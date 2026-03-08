@@ -1,0 +1,84 @@
+"use server";
+
+import { createClient } from "@/lib/supabase/server";
+import { revalidatePath } from "next/cache";
+
+export async function registerCallMissed(
+  clientId: string
+): Promise<{ ok: boolean; error?: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "No autenticado" };
+
+  const now = new Date();
+  const { error: interactionErr } = await supabase.from("interactions").insert({
+    client_id: clientId,
+    actor_id: user.id,
+    type: "call_missed",
+    metadata: { at: now.toISOString() },
+  });
+
+  if (interactionErr) return { ok: false, error: interactionErr.message };
+
+  const { data: interaction } = await supabase
+    .from("interactions")
+    .select("id")
+    .eq("client_id", clientId)
+    .eq("actor_id", user.id)
+    .eq("type", "call_missed")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  const message = `Intentamos contactar contigo el ${now.toLocaleDateString("es")} a las ${now.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" })}. Por favor revisa el email o avísanos.`;
+
+  await supabase.from("alerts").insert({
+    client_id: clientId,
+    message,
+    interaction_id: interaction?.id ?? null,
+  });
+
+  await supabase.from("audit_logs").insert({
+    actor_id: user.id,
+    action: "call_missed",
+    entity_type: "client",
+    entity_id: clientId,
+    payload: { at: now.toISOString() },
+  });
+
+  revalidatePath("/backoffice");
+  revalidatePath("/portal");
+  return { ok: true };
+}
+
+export async function registerCallSuccess(
+  clientId: string
+): Promise<{ ok: boolean; error?: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "No autenticado" };
+
+  const { error } = await supabase.from("interactions").insert({
+    client_id: clientId,
+    actor_id: user.id,
+    type: "call_success",
+    metadata: { at: new Date().toISOString() },
+  });
+
+  if (error) return { ok: false, error: error.message };
+
+  await supabase.from("audit_logs").insert({
+    actor_id: user.id,
+    action: "call_success",
+    entity_type: "client",
+    entity_id: clientId,
+    payload: { at: new Date().toISOString() },
+  });
+
+  revalidatePath("/backoffice");
+  return { ok: true };
+}

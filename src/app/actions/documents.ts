@@ -1,0 +1,103 @@
+"use server";
+
+import { createClient } from "@/lib/supabase/server";
+import { revalidatePath } from "next/cache";
+
+export async function approveDocument(
+  documentId: string
+): Promise<{ ok: boolean; error?: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "No autenticado" };
+
+  const { data: doc, error: fetchErr } = await supabase
+    .from("documents")
+    .select("id, client_id")
+    .eq("id", documentId)
+    .single();
+
+  if (fetchErr || !doc) return { ok: false, error: "Documento no encontrado" };
+
+  const { error: updateErr } = await supabase
+    .from("documents")
+    .update({
+      status: "approved",
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: user.id,
+      rejection_reason: null,
+    })
+    .eq("id", documentId);
+
+  if (updateErr) return { ok: false, error: updateErr.message };
+
+  await supabase.from("interactions").insert({
+    client_id: doc.client_id,
+    actor_id: user.id,
+    type: "document_approved",
+    metadata: { document_id: documentId },
+  });
+
+  await supabase.from("audit_logs").insert({
+    actor_id: user.id,
+    action: "document_approved",
+    entity_type: "document",
+    entity_id: documentId,
+    payload: { client_id: doc.client_id },
+  });
+
+  revalidatePath("/backoffice");
+  revalidatePath("/portal");
+  return { ok: true };
+}
+
+export async function rejectDocument(
+  documentId: string,
+  reason: string
+): Promise<{ ok: boolean; error?: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "No autenticado" };
+
+  const { data: doc, error: fetchErr } = await supabase
+    .from("documents")
+    .select("id, client_id")
+    .eq("id", documentId)
+    .single();
+
+  if (fetchErr || !doc) return { ok: false, error: "Documento no encontrado" };
+
+  const { error: updateErr } = await supabase
+    .from("documents")
+    .update({
+      status: "rejected",
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: user.id,
+      rejection_reason: reason,
+    })
+    .eq("id", documentId);
+
+  if (updateErr) return { ok: false, error: updateErr.message };
+
+  await supabase.from("interactions").insert({
+    client_id: doc.client_id,
+    actor_id: user.id,
+    type: "document_rejected",
+    metadata: { document_id: documentId, reason },
+  });
+
+  await supabase.from("audit_logs").insert({
+    actor_id: user.id,
+    action: "document_rejected",
+    entity_type: "document",
+    entity_id: documentId,
+    payload: { client_id: doc.client_id, reason },
+  });
+
+  revalidatePath("/backoffice");
+  revalidatePath("/portal");
+  return { ok: true };
+}
