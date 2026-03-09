@@ -14,7 +14,7 @@ export default async function PortalTutorialesPage({
   const supabase = await createClient();
   const { data: items } = await supabase
     .from("academy_content")
-    .select("id, title, slug, category, description, content_type, video_url, content_body")
+    .select("id, title, slug, category, description, content_type, video_url, content_body, cover_image")
     .order("sort_order")
     .order("title");
 

@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import { createTutorial } from "@/app/actions/help-center";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { TiptapEditor } from "@/components/tiptap-editor";
 import { cn } from "@/lib/utils";
 
 type Tutorial = {
@@ -32,7 +34,10 @@ export function AcademyCMS({ tutorials }: { tutorials: Tutorial[] }) {
     content_type: "video" as "video" | "articulo",
     video_url: "",
     content_body: "",
+    cover_image: "",
   });
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const supabase = createClient();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -45,6 +50,7 @@ export function AcademyCMS({ tutorials }: { tutorials: Tutorial[] }) {
       content_type: form.content_type,
       video_url: form.content_type === "video" ? form.video_url.trim() || undefined : undefined,
       content_body: form.content_type === "articulo" ? form.content_body : undefined,
+      cover_image: form.cover_image.trim() || undefined,
     });
     setSending(false);
     if (res.ok) {
@@ -56,6 +62,7 @@ export function AcademyCMS({ tutorials }: { tutorials: Tutorial[] }) {
         content_type: "video",
         video_url: "",
         content_body: "",
+        cover_image: "",
       });
       router.refresh();
     } else {
@@ -167,6 +174,42 @@ export function AcademyCMS({ tutorials }: { tutorials: Tutorial[] }) {
                 </div>
                 <div>
                   <label className="text-sm text-muted block mb-1">
+                    Imagen de portada (opcional)
+                  </label>
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    className="bg-white/5 border-white/10"
+                    disabled={uploadingCover}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setUploadingCover(true);
+                      const ext = file.name.split(".").pop() || "jpg";
+                      const path = `covers/${Date.now()}.${ext}`;
+                      const { error } = await supabase.storage
+                        .from("academy")
+                        .upload(path, file, { upsert: false });
+                      if (error) {
+                        alert(error.message);
+                        setUploadingCover(false);
+                        return;
+                      }
+                      const { data } = supabase.storage
+                        .from("academy")
+                        .getPublicUrl(path);
+                      setForm((f) => ({ ...f, cover_image: data.publicUrl }));
+                      setUploadingCover(false);
+                    }}
+                  />
+                  {form.cover_image && (
+                    <p className="text-xs text-muted mt-1 truncate">
+                      Portada: {form.cover_image}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label className="text-sm text-muted block mb-1">
                     Tipo de contenido
                   </label>
                   <select
@@ -204,11 +247,10 @@ export function AcademyCMS({ tutorials }: { tutorials: Tutorial[] }) {
                     <label className="text-sm text-muted block mb-1">
                       Contenido (texto de la guía)
                     </label>
-                    <textarea
-                      className="w-full min-h-[160px] rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-sm text-foreground placeholder:text-muted"
+                    <TiptapEditor
                       value={form.content_body}
-                      onChange={(e) =>
-                        setForm((f) => ({ ...f, content_body: e.target.value }))
+                      onChange={(html) =>
+                        setForm((f) => ({ ...f, content_body: html }))
                       }
                       placeholder="Escribe el contenido del artículo..."
                     />

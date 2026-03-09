@@ -92,6 +92,7 @@ export async function createTutorial(data: {
   content_type: "video" | "articulo";
   video_url?: string;
   content_body?: string;
+  cover_image?: string;
 }): Promise<{ ok: boolean; error?: string }> {
   const supabase = await createClient();
   const {
@@ -120,6 +121,7 @@ export async function createTutorial(data: {
     content_type: data.content_type || "video",
     video_url: data.video_url ?? null,
     content_body: data.content_body ?? null,
+    cover_image: data.cover_image ?? null,
     sort_order: 0,
   });
 
