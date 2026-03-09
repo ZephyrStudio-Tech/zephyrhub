@@ -116,7 +116,15 @@ function DroppableStateColumn({
   );
 }
 
-export function PipelineView({ clients }: { clients: Client[] }) {
+type StateLabel = { id: PipelineState; label: string };
+
+export function PipelineView({
+  clients,
+  stateLabels = PIPELINE_STATE_LABELS,
+}: {
+  clients: Client[];
+  stateLabels?: readonly StateLabel[];
+}) {
   const router = useRouter();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [changing, setChanging] = useState(false);
@@ -136,7 +144,7 @@ export function PipelineView({ clients }: { clients: Client[] }) {
       if (!over || changing) return;
 
       const toState = String(over.id) as PipelineState;
-      if (!PIPELINE_STATE_LABELS.some((s) => s.id === toState)) return;
+      if (!stateLabels.some((s) => s.id === toState)) return;
 
       const client = clients.find((c) => c.id === active.id);
       if (!client) return;
@@ -153,7 +161,7 @@ export function PipelineView({ clients }: { clients: Client[] }) {
       if (res.ok) router.refresh();
       else alert(res.error);
     },
-    [clients, changing, router]
+    [clients, stateLabels, changing, router]
   );
 
   const activeClient = activeId ? clients.find((c) => c.id === activeId) : null;
@@ -165,7 +173,7 @@ export function PipelineView({ clients }: { clients: Client[] }) {
       onDragEnd={handleDragEnd}
     >
       <div className="flex gap-3 overflow-x-auto pb-4">
-        {PIPELINE_STATE_LABELS.map(({ id, label }) => (
+        {stateLabels.map(({ id, label }) => (
           <DroppableStateColumn
             key={id}
             stateId={id}

@@ -11,18 +11,19 @@ type Role = "admin" | "consultor" | "tecnico";
 
 const NAV = {
   admin: [
-    { href: "/backoffice", label: "Pipeline" },
-    { href: "/backoffice/triage", label: "Buzón Leads" },
+    { href: "/backoffice/preconsultoria", label: "Preconsultoría" },
+    { href: "/backoffice/consultoria", label: "Consultoría" },
     { href: "/backoffice/tech", label: "Evidencias" },
     { href: "/backoffice/logs", label: "Logs" },
     { href: "/backoffice/assign", label: "Asignar consultores" },
   ],
   consultor: [
-    { href: "/backoffice", label: "Pipeline" },
-    { href: "/backoffice/triage", label: "Buzón Leads" },
+    { href: "/backoffice/preconsultoria", label: "Preconsultoría" },
+    { href: "/backoffice/consultoria", label: "Consultoría" },
   ],
   tecnico: [
-    { href: "/backoffice", label: "Pipeline" },
+    { href: "/backoffice/preconsultoria", label: "Preconsultoría" },
+    { href: "/backoffice/consultoria", label: "Consultoría" },
     { href: "/backoffice/tech", label: "Evidencias" },
   ],
 } as const;
@@ -35,7 +36,7 @@ export function Sidebar({ role, userLabel }: { role: Role; userLabel: string }) 
   const nav = (
     <>
       <div className="flex h-16 items-center justify-between border-b border-slate-200 px-6 dark:border-slate-800">
-        <Link href="/backoffice" className="font-bold text-slate-900 dark:text-white">
+        <Link href="/backoffice/preconsultoria" className="font-bold text-slate-900 dark:text-white">
           Zephyr<span className="text-primary">OS</span>
         </Link>
         <button
