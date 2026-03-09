@@ -1,7 +1,7 @@
 "use server";
 
 import type React from "react";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { getAgreementTemplate } from "@/lib/service-config";
 import type { ServiceType } from "@/lib/service-config";
 import { revalidatePath } from "next/cache";
@@ -56,14 +56,15 @@ export async function generateAgreement(
     };
   }
 
+  const supabaseAdmin = createAdminClient();
   const path = `${clientId}/acuerdo_${Date.now()}.pdf`;
-  const { error: uploadErr } = await supabase.storage
+  const { error: uploadErr } = await supabaseAdmin.storage
     .from("documents")
     .upload(path, buffer, { contentType: "application/pdf", upsert: false });
 
   if (uploadErr) return { ok: false, error: uploadErr.message };
 
-  const { error: insertErr } = await supabase.from("agreements").insert({
+  const { error: insertErr } = await supabaseAdmin.from("agreements").insert({
     client_id: clientId,
     storage_path: path,
   });

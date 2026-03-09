@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
 /** Mapea service_requested (triage) → service_type (clients). factura → factura_electronica */
@@ -58,7 +58,8 @@ export async function convertLeadToClient(
   const serviceType = mapServiceType(lead.service_requested);
   const companyName = (lead.company_name?.trim() || lead.full_name) || "Sin nombre";
 
-  const { error: insertErr } = await supabase.from("clients").insert({
+  const supabaseAdmin = createAdminClient();
+  const { error: insertErr } = await supabaseAdmin.from("clients").insert({
     company_name: companyName,
     cif: lead.nif ?? null,
     service_type: serviceType,
@@ -80,7 +81,7 @@ export async function convertLeadToClient(
 
   if (insertErr) return { ok: false, error: insertErr.message };
 
-  const { error: updateErr } = await supabase
+  const { error: updateErr } = await supabaseAdmin
     .from("triage_leads")
     .update({ status: "completed" })
     .eq("id", leadId);
@@ -125,7 +126,8 @@ export async function rejectLead(
     return { ok: false, error: "Lead no encontrado o ya procesado" };
   }
 
-  const { error: updateErr } = await supabase
+  const supabaseAdmin = createAdminClient();
+  const { error: updateErr } = await supabaseAdmin
     .from("triage_leads")
     .update({ status: "rejected" })
     .eq("id", leadId);

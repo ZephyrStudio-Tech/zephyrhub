@@ -1,5 +1,14 @@
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+
+/** Cliente con Service Role Key: salta RLS. Usar solo en servidor para mutaciones tras validar rol en código. */
+export function createAdminClient() {
+  return createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 export async function createClient() {
   const cookieStore = await cookies();
