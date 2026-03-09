@@ -2,7 +2,6 @@ import { getSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { PipelineView } from "./pipeline-view";
-import { PHASES } from "@/lib/state-machine/constants";
 
 export default async function BackofficePage() {
   const { user, role } = await getSession();
@@ -40,7 +39,7 @@ export default async function BackofficePage() {
           expediente{clientCount !== 1 ? "s" : ""}
         </div>
       </div>
-      <PipelineView clients={clients ?? []} phases={PHASES} />
+      <PipelineView clients={clients ?? []} />
     </div>
   );
 }

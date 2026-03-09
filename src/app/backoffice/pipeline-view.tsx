@@ -16,6 +16,7 @@ import {
 } from "@dnd-kit/core";
 import { transitionClientState } from "@/app/actions/transition-state";
 import { canTransition } from "@/lib/state-machine/machine";
+import { PIPELINE_STATE_LABELS } from "@/lib/state-machine/constants";
 import type { PipelineState } from "@/lib/state-machine/constants";
 import { cn } from "@/lib/utils";
 
@@ -57,19 +58,10 @@ function ClientCard({
   );
 }
 
-function DraggableClientCard({
-  client,
-  isDragging,
-}: {
-  client: Client;
-  isDragging?: boolean;
-}) {
+function DraggableClientCard({ client }: { client: Client }) {
   const { attributes, listeners, setNodeRef } = useDraggable({
     id: client.id,
-    data: {
-      clientId: client.id,
-      currentState: client.current_state,
-    },
+    data: { clientId: client.id, currentState: client.current_state },
   });
 
   return (
@@ -79,26 +71,58 @@ function DraggableClientCard({
       {...attributes}
       className="cursor-grab active:cursor-grabbing"
     >
-      <ClientCard client={client} isDragging={isDragging} />
+      <ClientCard client={client} />
     </div>
   );
 }
 
-export function PipelineView({
+function DroppableStateColumn({
+  stateId,
+  label,
   clients,
-  phases,
 }: {
+  stateId: PipelineState;
+  label: string;
   clients: Client[];
-  phases: { name: string; states: PipelineState[] }[];
 }) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: stateId,
+    data: { stateId },
+  });
+
+  return (
+    <div ref={setNodeRef} className="flex-shrink-0 w-[220px]">
+      <div
+        className={cn(
+          "rounded-2xl border bg-white/80 dark:bg-slate-800/80 dark:border-slate-700 shadow-card transition-all h-full flex flex-col min-h-[140px]",
+          isOver && "ring-2 ring-primary/40 bg-primary/5 dark:bg-primary/10"
+        )}
+      >
+        <div className="p-3 border-b border-slate-100 dark:border-slate-700">
+          <h3 className="font-semibold text-slate-800 dark:text-white text-sm leading-tight">
+            {label}
+          </h3>
+          <p className="text-xs text-slate-500 mt-0.5">
+            {clients.length}
+          </p>
+        </div>
+        <div className="p-2 flex-1 space-y-2 overflow-y-auto max-h-[calc(100vh-280px)]">
+          {clients.map((client) => (
+            <DraggableClientCard key={client.id} client={client} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function PipelineView({ clients }: { clients: Client[] }) {
   const router = useRouter();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [changing, setChanging] = useState(false);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: { distance: 8 },
-    })
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
@@ -111,48 +135,28 @@ export function PipelineView({
       const { active, over } = event;
       if (!over || changing) return;
 
-      const overId = String(over.id);
-      if (!overId.startsWith("phase-")) return;
-
-      const phaseIndex = parseInt(overId.replace("phase-", ""), 10);
-      if (Number.isNaN(phaseIndex) || phaseIndex < 0 || phaseIndex >= phases.length)
-        return;
+      const toState = String(over.id) as PipelineState;
+      if (!PIPELINE_STATE_LABELS.some((s) => s.id === toState)) return;
 
       const client = clients.find((c) => c.id === active.id);
       if (!client) return;
 
-      const targetPhase = phases[phaseIndex];
       const fromState = client.current_state as PipelineState;
-
-      const validToState = targetPhase.states.find((s) =>
-        canTransition(fromState, s)
-      );
-      if (!validToState) {
-        alert(
-          `No se puede mover a "${targetPhase.name}". Transición no permitida desde el estado actual.`
-        );
+      if (!canTransition(fromState, toState)) {
+        alert("Transición no permitida desde el estado actual.");
         return;
       }
 
       setChanging(true);
-      const res = await transitionClientState(client.id, validToState);
+      const res = await transitionClientState(client.id, toState);
       setChanging(false);
       if (res.ok) router.refresh();
       else alert(res.error);
     },
-    [clients, phases, changing, router]
+    [clients, changing, router]
   );
 
-  const clientsByPhase = phases.map((phase) => ({
-    phase,
-    clients: clients.filter((c) =>
-      phase.states.includes(c.current_state as PipelineState)
-    ),
-  }));
-
-  const activeClient = activeId
-    ? clients.find((c) => c.id === activeId)
-    : null;
+  const activeClient = activeId ? clients.find((c) => c.id === activeId) : null;
 
   return (
     <DndContext
@@ -160,24 +164,20 @@ export function PipelineView({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex gap-4 overflow-x-auto pb-4">
-        {phases.map((phase, idx) => {
-          const { clients: inPhase } = clientsByPhase[idx];
-          return (
-            <DroppablePhaseColumnWrapper
-              key={phase.name}
-              phaseIndex={idx}
-              phase={phase}
-              clients={inPhase}
-              DraggableCard={DraggableClientCard}
-            />
-          );
-        })}
+      <div className="flex gap-3 overflow-x-auto pb-4">
+        {PIPELINE_STATE_LABELS.map(({ id, label }) => (
+          <DroppableStateColumn
+            key={id}
+            stateId={id}
+            label={label}
+            clients={clients.filter((c) => c.current_state === id)}
+          />
+        ))}
       </div>
 
       <DragOverlay dropAnimation={null}>
         {activeClient ? (
-          <div className="w-[280px] rounded-xl border-2 border-primary/40 bg-white dark:bg-slate-800 p-3 shadow-xl cursor-grabbing">
+          <div className="w-[220px] rounded-xl border-2 border-primary/40 bg-white dark:bg-slate-800 p-3 shadow-xl cursor-grabbing">
             <p className="font-medium text-slate-800 dark:text-slate-200 text-sm truncate">
               {activeClient.company_name ||
                 activeClient.cif ||
@@ -190,50 +190,5 @@ export function PipelineView({
         ) : null}
       </DragOverlay>
     </DndContext>
-  );
-}
-
-function DroppablePhaseColumnWrapper({
-  phaseIndex,
-  phase,
-  clients,
-  DraggableCard,
-}: {
-  phaseIndex: number;
-  phase: { name: string; states: PipelineState[] };
-  clients: Client[];
-  DraggableCard: React.ComponentType<{
-    client: Client;
-    isDragging?: boolean;
-  }>;
-}) {
-  const { setNodeRef, isOver } = useDroppable({
-    id: `phase-${phaseIndex}`,
-    data: { phaseIndex, states: phase.states },
-  });
-
-  return (
-    <div ref={setNodeRef} className="flex-shrink-0">
-      <div
-        className={cn(
-          "w-[280px] rounded-2xl border bg-white/80 dark:bg-slate-800/80 dark:border-slate-700 shadow-card transition-all",
-          isOver && "ring-2 ring-primary/40 bg-primary/5 dark:bg-primary/10"
-        )}
-      >
-        <div className="p-4 border-b border-slate-100 dark:border-slate-700">
-          <h3 className="font-semibold text-slate-800 dark:text-white tracking-tight">
-            {phase.name}
-          </h3>
-          <p className="text-xs text-slate-500 mt-0.5">
-            {clients.length} expediente{clients.length !== 1 ? "s" : ""}
-          </p>
-        </div>
-        <div className="p-3 min-h-[120px] space-y-2">
-          {clients.map((client) => (
-            <DraggableCard key={client.id} client={client} />
-          ))}
-        </div>
-      </div>
-    </div>
   );
 }

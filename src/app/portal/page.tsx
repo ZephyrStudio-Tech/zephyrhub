@@ -31,15 +31,8 @@ export default async function PortalPage() {
           Estás en el portal como administrador. Los admins no tienen expediente asignado (son personal).
         </p>
         <a
-          href="/admin"
-          className="inline-block rounded-lg bg-accent px-4 py-2 text-background font-medium hover:opacity-90"
-        >
-          Ir al panel de administración
-        </a>
-        <span className="text-muted"> o </span>
-        <a
           href="/backoffice"
-          className="inline-block rounded-lg border border-white/20 px-4 py-2 font-medium hover:bg-white/10"
+          className="inline-block rounded-lg bg-accent px-4 py-2 text-background font-medium hover:opacity-90"
         >
           Ir al backoffice
         </a>

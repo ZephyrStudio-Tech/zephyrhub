@@ -29,6 +29,34 @@ export const PIPELINE_STATES = [
 
 export type PipelineState = (typeof PIPELINE_STATES)[number];
 
+/** Orden y etiquetas para el Kanban (una columna por estado) */
+export const PIPELINE_STATE_LABELS: { id: PipelineState; label: string }[] = [
+  { id: "nuevo_lead", label: "Nuevo Lead" },
+  { id: "no_contesta", label: "No contesta" },
+  { id: "contactar_mas_tarde", label: "Contactar Más Tarde" },
+  { id: "imposible_contactar", label: "Imposible contactar" },
+  { id: "consultoria", label: "Consultoría" },
+  { id: "listo_para_tramitar", label: "Listo para tramitar" },
+  { id: "esperando_concesion", label: "Esperando concesión" },
+  { id: "subsanacion_tramitacion", label: "Subsanación (Tramitación)" },
+  { id: "bono_concedido", label: "Bono Concedido" },
+  { id: "consultoria_confirmacion", label: "Consultoría Confirmación" },
+  { id: "emitir_acuerdos", label: "Emitir Acuerdos" },
+  { id: "empezar_desarrollo", label: "Empezar Desarrollo" },
+  { id: "presentar_justificacion_fase_i", label: "Presentar Justificación (Fase I)" },
+  { id: "firma_justificacion", label: "Firma justificación" },
+  { id: "subsanacion_fase_i", label: "Subsanación (Justificación Fase I)" },
+  { id: "resolucion_red_es", label: "Resolución Red.es" },
+  { id: "pago_i_fase", label: "Pago I Fase" },
+  { id: "ano_mantenimiento", label: "Año Mantenimiento" },
+  { id: "justificacion_ii_fase", label: "Justificación II Fase" },
+  { id: "firma_justificacion_ii", label: "Firma Justificación II" },
+  { id: "subsanacion_fase_ii", label: "Subsanación (Justificación Fase II)" },
+  { id: "resolucion_ii_red_es", label: "Resolución II Red.es" },
+  { id: "ganada", label: "Ganada" },
+  { id: "perdida", label: "Perdida" },
+];
+
 export const PHASES: { name: string; states: PipelineState[] }[] = [
   {
     name: "Captación y Triage",
