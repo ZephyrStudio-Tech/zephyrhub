@@ -52,7 +52,7 @@ export function Sidebar({ role, userLabel }: { role: Role; userLabel: string }) 
       </div>
       <nav className="flex-1 space-y-0.5 overflow-y-auto p-4">
         {links.map((item) => {
-          const isActive = pathname === item.href || (item.href !== "/backoffice" && pathname.startsWith(item.href));
+          const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
           return (
             <Link
               key={item.href}
