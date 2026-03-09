@@ -39,6 +39,12 @@ export async function updateSession(request: NextRequest) {
     return res;
   };
 
+  // Redirigir /admin y /admin/* a /backoffice (una sola área con sidebar por rol)
+  if (request.nextUrl.pathname.startsWith("/admin")) {
+    const pathname = request.nextUrl.pathname.replace(/^\/admin/, "/backoffice") || "/backoffice";
+    return redirectWithCookies(pathname);
+  }
+
   if (!user && isProtectedPath(request.nextUrl.pathname)) {
     return redirectWithCookies("/login");
   }
@@ -52,9 +58,6 @@ export async function updateSession(request: NextRequest) {
     const role = await getRole(supabase, user.id);
     if (!role) {
       return redirectWithCookies("/sin-perfil");
-    }
-    if (request.nextUrl.pathname.startsWith("/admin") && role !== "admin") {
-      return redirectWithCookies("/backoffice");
     }
     if (
       request.nextUrl.pathname.startsWith("/backoffice") &&
@@ -106,6 +109,5 @@ async function getRedirectForUser(
   const role = data?.role;
   if (!role) return "/sin-perfil";
   if (role === "beneficiario") return "/portal";
-  if (role === "admin") return "/admin";
   return "/backoffice";
 }

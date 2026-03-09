@@ -47,7 +47,7 @@ export default function LoginPage() {
     const role = profile?.role;
     setLoading(false);
     router.refresh();
-    if (role === "admin") router.push("/admin");
+    if (role === "admin") router.push("/backoffice");
     else if (role === "consultor" || role === "tecnico") router.push("/backoffice");
     else router.push("/portal");
   }
