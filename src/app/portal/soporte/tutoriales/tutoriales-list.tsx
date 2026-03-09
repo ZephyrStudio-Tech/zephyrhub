@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -15,7 +14,18 @@ type Item = {
   content_type: string | null;
   video_url: string | null;
   content_body: string | null;
+  cover_image: string | null;
 };
+
+/** Convierte URL de YouTube (watch?v=XXX o youtu.be/XXX) a embed. Si no es YouTube, devuelve la URL tal cual. */
+function toEmbedVideoUrl(url: string): string {
+  const u = url.trim();
+  const youtuBeMatch = u.match(/youtu\.be\/([a-zA-Z0-9_-]+)/);
+  if (youtuBeMatch) return `https://www.youtube.com/embed/${youtuBeMatch[1]}`;
+  const watchMatch = u.match(/[?&]v=([a-zA-Z0-9_-]+)/);
+  if (watchMatch) return `https://www.youtube.com/embed/${watchMatch[1]}`;
+  return u;
+}
 
 export function TutorialesList({
   items,
@@ -26,6 +36,7 @@ export function TutorialesList({
 }) {
   const [search, setSearch] = useState(initialSearch);
   const [guiaOpen, setGuiaOpen] = useState<Item | null>(null);
+  const [videoOpen, setVideoOpen] = useState<Item | null>(null);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -56,17 +67,31 @@ export function TutorialesList({
 
           if (isVideo && hasVideoUrl) {
             return (
-              <a
+              <button
                 key={item.id}
-                href={item.video_url!}
-                target="_blank"
-                rel="noopener noreferrer"
+                type="button"
+                onClick={() => setVideoOpen(item)}
+                className="text-left"
               >
-                <Card className="border-white/10 bg-white/5 hover:bg-white/10 transition-colors h-full">
-                  <CardHeader className="pb-2">
-                    <span className="text-xs px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/30 w-fit">
+                <Card className="border-white/10 bg-white/5 hover:bg-white/10 transition-colors h-full overflow-hidden">
+                  <div className="relative h-48 w-full overflow-hidden">
+                    {item.cover_image ? (
+                      <img
+                        src={item.cover_image}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div
+                        className="h-full w-full bg-gradient-to-br from-slate-800/80 to-slate-900/80"
+                        aria-hidden
+                      />
+                    )}
+                    <span className="absolute top-3 left-3 text-xs px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/30">
                       VIDEO
                     </span>
+                  </div>
+                  <CardHeader className="pb-2">
                     <h3 className="font-medium text-foreground mt-2">
                       {item.title ?? "Sin título"}
                     </h3>
@@ -77,7 +102,7 @@ export function TutorialesList({
                     </p>
                   </CardContent>
                 </Card>
-              </a>
+              </button>
             );
           }
 
@@ -88,11 +113,25 @@ export function TutorialesList({
               onClick={() => setGuiaOpen(item)}
               className="text-left"
             >
-              <Card className="border-white/10 bg-white/5 hover:bg-white/10 transition-colors h-full">
-                <CardHeader className="pb-2">
-                  <span className="text-xs px-2 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/30 w-fit">
+              <Card className="border-white/10 bg-white/5 hover:bg-white/10 transition-colors h-full overflow-hidden">
+                <div className="relative h-48 w-full overflow-hidden">
+                  {item.cover_image ? (
+                    <img
+                      src={item.cover_image}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div
+                      className="h-full w-full bg-gradient-to-br from-violet-900/40 to-slate-900/80"
+                      aria-hidden
+                    />
+                  )}
+                  <span className="absolute top-3 left-3 text-xs px-2 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/30">
                     GUÍA
                   </span>
+                </div>
+                <CardHeader className="pb-2">
                   <h3 className="font-medium text-foreground mt-2">
                     {item.title ?? "Sin título"}
                   </h3>
@@ -112,13 +151,49 @@ export function TutorialesList({
         <p className="py-8 text-center text-muted">No hay resultados.</p>
       )}
 
+      {/* Lightbox Vídeo */}
+      {videoOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          onClick={() => setVideoOpen(null)}
+        >
+          <Card
+            className="w-full max-w-4xl border-white/20 bg-background overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-4 border-b border-white/10">
+              <h2 className="font-semibold text-foreground">
+                {videoOpen.title ?? "Vídeo"}
+              </h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setVideoOpen(null)}
+              >
+                Cerrar
+              </Button>
+            </div>
+            <div className="p-4 bg-black/20">
+              <iframe
+                src={toEmbedVideoUrl(videoOpen.video_url!)}
+                title={videoOpen.title ?? "Vídeo"}
+                className="w-full aspect-video rounded-lg border-0 bg-black"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Modal Guía con prose */}
       {guiaOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
           onClick={() => setGuiaOpen(null)}
         >
           <Card
-            className="w-full max-w-2xl max-h-[85vh] overflow-hidden border-white/20 bg-background flex flex-col"
+            className="w-full max-w-4xl max-h-[85vh] overflow-hidden border-white/20 bg-background flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between p-4 border-b border-white/10">
@@ -133,16 +208,13 @@ export function TutorialesList({
                 Cerrar
               </Button>
             </div>
-            <div className="p-4 overflow-y-auto flex-1">
-              <div className="prose prose-invert prose-sm max-w-none text-foreground">
-                {guiaOpen.content_body ? (
-                  <div className="whitespace-pre-wrap">
-                    {guiaOpen.content_body}
-                  </div>
-                ) : (
-                  <p className="text-muted">Sin contenido.</p>
-                )}
-              </div>
+            <div className="p-6 overflow-y-auto flex-1">
+              <div
+                className="prose prose-invert prose-blue max-w-none text-foreground"
+                dangerouslySetInnerHTML={{
+                  __html: guiaOpen.content_body || "<p class=\"text-muted\">Sin contenido.</p>",
+                }}
+              />
             </div>
           </Card>
         </div>
