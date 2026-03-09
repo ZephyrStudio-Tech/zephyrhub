@@ -7,7 +7,7 @@ export default function HomePage() {
         ZephyrOS
       </h1>
       <p className="text-muted mb-8">
-        Sistema operativo ZephyrStudio - Kit Digital
+        Sistema operativo ZephyrStudio - Kit Digital 2026
       </p>
       <div className="flex gap-4">
         <Link
