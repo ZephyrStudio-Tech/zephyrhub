@@ -1,13 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { transitionClientState } from "@/app/actions/transition-state";
-import { PHASES } from "@/lib/state-machine/constants";
-import type { PipelineState } from "@/lib/state-machine/constants";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useState } from "react";
+import {
+  DndContext,
+  DragOverlay,
+  type DragEndEvent,
+  type DragStartEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  useDraggable,
+  useDroppable,
+} from "@dnd-kit/core";
+import { transitionClientState } from "@/app/actions/transition-state";
+import { canTransition } from "@/lib/state-machine/machine";
+import type { PipelineState } from "@/lib/state-machine/constants";
+import { cn } from "@/lib/utils";
 
 type Client = {
   id: string;
@@ -19,6 +29,61 @@ type Client = {
   created_at: string;
 };
 
+function ClientCard({
+  client,
+  isDragging,
+}: {
+  client: Client;
+  isDragging?: boolean;
+}) {
+  const title =
+    client.company_name || client.cif || client.id.slice(0, 8);
+
+  return (
+    <Link
+      href={`/backoffice/clients/${client.id}`}
+      className={cn(
+        "block rounded-xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 shadow-sm hover:shadow-md hover:border-primary/20 transition-all text-left",
+        isDragging && "opacity-90 shadow-lg ring-2 ring-primary/30"
+      )}
+    >
+      <p className="font-medium text-slate-800 dark:text-slate-200 text-sm truncate">
+        {title}
+      </p>
+      <p className="text-xs text-slate-500 mt-1 capitalize">
+        {client.service_type?.replace("_", " ")}
+      </p>
+    </Link>
+  );
+}
+
+function DraggableClientCard({
+  client,
+  isDragging,
+}: {
+  client: Client;
+  isDragging?: boolean;
+}) {
+  const { attributes, listeners, setNodeRef } = useDraggable({
+    id: client.id,
+    data: {
+      clientId: client.id,
+      currentState: client.current_state,
+    },
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      className="cursor-grab active:cursor-grabbing"
+    >
+      <ClientCard client={client} isDragging={isDragging} />
+    </div>
+  );
+}
+
 export function PipelineView({
   clients,
   phases,
@@ -27,71 +92,147 @@ export function PipelineView({
   phases: { name: string; states: PipelineState[] }[];
 }) {
   const router = useRouter();
-  const [changing, setChanging] = useState<string | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [changing, setChanging] = useState(false);
 
-  async function onStateChange(clientId: string, toState: string) {
-    setChanging(clientId);
-    const res = await transitionClientState(clientId, toState);
-    setChanging(null);
-    if (res.ok) router.refresh();
-    else alert(res.error);
-  }
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    })
+  );
+
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    setActiveId(String(event.active.id));
+  }, []);
+
+  const handleDragEnd = useCallback(
+    async (event: DragEndEvent) => {
+      setActiveId(null);
+      const { active, over } = event;
+      if (!over || changing) return;
+
+      const overId = String(over.id);
+      if (!overId.startsWith("phase-")) return;
+
+      const phaseIndex = parseInt(overId.replace("phase-", ""), 10);
+      if (Number.isNaN(phaseIndex) || phaseIndex < 0 || phaseIndex >= phases.length)
+        return;
+
+      const client = clients.find((c) => c.id === active.id);
+      if (!client) return;
+
+      const targetPhase = phases[phaseIndex];
+      const fromState = client.current_state as PipelineState;
+
+      const validToState = targetPhase.states.find((s) =>
+        canTransition(fromState, s)
+      );
+      if (!validToState) {
+        alert(
+          `No se puede mover a "${targetPhase.name}". Transición no permitida desde el estado actual.`
+        );
+        return;
+      }
+
+      setChanging(true);
+      const res = await transitionClientState(client.id, validToState);
+      setChanging(false);
+      if (res.ok) router.refresh();
+      else alert(res.error);
+    },
+    [clients, phases, changing, router]
+  );
+
+  const clientsByPhase = phases.map((phase) => ({
+    phase,
+    clients: clients.filter((c) =>
+      phase.states.includes(c.current_state as PipelineState)
+    ),
+  }));
+
+  const activeClient = activeId
+    ? clients.find((c) => c.id === activeId)
+    : null;
 
   return (
-    <div className="space-y-8">
-      <h1 className="text-2xl font-bold">Pipeline</h1>
-
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {phases.map((phase) => {
-          const inPhase = clients.filter((c) =>
-            phase.states.includes(c.current_state as PipelineState)
-          );
+    <DndContext
+      sensors={sensors}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
+      <div className="flex gap-4 overflow-x-auto pb-4">
+        {phases.map((phase, idx) => {
+          const { clients: inPhase } = clientsByPhase[idx];
           return (
-            <div key={phase.name} className="space-y-2">
-              <h2 className="text-sm font-medium text-muted">{phase.name}</h2>
-              <div className="space-y-2">
-                {inPhase.map((client) => (
-                  <Card
-                    key={client.id}
-                    className="border-white/10 bg-white/5"
-                  >
-                    <CardHeader className="p-3">
-                      <CardTitle className="text-sm font-medium">
-                        <Link
-                          href={`/backoffice/clients/${client.id}`}
-                          className="text-foreground hover:text-accent"
-                        >
-                          {client.company_name || client.cif || client.id.slice(0, 8)}
-                        </Link>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-3 pt-0">
-                      <select
-                        className="w-full rounded border border-white/20 bg-white/5 px-2 py-1.5 text-sm"
-                        value={client.current_state}
-                        disabled={!!changing}
-                        onChange={(e) =>
-                          onStateChange(client.id, e.target.value)
-                        }
-                      >
-                        {phases.flatMap((p) =>
-                          p.states.map((s) => (
-                            <option key={s} value={s}>
-                              {p.name === phase.name ? s : `${p.name}: ${s}`}
-                            </option>
-                          ))
-                        )}
-                      </select>
-                    </CardContent>
-                  </Card>
-                ))}
-                {inPhase.length === 0 && (
-                  <p className="text-sm text-muted">Ninguno</p>
-                )}
-              </div>
-            </div>
+            <DroppablePhaseColumnWrapper
+              key={phase.name}
+              phaseIndex={idx}
+              phase={phase}
+              clients={inPhase}
+              DraggableCard={DraggableClientCard}
+            />
           );
         })}
+      </div>
+
+      <DragOverlay dropAnimation={null}>
+        {activeClient ? (
+          <div className="w-[280px] rounded-xl border-2 border-primary/40 bg-white dark:bg-slate-800 p-3 shadow-xl cursor-grabbing">
+            <p className="font-medium text-slate-800 dark:text-slate-200 text-sm truncate">
+              {activeClient.company_name ||
+                activeClient.cif ||
+                activeClient.id.slice(0, 8)}
+            </p>
+            <p className="text-xs text-slate-500 mt-1 capitalize">
+              {activeClient.service_type?.replace("_", " ")}
+            </p>
+          </div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
+  );
+}
+
+function DroppablePhaseColumnWrapper({
+  phaseIndex,
+  phase,
+  clients,
+  DraggableCard,
+}: {
+  phaseIndex: number;
+  phase: { name: string; states: PipelineState[] };
+  clients: Client[];
+  DraggableCard: React.ComponentType<{
+    client: Client;
+    isDragging?: boolean;
+  }>;
+}) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `phase-${phaseIndex}`,
+    data: { phaseIndex, states: phase.states },
+  });
+
+  return (
+    <div ref={setNodeRef} className="flex-shrink-0">
+      <div
+        className={cn(
+          "w-[280px] rounded-2xl border bg-white/80 dark:bg-slate-800/80 dark:border-slate-700 shadow-card transition-all",
+          isOver && "ring-2 ring-primary/40 bg-primary/5 dark:bg-primary/10"
+        )}
+      >
+        <div className="p-4 border-b border-slate-100 dark:border-slate-700">
+          <h3 className="font-semibold text-slate-800 dark:text-white tracking-tight">
+            {phase.name}
+          </h3>
+          <p className="text-xs text-slate-500 mt-0.5">
+            {clients.length} expediente{clients.length !== 1 ? "s" : ""}
+          </p>
+        </div>
+        <div className="p-3 min-h-[120px] space-y-2">
+          {clients.map((client) => (
+            <DraggableCard key={client.id} client={client} />
+          ))}
+        </div>
       </div>
     </div>
   );

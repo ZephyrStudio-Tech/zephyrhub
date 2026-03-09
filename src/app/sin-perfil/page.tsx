@@ -33,6 +33,9 @@ ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role;`}
             <code className="rounded bg-white/10 px-1">consultor</code> o{" "}
             <code className="rounded bg-white/10 px-1">tecnico</code> según corresponda.
           </p>
+          <p className="text-sm text-amber-600 dark:text-amber-400">
+            Si tu perfil ya existe en la tabla <code className="rounded bg-white/10 px-1">profiles</code>, el fallo suele ser RLS: en Supabase → Authentication → Policies, asegura que en <code className="rounded bg-white/10 px-1">profiles</code> haya una política que permita <strong>SELECT</strong> cuando <code className="rounded bg-white/10 px-1">auth.uid() = id</code>. Ver <code className="rounded bg-white/10 px-1">supabase/migrations/00001_profiles_rls_own_profile.sql</code>.
+          </p>
           <form action={signOut}>
             <Button type="submit" variant="outline" className="w-full">
               Cerrar sesión
