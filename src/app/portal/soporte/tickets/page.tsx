@@ -1,7 +1,8 @@
 import { getSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { TicketsList } from "./tickets-list";
+import Link from "next/link";
+import { TicketsPageClient } from "./tickets-page-client";
 
 export default async function PortalTicketsPage() {
   const { user } = await getSession();
@@ -16,15 +17,14 @@ export default async function PortalTicketsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">
-          Mis Tickets de Soporte
-        </h1>
-        <p className="text-muted text-sm mt-1">
-          Gestiona tus consultas y abre nuevos tickets.
-        </p>
-      </div>
-      <TicketsList tickets={tickets ?? []} />
+      <span className="text-muted text-sm mb-4 block">
+        <Link href="/portal" className="hover:text-foreground">Inicio</Link>
+        {" / "}
+        <Link href="/portal/soporte" className="hover:text-foreground">Centro de Ayuda</Link>
+        {" / "}
+        Mis Tickets
+      </span>
+      <TicketsPageClient tickets={tickets ?? []} />
     </div>
   );
 }

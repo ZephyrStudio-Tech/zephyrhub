@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { createTicket } from "@/app/actions/help-center";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 
 type Ticket = {
   id: string;
@@ -19,13 +18,22 @@ type Ticket = {
 
 const CATEGORIES = ["general", "web", "ecommerce", "seo", "factura", "soporte"];
 
-export function TicketsList({ tickets }: { tickets: Ticket[] }) {
+type TicketsListProps = {
+  tickets: Ticket[];
+  openNew?: boolean;
+  setOpenNew?: (open: boolean) => void;
+};
+
+export function TicketsList({ tickets, openNew: controlledOpen, setOpenNew: setControlledOpen }: TicketsListProps) {
   const router = useRouter();
   const [tab, setTab] = useState<"all" | "abierto" | "cerrado">("all");
-  const [openNew, setOpenNew] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const [category, setCategory] = useState("general");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
+
+  const openNew = setControlledOpen !== undefined ? controlledOpen ?? false : internalOpen;
+  const setOpenNew = setControlledOpen ?? setInternalOpen;
 
   const filtered =
     tab === "all"
@@ -51,7 +59,7 @@ export function TicketsList({ tickets }: { tickets: Ticket[] }) {
 
   return (
     <>
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex gap-2 flex-wrap mt-4">
         <Button
           variant={tab === "all" ? "default" : "outline"}
           size="sm"
@@ -77,39 +85,37 @@ export function TicketsList({ tickets }: { tickets: Ticket[] }) {
         </Button>
       </div>
 
-      <div className="space-y-4">
+      <div className="mt-4">
         {filtered.map((t) => (
-          <Card
+          <div
             key={t.id}
-            className="border-white/10 bg-white/5 overflow-hidden"
+            className="border-b border-white/5 py-4 hover:bg-white/5 transition-colors -mx-4 px-4 rounded-xl"
           >
-            <CardContent className="p-4 space-y-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <span
-                  className={
-                    (t.status?.toLowerCase() ?? "") === "resuelto"
-                      ? "text-xs px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"
-                      : "text-xs px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30"
-                  }
-                >
-                  {t.status ?? "abierto"}
-                </span>
-                <span className="text-xs text-muted">{t.category}</span>
-                <span className="text-xs text-muted ml-auto">
-                  {new Date(t.created_at).toLocaleDateString("es")}
-                </span>
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <span
+                className={
+                  (t.status?.toLowerCase() ?? "") === "resuelto"
+                    ? "text-xs px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"
+                    : "text-xs px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30"
+                }
+              >
+                {t.status ?? "abierto"}
+              </span>
+              <span className="text-xs text-muted">{t.category}</span>
+              <span className="text-xs text-muted ml-auto">
+                {new Date(t.created_at).toLocaleDateString("es")}
+              </span>
+            </div>
+            <p className="text-sm text-foreground">{t.message ?? "—"}</p>
+            {t.admin_reply && (
+              <div className="rounded-lg bg-black/20 border border-white/10 p-3 mt-3">
+                <p className="text-xs text-muted mb-1">Respuesta del equipo</p>
+                <p className="text-sm text-foreground whitespace-pre-wrap">
+                  {t.admin_reply}
+                </p>
               </div>
-              <p className="text-sm text-foreground">{t.message ?? "—"}</p>
-              {t.admin_reply && (
-                <div className="rounded-lg bg-black/20 border border-white/10 p-3">
-                  <p className="text-xs text-muted mb-1">Respuesta del equipo</p>
-                  <p className="text-sm text-foreground whitespace-pre-wrap">
-                    {t.admin_reply}
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+            )}
+          </div>
         ))}
       </div>
 
@@ -117,16 +123,17 @@ export function TicketsList({ tickets }: { tickets: Ticket[] }) {
         <p className="py-8 text-center text-muted">No hay tickets en esta pestaña.</p>
       )}
 
-      {/* FAB + Modal nuevo ticket */}
-      <div className="fixed bottom-6 right-6 z-40">
-        <Button
-          size="lg"
-          className="rounded-full shadow-lg bg-accent hover:bg-accent/90"
-          onClick={() => setOpenNew(true)}
-        >
-          + Nuevo Ticket
-        </Button>
-      </div>
+      {setControlledOpen === undefined && (
+        <div className="fixed bottom-6 right-6 z-40">
+          <Button
+            size="lg"
+            className="rounded-full shadow-lg bg-accent hover:bg-accent/90"
+            onClick={() => setOpenNew(true)}
+          >
+            + Nuevo Ticket
+          </Button>
+        </div>
+      )}
 
       {openNew && (
         <div
