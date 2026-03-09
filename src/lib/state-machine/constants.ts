@@ -57,6 +57,12 @@ export const PIPELINE_STATE_LABELS: { id: PipelineState; label: string }[] = [
   { id: "perdida", label: "Perdida" },
 ];
 
+/** Solo los 6 estados del tablero Preconsultoría (triage_leads) */
+export const PRECONSULTORIA_STATE_LABELS = PIPELINE_STATE_LABELS.slice(0, 6);
+
+/** Estados del tablero Consultoría (clients): desde esperando_concesion hasta perdida */
+export const CONSULTORIA_STATE_LABELS = PIPELINE_STATE_LABELS.slice(6);
+
 export const PHASES: { name: string; states: PipelineState[] }[] = [
   {
     name: "Captación y Triage",
