@@ -15,7 +15,6 @@ type TiptapEditorProps = {
 export function TiptapEditor({
   value,
   onChange,
-  placeholder = "Escribe aquí…",
   className = "",
 }: TiptapEditorProps) {
   const editor = useEditor({
@@ -29,7 +28,6 @@ export function TiptapEditor({
         class:
           "min-h-[160px] rounded-b-lg border border-t-0 border-white/20 bg-white/5 px-3 py-2 text-sm text-foreground outline-none prose prose-invert prose-sm max-w-none",
       },
-      placeholder,
     },
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());

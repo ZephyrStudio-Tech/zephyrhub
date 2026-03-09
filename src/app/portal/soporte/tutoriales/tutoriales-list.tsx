@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Image from "next/image";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -76,10 +77,12 @@ export function TutorialesList({
                 <Card className="border-white/10 bg-white/5 hover:bg-white/10 transition-colors h-full overflow-hidden">
                   <div className="relative h-48 w-full overflow-hidden">
                     {item.cover_image ? (
-                      <img
+                      <Image
                         src={item.cover_image}
                         alt=""
-                        className="h-full w-full object-cover"
+                        fill
+                        className="object-cover"
+                        unoptimized
                       />
                     ) : (
                       <div
@@ -116,10 +119,12 @@ export function TutorialesList({
               <Card className="border-white/10 bg-white/5 hover:bg-white/10 transition-colors h-full overflow-hidden">
                 <div className="relative h-48 w-full overflow-hidden">
                   {item.cover_image ? (
-                    <img
+                    <Image
                       src={item.cover_image}
                       alt=""
-                      className="h-full w-full object-cover"
+                      fill
+                      className="object-cover"
+                      unoptimized
                     />
                   ) : (
                     <div
