@@ -23,55 +23,32 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  // Refresh session (token rotation) on every request
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // IMPORTANTE: Esto refresca la cookie de sesión de Supabase
+  const { data: { user } } = await supabase.auth.getUser();
 
-  // Helper: redirect manteniendo las cookies de sesión (evita ERR_TOO_MANY_REDIRECTS)
-  const redirectWithCookies = (pathname: string) => {
-    const url = request.nextUrl.clone();
-    url.pathname = pathname;
-    const res = NextResponse.redirect(url);
-    response.cookies.getAll().forEach((c) => {
-      res.cookies.set(c.name, c.value);
-    });
-    return res;
-  };
-
-  // Redirigir /admin y /admin/* a /backoffice (una sola área con sidebar por rol)
+  // Redirigir /admin y /admin/* a /backoffice (los layouts decidirán por rol)
   if (request.nextUrl.pathname.startsWith("/admin")) {
-    const pathname = request.nextUrl.pathname.replace(/^\/admin/, "/backoffice") || "/backoffice";
-    return redirectWithCookies(pathname);
+    const url = request.nextUrl.clone();
+    url.pathname = request.nextUrl.pathname.replace(/^\/admin/, "/backoffice") || "/backoffice";
+    const res = NextResponse.redirect(url);
+    response.cookies.getAll().forEach((c) => res.cookies.set(c.name, c.value));
+    return res;
   }
 
+  // Si intenta acceder a una ruta privada sin estar logueado, al login.
   if (!user && isProtectedPath(request.nextUrl.pathname)) {
-    return redirectWithCookies("/login");
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    return NextResponse.redirect(url);
   }
 
+  // Si ya está logueado e intenta ir al login, lo mandamos al index protegido (el layout decidirá su destino final)
   if (user && request.nextUrl.pathname === "/login") {
-    const pathname = await getRedirectForUser(supabase, user.id);
-    return redirectWithCookies(pathname);
-  }
-
-  if (user && isProtectedPath(request.nextUrl.pathname)) {
-    const role = await getRole(supabase, user.id);
-    if (!role) {
-      return redirectWithCookies("/sin-perfil");
-    }
-    if (
-      request.nextUrl.pathname.startsWith("/backoffice") &&
-      !["consultor", "tecnico", "admin"].includes(role)
-    ) {
-      return redirectWithCookies("/portal");
-    }
-    if (
-      request.nextUrl.pathname.startsWith("/portal") &&
-      role !== "beneficiario" &&
-      role !== "admin"
-    ) {
-      return redirectWithCookies("/backoffice");
-    }
+    const url = request.nextUrl.clone();
+    url.pathname = "/portal"; // Ruta por defecto segura, los layouts harán la redirección final si es admin o consultor
+    const res = NextResponse.redirect(url);
+    response.cookies.getAll().forEach((c) => res.cookies.set(c.name, c.value));
+    return res;
   }
 
   return response;
@@ -83,31 +60,4 @@ function isProtectedPath(pathname: string) {
     pathname.startsWith("/backoffice") ||
     pathname.startsWith("/admin")
   );
-}
-
-async function getRole(
-  supabase: Awaited<ReturnType<typeof createServerClient>>,
-  userId: string
-) {
-  const { data } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", userId)
-    .single();
-  return data?.role ?? null;
-}
-
-async function getRedirectForUser(
-  supabase: Awaited<ReturnType<typeof createServerClient>>,
-  userId: string
-) {
-  const { data } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", userId)
-    .single();
-  const role = data?.role;
-  if (!role) return "/sin-perfil";
-  if (role === "beneficiario") return "/portal";
-  return "/backoffice";
 }
