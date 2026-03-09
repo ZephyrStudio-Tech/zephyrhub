@@ -13,6 +13,8 @@ const NAV = {
   admin: [
     { href: "/backoffice/preconsultoria", label: "Preconsultoría" },
     { href: "/backoffice/consultoria", label: "Consultoría" },
+    { href: "/backoffice/support", label: "Soporte" },
+    { href: "/backoffice/academy", label: "Academia" },
     { href: "/backoffice/tech", label: "Evidencias" },
     { href: "/backoffice/logs", label: "Logs" },
     { href: "/backoffice/assign", label: "Asignar consultores" },
@@ -20,6 +22,7 @@ const NAV = {
   consultor: [
     { href: "/backoffice/preconsultoria", label: "Preconsultoría" },
     { href: "/backoffice/consultoria", label: "Consultoría" },
+    { href: "/backoffice/support", label: "Soporte" },
   ],
   tecnico: [
     { href: "/backoffice/preconsultoria", label: "Preconsultoría" },

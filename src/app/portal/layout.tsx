@@ -40,7 +40,7 @@ export default async function PortalLayout({
               Acuerdos
             </Link>
             <Link
-              href="/portal/academy"
+              href="/portal/soporte"
               className="text-sm text-muted hover:text-foreground"
             >
               Formación
