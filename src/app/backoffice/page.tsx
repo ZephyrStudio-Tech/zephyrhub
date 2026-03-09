@@ -20,15 +20,27 @@ export default async function BackofficePage() {
 
   const { data: clients } = await query;
 
+  const clientCount = clients?.length ?? 0;
+
   return (
     <div className="space-y-8">
-      <h1 className="text-2xl font-bold">Pipeline</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">
+            Pipeline
+          </h1>
+          <p className="text-slate-500 text-sm mt-1">
+            Arrastra las tarjetas a otra columna para cambiar el estado del expediente.
+          </p>
+        </div>
+        <div className="flex items-center gap-2 text-sm text-slate-500 bg-slate-100 dark:bg-slate-800 px-4 py-2 rounded-xl">
+          <span className="font-semibold text-slate-700 dark:text-slate-200">
+            {clientCount}
+          </span>
+          expediente{clientCount !== 1 ? "s" : ""}
+        </div>
+      </div>
       <PipelineView clients={clients ?? []} phases={PHASES} />
-      <p className="text-sm text-muted">
-        Para activar vista Kanban con Drag &amp; Drop:{" "}
-        <code className="rounded bg-white/10 px-1">npm install @dnd-kit/core @dnd-kit/utilities</code> y añadir un
-        componente que use <code className="rounded bg-white/10 px-1">transitionClientState</code> al soltar en otra fase. Ver README.
-      </p>
     </div>
   );
 }
