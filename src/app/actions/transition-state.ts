@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { validateTransition } from "@/lib/state-machine/machine";
 import { revalidatePath } from "next/cache";
 
@@ -38,7 +38,8 @@ export async function transitionClientState(
     (role === "consultor" && client.consultant_id === user.id);
   if (!canChange) return { ok: false, error: "Sin permiso para cambiar estado" };
 
-  const { error: updateError } = await supabase
+  const supabaseAdmin = createAdminClient();
+  const { error: updateError } = await supabaseAdmin
     .from("clients")
     .update({
       current_state: toState,
@@ -48,14 +49,14 @@ export async function transitionClientState(
 
   if (updateError) return { ok: false, error: updateError.message };
 
-  await supabase.from("interactions").insert({
+  await supabaseAdmin.from("interactions").insert({
     client_id: clientId,
     actor_id: user.id,
     type: "state_change",
     metadata: { from: fromState, to: toState },
   });
 
-  await supabase.from("audit_logs").insert({
+  await supabaseAdmin.from("audit_logs").insert({
     actor_id: user.id,
     action: "state_change",
     entity_type: "client",

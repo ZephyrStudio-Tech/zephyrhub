@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
 export async function registerCallMissed(
@@ -12,8 +12,9 @@ export async function registerCallMissed(
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "No autenticado" };
 
+  const supabaseAdmin = createAdminClient();
   const now = new Date();
-  const { error: interactionErr } = await supabase.from("interactions").insert({
+  const { error: interactionErr } = await supabaseAdmin.from("interactions").insert({
     client_id: clientId,
     actor_id: user.id,
     type: "call_missed",
@@ -22,7 +23,7 @@ export async function registerCallMissed(
 
   if (interactionErr) return { ok: false, error: interactionErr.message };
 
-  const { data: interaction } = await supabase
+  const { data: interaction } = await supabaseAdmin
     .from("interactions")
     .select("id")
     .eq("client_id", clientId)
@@ -34,13 +35,13 @@ export async function registerCallMissed(
 
   const message = `Intentamos contactar contigo el ${now.toLocaleDateString("es")} a las ${now.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" })}. Por favor revisa el email o avísanos.`;
 
-  await supabase.from("alerts").insert({
+  await supabaseAdmin.from("alerts").insert({
     client_id: clientId,
     message,
     interaction_id: interaction?.id ?? null,
   });
 
-  await supabase.from("audit_logs").insert({
+  await supabaseAdmin.from("audit_logs").insert({
     actor_id: user.id,
     action: "call_missed",
     entity_type: "client",
@@ -62,7 +63,8 @@ export async function registerCallSuccess(
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "No autenticado" };
 
-  const { error } = await supabase.from("interactions").insert({
+  const supabaseAdmin = createAdminClient();
+  const { error } = await supabaseAdmin.from("interactions").insert({
     client_id: clientId,
     actor_id: user.id,
     type: "call_success",
@@ -71,7 +73,7 @@ export async function registerCallSuccess(
 
   if (error) return { ok: false, error: error.message };
 
-  await supabase.from("audit_logs").insert({
+  await supabaseAdmin.from("audit_logs").insert({
     actor_id: user.id,
     action: "call_success",
     entity_type: "client",

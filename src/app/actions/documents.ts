@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
 export async function approveDocument(
@@ -20,7 +20,8 @@ export async function approveDocument(
 
   if (fetchErr || !doc) return { ok: false, error: "Documento no encontrado" };
 
-  const { error: updateErr } = await supabase
+  const supabaseAdmin = createAdminClient();
+  const { error: updateErr } = await supabaseAdmin
     .from("documents")
     .update({
       status: "approved",
@@ -32,14 +33,14 @@ export async function approveDocument(
 
   if (updateErr) return { ok: false, error: updateErr.message };
 
-  await supabase.from("interactions").insert({
+  await supabaseAdmin.from("interactions").insert({
     client_id: doc.client_id,
     actor_id: user.id,
     type: "document_approved",
     metadata: { document_id: documentId },
   });
 
-  await supabase.from("audit_logs").insert({
+  await supabaseAdmin.from("audit_logs").insert({
     actor_id: user.id,
     action: "document_approved",
     entity_type: "document",
@@ -70,7 +71,8 @@ export async function rejectDocument(
 
   if (fetchErr || !doc) return { ok: false, error: "Documento no encontrado" };
 
-  const { error: updateErr } = await supabase
+  const supabaseAdmin = createAdminClient();
+  const { error: updateErr } = await supabaseAdmin
     .from("documents")
     .update({
       status: "rejected",
@@ -82,14 +84,14 @@ export async function rejectDocument(
 
   if (updateErr) return { ok: false, error: updateErr.message };
 
-  await supabase.from("interactions").insert({
+  await supabaseAdmin.from("interactions").insert({
     client_id: doc.client_id,
     actor_id: user.id,
     type: "document_rejected",
     metadata: { document_id: documentId, reason },
   });
 
-  await supabase.from("audit_logs").insert({
+  await supabaseAdmin.from("audit_logs").insert({
     actor_id: user.id,
     action: "document_rejected",
     entity_type: "document",
