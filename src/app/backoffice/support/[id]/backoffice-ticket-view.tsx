@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { addTicketMessage, updateTicketStatus } from "@/app/actions/help-center";
+import { createClient } from "@/lib/supabase/client";
 
 type Ticket = {
   id: string;
@@ -48,7 +49,7 @@ function statusBadge(status: string | null | undefined) {
 
 export function BackofficeTicketView({
   ticket,
-  messages,
+  messages: initialMessages,
 }: {
   ticket: Ticket;
   messages: TicketMessage[];
@@ -57,8 +58,7 @@ export function BackofficeTicketView({
   const [status, setStatus] = useState(ticket.status ?? "abierto");
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-
-  const timeline = useMemo(() => {
+  const [messages, setMessages] = useState<TicketMessage[]>(() => {
     const initial: TicketMessage = {
       id: "initial",
       ticket_id: ticket.id,
@@ -67,8 +67,88 @@ export function BackofficeTicketView({
       sender_role: "cliente",
       created_at: ticket.created_at,
     };
-    return [initial, ...(messages ?? [])];
-  }, [messages, ticket.created_at, ticket.id, ticket.message]);
+    return [initial, ...(initialMessages ?? [])];
+  });
+  const bottomRef = useRef<HTMLDivElement | null>(null);
+
+  // Re-sync si se navega entre tickets sin recargar app.
+  useEffect(() => {
+    const initial: TicketMessage = {
+      id: "initial",
+      ticket_id: ticket.id,
+      message: ticket.message ?? "—",
+      attachment_url: null,
+      sender_role: "cliente",
+      created_at: ticket.created_at,
+    };
+    setStatus(ticket.status ?? "abierto");
+    setMessages([initial, ...(initialMessages ?? [])]);
+  }, [ticket.id, ticket.message, ticket.created_at, ticket.status, initialMessages]);
+
+  // Supabase Realtime: nuevos mensajes + cambios de estado.
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`ticket-backoffice-${ticket.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "ticket_messages",
+          filter: `ticket_id=eq.${ticket.id}`,
+        },
+        (payload) => {
+          const newMessage = payload.new as TicketMessage;
+          setMessages((prev) => {
+            // Si ya tenemos el mensaje real por ID, no hacemos nada.
+            if (prev.some((m) => m.id === newMessage.id)) return prev;
+
+            // Intentar sustituir un mensaje optimista temporal que coincida.
+            const tempIndex = prev.findIndex(
+              (m) =>
+                m.id.startsWith("temp-") &&
+                m.message === newMessage.message &&
+                (m.sender_role ?? "").toLowerCase() ===
+                  (newMessage.sender_role ?? "").toLowerCase()
+            );
+
+            if (tempIndex !== -1) {
+              const copy = [...prev];
+              copy[tempIndex] = newMessage;
+              return copy;
+            }
+
+            return [...prev, newMessage];
+          });
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "support_requests",
+          filter: `id=eq.${ticket.id}`,
+        },
+        (payload) => {
+          const nextStatus = (payload.new as { status?: string | null }).status;
+          if (nextStatus) setStatus(nextStatus);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [ticket.id]);
+
+  // Scroll automático al último mensaje.
+  useEffect(() => {
+    if (bottomRef.current) {
+      bottomRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
+    }
+  }, [messages.length]);
 
   return (
     <div className="space-y-6">
@@ -122,7 +202,7 @@ export function BackofficeTicketView({
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {timeline.map((m) => {
+            {messages.map((m) => {
               const isClient = (m.sender_role ?? "").toLowerCase() === "cliente";
               return (
                 <div
@@ -158,6 +238,8 @@ export function BackofficeTicketView({
             )}
           </div>
 
+          <div ref={bottomRef} />
+
           <div className="mt-6 border-t border-gray-200 pt-4">
             <div className="flex gap-2">
               <textarea
@@ -173,6 +255,20 @@ export function BackofficeTicketView({
                 onClick={() => {
                   const msg = text.trim();
                   if (!msg) return;
+                  const tempId = `temp-${Date.now()}`;
+                  const optimistic: TicketMessage = {
+                    id: tempId,
+                    ticket_id: ticket.id,
+                    message: msg,
+                    attachment_url: null,
+                    sender_role: "soporte",
+                    created_at: new Date().toISOString(),
+                  };
+
+                  // Optimistic UI: añadimos el mensaje al instante.
+                  setMessages((prev) => [...prev, optimistic]);
+                  setText("");
+
                   startTransition(async () => {
                     setError(null);
                     const res = await addTicketMessage({
@@ -181,10 +277,14 @@ export function BackofficeTicketView({
                       isClient: false,
                     });
                     if (!res.ok) {
-                      setError(res.error ?? "No se pudo enviar el mensaje.");
-                      return;
+                      // Rollback: eliminamos el mensaje temporal.
+                      setMessages((prev) => prev.filter((m) => m.id !== tempId));
+                      const message = res.error ?? "No se pudo enviar el mensaje.";
+                      setError(message);
+                      if (typeof window !== "undefined") {
+                        window.alert(message);
+                      }
                     }
-                    setText("");
                   });
                 }}
               >
