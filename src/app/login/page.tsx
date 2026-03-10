@@ -59,7 +59,7 @@ export default function LoginPage() {
     <div className="flex h-screen w-full overflow-hidden bg-white">
       {/* Left Panel - Brand */}
       <div
-        className={`flex flex-col items-center justify-center p-8 bg-brand-500 text-white transition-all duration-[900ms] ease-in-out ${
+        className={`flex flex-col items-center justify-center p-8 bg-white border-r border-gray-200 transition-all duration-[900ms] ease-in-out ${
           isSplit ? "w-0 md:w-[40%] opacity-0 md:opacity-100" : "w-full"
         }`}
       >
@@ -70,19 +70,18 @@ export default function LoginPage() {
               alt="ZephyrHub"
               className="h-12 w-auto mb-8 mx-auto"
             />
-            <h1 className="text-5xl font-bold mb-6 leading-tight">
-              El centro de operaciones B2B
+            <h1 className="text-5xl font-bold mb-6 leading-tight text-gray-900">
+              ZephyrOS
             </h1>
-            <p className="text-lg mb-12 text-white/80">
-              Gestión completa del Kit Digital para consultores y empresas
+            <p className="text-lg mb-12 text-gray-500">
+              Centro de operaciones integral para consultores y empresas
             </p>
             <Button
               onClick={() => setIsSplit(true)}
-              variant="outline"
               size="lg"
-              className="w-full border-white text-black hover:bg-white/20 hover:text-white"
+              className="w-full"
             >
-              Acceder a mi cuenta →
+              Iniciar sesión
             </Button>
           </div>
         )}
@@ -90,7 +89,7 @@ export default function LoginPage() {
 
       {/* Right Panel - Form */}
       <div
-        className={`flex flex-col items-center justify-center flex-1 p-8 transition-all duration-[900ms] ease-in-out ${
+        className={`flex flex-col items-center justify-center flex-1 p-8 bg-gray-50 transition-all duration-[900ms] ease-in-out ${
           isSplit ? "w-full opacity-100" : "w-0 opacity-0"
         }`}
       >
@@ -98,18 +97,13 @@ export default function LoginPage() {
           <div className="w-full max-w-md">
             <Card>
               <CardHeader>
-                <img
-                  src={LOGO_URL}
-                  alt="ZephyrHub"
-                  className="h-8 w-auto mb-4"
-                />
-                <CardTitle className="text-2xl text-gray-900">ZephyrHub</CardTitle>
-                <CardDescription>Iniciar sesión en tu cuenta</CardDescription>
+                <CardTitle className="text-2xl text-gray-900">ZephyrOS</CardTitle>
+                <CardDescription>Iniciar sesión</CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
-                    <label htmlFor="email" className="text-sm text-muted mb-2 block">
+                    <label htmlFor="email" className="text-sm text-gray-600 mb-2 block">
                       Email
                     </label>
                     <Input
@@ -122,7 +116,7 @@ export default function LoginPage() {
                     />
                   </div>
                   <div>
-                    <label htmlFor="password" className="text-sm text-muted mb-2 block">
+                    <label htmlFor="password" className="text-sm text-gray-600 mb-2 block">
                       Contraseña
                     </label>
                     <Input
@@ -140,14 +134,15 @@ export default function LoginPage() {
                     {loading ? "Entrando…" : "Entrar"}
                   </Button>
                 </form>
-                <button
-                  onClick={() => setIsSplit(false)}
-                  className="w-full mt-6 text-sm text-gray-500 hover:text-gray-700 transition-colors"
-                >
-                  ← Volver a la presentación
-                </button>
               </CardContent>
             </Card>
+            <Button
+              variant="ghost"
+              className="w-full mt-4"
+              onClick={() => setIsSplit(false)}
+            >
+              ← Volver al inicio
+            </Button>
           </div>
         )}
       </div>
