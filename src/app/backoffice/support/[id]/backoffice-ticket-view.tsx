@@ -71,19 +71,46 @@ export function BackofficeTicketView({
   });
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
-  // Re-sync si se navega entre tickets sin recargar app.
+  // Sincronizar el estado local con los datos frescos del servidor tras un router.refresh()
   useEffect(() => {
-    const initial: TicketMessage = {
-      id: "initial",
-      ticket_id: ticket.id,
-      message: ticket.message ?? "—",
-      attachment_url: null,
-      sender_role: "cliente",
-      created_at: ticket.created_at,
-    };
+    const base: TicketMessage[] = [
+      {
+        id: "initial",
+        ticket_id: ticket.id,
+        message: ticket.message ?? "—",
+        attachment_url: null,
+        sender_role: "cliente",
+        created_at: ticket.created_at,
+      },
+      ...(initialMessages ?? []),
+    ];
+
+    setMessages((prev) => {
+      const temps = prev.filter((m) => m.id.startsWith("temp-"));
+      const merged = [...base];
+
+      temps.forEach((t) => {
+        if (
+          !merged.some(
+            (m) =>
+              m.message === t.message &&
+              (m.sender_role ?? "").toLowerCase() ===
+                (t.sender_role ?? "").toLowerCase()
+          )
+        ) {
+          merged.push(t);
+        }
+      });
+
+      return merged.sort(
+        (a, b) =>
+          new Date(a.created_at).getTime() -
+          new Date(b.created_at).getTime()
+      );
+    });
+
     setStatus(ticket.status ?? "abierto");
-    setMessages([initial, ...(initialMessages ?? [])]);
-  }, [ticket.id, ticket.message, ticket.created_at, ticket.status, initialMessages]);
+  }, [initialMessages, ticket.status, ticket.id, ticket.message, ticket.created_at]);
 
   // Supabase Realtime: nuevos mensajes + cambios de estado.
   useEffect(() => {
@@ -104,22 +131,22 @@ export function BackofficeTicketView({
             // Si ya tenemos el mensaje real por ID, no hacemos nada.
             if (prev.some((m) => m.id === newMessage.id)) return prev;
 
-            // Intentar sustituir un mensaje optimista temporal que coincida.
-            const tempIndex = prev.findIndex(
+            // Si existe un mensaje temporal idéntico, lo descartamos a favor del real.
+            const filtered = prev.filter(
               (m) =>
-                m.id.startsWith("temp-") &&
-                m.message === newMessage.message &&
-                (m.sender_role ?? "").toLowerCase() ===
-                  (newMessage.sender_role ?? "").toLowerCase()
+                !(
+                  m.id.startsWith("temp-") &&
+                  m.message === newMessage.message &&
+                  (m.sender_role ?? "").toLowerCase() ===
+                    (newMessage.sender_role ?? "").toLowerCase()
+                )
             );
 
-            if (tempIndex !== -1) {
-              const copy = [...prev];
-              copy[tempIndex] = newMessage;
-              return copy;
-            }
-
-            return [...prev, newMessage];
+            return [...filtered, newMessage].sort(
+              (a, b) =>
+                new Date(a.created_at).getTime() -
+                new Date(b.created_at).getTime()
+            );
           });
         }
       )
