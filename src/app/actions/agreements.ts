@@ -1,7 +1,8 @@
 "use server";
 
 import type React from "react";
-import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
+import { requireServerAuth } from "@/lib/auth";
 import { getAgreementTemplate } from "@/lib/service-config";
 import type { ServiceType } from "@/lib/service-config";
 import { revalidatePath } from "next/cache";
@@ -9,12 +10,12 @@ import { revalidatePath } from "next/cache";
 export async function generateAgreement(
   clientId: string
 ): Promise<{ ok: boolean; error?: string; path?: string }> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "No autenticado" };
+  const auth = await requireServerAuth(["admin", "consultor"]);
+  if (auth.error) return { ok: false, error: auth.error };
 
+  const { user, role, supabaseAdmin } = auth;
+
+  const supabase = await createClient();
   const { data: client, error: clientErr } = await supabase
     .from("clients")
     .select("id, company_name, service_type, consultant_id")
@@ -24,15 +25,10 @@ export async function generateAgreement(
   if (clientErr || !client)
     return { ok: false, error: "Cliente no encontrado" };
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  const canDo =
-    profile?.role === "admin" ||
-    (profile?.role === "consultor" && client.consultant_id === user.id);
-  if (!canDo) return { ok: false, error: "Sin permiso" };
+  // Business logic: consultores can only access their own clients
+  if (role === "consultor" && client.consultant_id !== user.id) {
+    return { ok: false, error: "Sin permiso" };
+  }
 
   const companyName = client.company_name || "Cliente";
   const serviceType = (client.service_type as ServiceType) ?? "web";
@@ -56,7 +52,6 @@ export async function generateAgreement(
     };
   }
 
-  const supabaseAdmin = createAdminClient();
   const path = `${clientId}/acuerdo_${Date.now()}.pdf`;
   const { error: uploadErr } = await supabaseAdmin.storage
     .from("documents")

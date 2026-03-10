@@ -2,6 +2,7 @@
   "name": "zephyros",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@9.15.0",
   "engines": {
     "node": ">=20.x"
   },
@@ -19,31 +20,38 @@
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.47.10",
     "@tanstack/react-query": "^5.62.2",
-    "@tiptap/extension-link": "latest",
-    "@tiptap/pm": "latest",
-    "@tiptap/react": "latest",
-    "@tiptap/starter-kit": "latest",
+    "@tiptap/extension-link": "^3.20.1",
+    "@tiptap/pm": "^3.20.1",
+    "@tiptap/react": "^3.20.1",
+    "@tiptap/starter-kit": "^3.20.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.577.0",
     "next": "15.0.5",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.54.2",
     "react-pdf": "^9.2.0",
-    "resend": "latest",
+    "resend": "^4.0.0",
     "xstate": "^5.21.0",
-    "clsx": "^2.1.1",
     "zod": "^3.24.1",
     "zustand": "^5.0.2"
   },
+  "pnpm": {
+    "overrides": {
+      "@swc/helpers": "^0.5.15"
+    }
+  },
   "devDependencies": {
-    "@tailwindcss/typography": "latest",
+    "@swc/helpers": "^0.5.15",
+    "@tailwindcss/typography": "^0.5.15",
     "@types/node": "^22.10.1",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "eslint": "^9.16.0",
     "eslint-config-next": "15.0.5",
     "postcss": "^8.4.49",
-    "tailwindcss-animate": "^1.0.7",
     "tailwindcss": "^3.4.16",
+    "tailwindcss-animate": "^1.0.7",
     "typescript": "^5.7.2"
   }
 }

@@ -2,6 +2,7 @@
 
 import { Resend } from "resend";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { requireServerAuth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
 const PRECONSULTORIA_STATES = [
@@ -40,27 +41,15 @@ export async function updateTriageLeadState(
   leadId: string,
   toState: string
 ): Promise<{ ok: boolean; error?: string }> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "No autenticado" };
+  const auth = await requireServerAuth(["consultor", "tecnico", "admin"]);
+  if (auth.error) return { ok: false, error: auth.error };
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  const role = profile?.role;
-  if (!["consultor", "tecnico", "admin"].includes(role ?? "")) {
-    return { ok: false, error: "Sin permiso" };
-  }
+  const { supabaseAdmin } = auth;
 
   if (!PRECONSULTORIA_STATES.includes(toState as (typeof PRECONSULTORIA_STATES)[number])) {
     return { ok: false, error: "Estado no válido para preconsultoría" };
   }
 
-  const supabaseAdmin = createAdminClient();
   const { error } = await supabaseAdmin
     .from("triage_leads")
     .update({ current_state: toState })
@@ -78,24 +67,12 @@ export async function updateTriageLeadState(
 export async function moveToConsultoria(
   leadId: string
 ): Promise<{ ok: boolean; error?: string; password?: string }> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "No autenticado" };
+  const auth = await requireServerAuth(["consultor", "tecnico", "admin"]);
+  if (auth.error) return { ok: false, error: auth.error };
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  const role = profile?.role;
-  if (!["consultor", "tecnico", "admin"].includes(role ?? "")) {
-    return { ok: false, error: "Sin permiso" };
-  }
+  const { user, supabaseAdmin } = auth;
 
   const resend = new Resend(process.env.RESEND_API_KEY);
-  const supabaseAdmin = createAdminClient();
   const { data: lead, error: leadErr } = await supabaseAdmin
     .from("triage_leads")
     .select(
@@ -378,60 +355,13 @@ export async function moveToConsultoria(
       <table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="width:100%;">
         <tbody>
           <tr>
-            <td style="direction:ltr;font-size:0px;padding:12px 16px 28px 16px;text-align:center;">
-              <div class="mj-column-per-100 mj-outlook-group-fix" style="font-size:0px;text-align:left;direction:ltr;display:inline-block;vertical-align:top;width:100%;">
+            <td style="direction:ltr;font-size:0px;padding:24px 16px 0px 16px;text-align:center;">
+              <div class="mj-column-per-100 mj-outlook-group-fix" style="font-size:0px;text-align:center;direction:ltr;display:inline-block;vertical-align:top;width:100%;">
                 <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="vertical-align:top;" width="100%">
                   <tbody>
                     <tr>
                       <td align="center" style="font-size:0px;padding:0;word-break:break-word;">
-                        <div style="font-family:-apple-system, 'Helvetica Neue', Arial, sans-serif;font-size:14px;font-weight:400;line-height:1.65;text-align:center;color:#94a3b8;"><span class="micro"> 100% digital <span class="micro-dot"></span> Bóveda Segura <span class="micro-dot"></span> Soporte Integrado </span></div>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <div style="margin:0px auto;max-width:600px;">
-      <table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="width:100%;">
-        <tbody>
-          <tr>
-            <td style="direction:ltr;font-size:0px;padding:0 16px 24px 16px;text-align:center;">
-              <div class="mj-column-per-100 mj-outlook-group-fix" style="font-size:0px;text-align:left;direction:ltr;display:inline-block;vertical-align:top;width:100%;">
-                <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="vertical-align:top;" width="100%">
-                  <tbody>
-                    <tr>
-                      <td align="center" style="font-size:0px;padding:0;word-break:break-word;">
-                        <p style="border-top:solid 1px #1e293b;font-size:1px;margin:0px auto;width:100%;">
-                        </p>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <div style="margin:0px auto;max-width:600px;">
-      <table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="width:100%;">
-        <tbody>
-          <tr>
-            <td style="direction:ltr;font-size:0px;padding:0 16px 40px 16px;text-align:center;">
-              <div class="mj-column-per-100 mj-outlook-group-fix" style="font-size:0px;text-align:left;direction:ltr;display:inline-block;vertical-align:top;width:100%;">
-                <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="vertical-align:top;" width="100%">
-                  <tbody>
-                    <tr>
-                      <td align="center" style="font-size:0px;padding:0;word-break:break-word;">
-                        <div style="font-family:-apple-system, 'Helvetica Neue', Arial, sans-serif;font-size:14px;font-weight:400;line-height:1.65;text-align:center;color:#94a3b8;"><span class="footer-brand">ZephyrStudio © 2026</span><br />
-                          <span class="footer-partner">Partner: Portalclub International SLU</span><br />
-                        </div>
+                        <div style="font-family:-apple-system, 'Helvetica Neue', Arial, sans-serif;font-size:11px;font-weight:400;line-height:1.5;text-align:center;color:#475569;"><span class="micro">© 2024 ZephyrStudio. Todos los derechos reservados.</span> <span class="micro-dot"></span> <span class="micro"><a href="https://www.kitdigitalzephyrstudio.es/privacidad" style="color: #475569; text-decoration: none;">Aviso de Privacidad</a></span></div>
                       </td>
                     </tr>
                   </tbody>
@@ -447,20 +377,13 @@ export async function moveToConsultoria(
 </html>
         `,
       });
-    } catch (error) {
-      console.error("Error enviando email con Resend:", error);
+    } catch (emailErr) {
+      console.error("[v0] Email sending failed:", emailErr);
+      // No retornamos error, el flujo continúa
     }
   }
 
-  const { error: updateLeadErr } = await supabaseAdmin
-    .from("triage_leads")
-    .update({ status: "completed" })
-    .eq("id", leadId);
-
-  if (updateLeadErr) return { ok: false, error: updateLeadErr.message };
-
   revalidatePath("/backoffice/preconsultoria");
-  revalidatePath("/backoffice/consultoria");
   return { ok: true, password };
 }
 
@@ -470,21 +393,11 @@ export async function moveToConsultoria(
 export async function rejectLead(
   leadId: string
 ): Promise<{ ok: boolean; error?: string }> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "No autenticado" };
+  const auth = await requireServerAuth(["consultor", "tecnico", "admin"]);
+  if (auth.error) return { ok: false, error: auth.error };
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  const role = profile?.role;
-  if (!["consultor", "tecnico", "admin"].includes(role ?? "")) {
-    return { ok: false, error: "Sin permiso para rechazar leads" };
-  }
+  const { supabaseAdmin } = auth;
+  const supabase = await createClient();
 
   const { data: lead, error: fetchErr } = await supabase
     .from("triage_leads")
@@ -497,7 +410,6 @@ export async function rejectLead(
     return { ok: false, error: "Lead no encontrado o ya procesado" };
   }
 
-  const supabaseAdmin = createAdminClient();
   const { error: updateErr } = await supabaseAdmin
     .from("triage_leads")
     .update({ status: "rejected" })

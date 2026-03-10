@@ -1,17 +1,13 @@
 "use server";
 
 import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { requireServerAuth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
 export async function approveDocument(
   documentId: string
 ): Promise<{ ok: boolean; error?: string }> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "No autenticado" };
-
   const { data: doc, error: fetchErr } = await supabase
     .from("documents")
     .select("id, client_id")
@@ -20,7 +16,11 @@ export async function approveDocument(
 
   if (fetchErr || !doc) return { ok: false, error: "Documento no encontrado" };
 
-  const supabaseAdmin = createAdminClient();
+  const auth = await requireServerAuth(["admin", "tecnico"]);
+  if (auth.error) return { ok: false, error: auth.error };
+
+  const { user, supabaseAdmin } = auth;
+
   const { error: updateErr } = await supabaseAdmin
     .from("documents")
     .update({
@@ -58,11 +58,6 @@ export async function rejectDocument(
   reason: string
 ): Promise<{ ok: boolean; error?: string }> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "No autenticado" };
-
   const { data: doc, error: fetchErr } = await supabase
     .from("documents")
     .select("id, client_id")
@@ -71,7 +66,11 @@ export async function rejectDocument(
 
   if (fetchErr || !doc) return { ok: false, error: "Documento no encontrado" };
 
-  const supabaseAdmin = createAdminClient();
+  const auth = await requireServerAuth(["admin", "tecnico"]);
+  if (auth.error) return { ok: false, error: auth.error };
+
+  const { user, supabaseAdmin } = auth;
+
   const { error: updateErr } = await supabaseAdmin
     .from("documents")
     .update({
