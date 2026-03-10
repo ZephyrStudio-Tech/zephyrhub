@@ -29,7 +29,7 @@ export default async function PortalSoportePage() {
     <div className="space-y-12">
       {/* Hero */}
       <div className="max-w-2xl mx-auto text-center space-y-6">
-        <h1 className="text-4xl md:text-5xl font-bold text-foreground">
+        <h1 className="text-4xl md:text-5xl font-bold text-gray-900">
           Hola, ¿cómo podemos ayudarte?
         </h1>
         <form
@@ -41,7 +41,7 @@ export default async function PortalSoportePage() {
             type="search"
             name="q"
             placeholder="Buscar en base de conocimientos..."
-            className="flex-1 h-12 text-base bg-white/5 border-white/10 text-foreground placeholder:text-muted rounded-xl"
+            className="flex-1 h-12 text-base"
           />
           <Button type="submit" variant="secondary" size="lg" className="rounded-xl">
             Buscar
@@ -52,28 +52,28 @@ export default async function PortalSoportePage() {
       {/* Cards de acceso */}
       <div className="grid gap-4 sm:grid-cols-2 max-w-4xl mx-auto">
         <Link href="/portal/soporte/tutoriales">
-          <Card className="border-white/10 bg-white/5 hover:bg-white/10 transition-colors h-full">
+          <Card className="transition-colors h-full hover:shadow-md">
             <CardHeader>
-              <CardTitle className="text-foreground text-lg">
+              <CardTitle className="text-lg">
                 Base de conocimientos
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted">
+              <p className="text-sm text-gray-500">
                 Videotutoriales y guías para resolver dudas frecuentes.
               </p>
             </CardContent>
           </Card>
         </Link>
         <Link href="/portal/soporte/tickets">
-          <Card className="border-white/10 bg-white/5 hover:bg-white/10 transition-colors h-full">
+          <Card className="transition-colors h-full hover:shadow-md">
             <CardHeader>
-              <CardTitle className="text-foreground text-lg">
+              <CardTitle className="text-lg">
                 Mis Tickets de Soporte
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted">
+              <p className="text-sm text-gray-500">
                 Revisa el estado de tus consultas y abre nuevos tickets.
               </p>
             </CardContent>
@@ -84,7 +84,7 @@ export default async function PortalSoportePage() {
       {/* Últimos artículos (Blogs) */}
       {latestArticles && latestArticles.length > 0 && (
         <div>
-          <h2 className="text-xl font-semibold text-foreground mb-4">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">
             Últimos artículos
           </h2>
           <div className="grid gap-4 sm:grid-cols-3">
@@ -93,7 +93,7 @@ export default async function PortalSoportePage() {
                 key={article.id}
                 href={`/portal/soporte/tutoriales?q=${encodeURIComponent(article.title ?? "")}`}
               >
-                <Card className="border-white/10 bg-white/5 hover:bg-white/10 transition-colors h-full overflow-hidden">
+                <Card className="transition-colors h-full overflow-hidden hover:shadow-md">
                   <div className="relative h-32 w-full overflow-hidden">
                     {article.cover_image ? (
                       <Image
@@ -105,18 +105,18 @@ export default async function PortalSoportePage() {
                       />
                     ) : (
                       <div
-                        className="h-full w-full bg-gradient-to-br from-slate-800/80 to-slate-900/80"
+                        className="h-full w-full bg-gradient-to-br from-gray-100 to-gray-200"
                         aria-hidden
                       />
                     )}
                   </div>
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-foreground text-base line-clamp-2">
+                    <CardTitle className="text-base line-clamp-2">
                       {article.title ?? "Sin título"}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-sm text-muted line-clamp-2">
+                    <p className="text-sm text-gray-500 line-clamp-2">
                       {article.description ?? "—"}
                     </p>
                   </CardContent>
@@ -130,24 +130,24 @@ export default async function PortalSoportePage() {
       {/* Mis tickets recientes - lista simple */}
       {recentTickets && recentTickets.length > 0 && (
         <div>
-          <h2 className="text-xl font-semibold text-foreground mb-4">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">
             Mis tickets recientes
           </h2>
-          <ul className="divide-y divide-white/5 border-y border-white/5">
+          <ul className="divide-y divide-gray-100 border-y border-gray-100">
             {recentTickets.map((t) => (
               <li
                 key={t.id}
                 className="flex items-center justify-between py-4 first:pt-0"
               >
-                <span className="text-sm text-foreground truncate flex-1 mr-4">
+                <span className="text-sm text-gray-700 truncate flex-1 mr-4">
                   {t.category} · {t.message?.slice(0, 60) ?? "—"}
                   {t.message && t.message.length > 60 ? "…" : ""}
                 </span>
                 <span
                   className={
                     (t.status?.toLowerCase() ?? "") === "resuelto"
-                      ? "text-xs px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 shrink-0"
-                      : "text-xs px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30 shrink-0"
+                      ? "text-xs px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0"
+                      : "text-xs px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 shrink-0"
                   }
                 >
                   {t.status ?? "abierto"}
