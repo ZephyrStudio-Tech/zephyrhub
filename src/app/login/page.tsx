@@ -59,9 +59,8 @@ export default function LoginPage() {
     <div className="flex h-screen w-full overflow-hidden bg-white">
       {/* Left Panel - Brand */}
       <div
-        className={`flex flex-col items-center justify-center p-8 bg-white border-r border-gray-200 transition-all duration-[900ms] ease-in-out ${
-          isSplit ? "w-0 md:w-[40%] opacity-0 md:opacity-100" : "w-full"
-        }`}
+        className={`flex flex-col items-center justify-center p-8 bg-white border-r border-gray-200 transition-all duration-[900ms] ease-in-out ${isSplit ? "w-0 md:w-[40%] opacity-0 md:opacity-100" : "w-full"
+          }`}
       >
         {!isSplit && (
           <div className="max-w-md text-center">
@@ -71,7 +70,7 @@ export default function LoginPage() {
               className="h-12 w-auto mb-8 mx-auto"
             />
             <h1 className="text-5xl font-bold mb-6 leading-tight text-gray-900">
-              ZephyrOS
+              ZephyrHUB
             </h1>
             <p className="text-lg mb-12 text-gray-500">
               Centro de operaciones integral para consultores y empresas
@@ -89,15 +88,14 @@ export default function LoginPage() {
 
       {/* Right Panel - Form */}
       <div
-        className={`flex flex-col items-center justify-center flex-1 p-8 bg-gray-50 transition-all duration-[900ms] ease-in-out ${
-          isSplit ? "w-full opacity-100" : "w-0 opacity-0"
-        }`}
+        className={`flex flex-col items-center justify-center flex-1 p-8 bg-gray-50 transition-all duration-[900ms] ease-in-out ${isSplit ? "w-full opacity-100" : "w-0 opacity-0"
+          }`}
       >
         {isSplit && (
           <div className="w-full max-w-md">
             <Card>
               <CardHeader>
-                <CardTitle className="text-2xl text-gray-900">ZephyrOS</CardTitle>
+                <CardTitle className="text-2xl text-gray-900">ZephyrHUB</CardTitle>
                 <CardDescription>Iniciar sesión</CardDescription>
               </CardHeader>
               <CardContent>
