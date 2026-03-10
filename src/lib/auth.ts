@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { cache } from "react";
 
 export type AppRole = "beneficiario" | "consultor" | "tecnico" | "admin";
@@ -20,3 +20,28 @@ export const getSession = cache(async () => {
     role: (profile?.role as AppRole) ?? null,
   };
 });
+
+/**
+ * Valida autenticación y autorización en una sola llamada.
+ * Devuelve usuario, rol y cliente admin de Supabase si todo es correcto.
+ * Caso contrario, devuelve un objeto con error.
+ */
+export async function requireServerAuth(allowedRoles?: AppRole[]) {
+  const { user, role } = await getSession();
+
+  if (!user) {
+    return { error: "No autenticado" };
+  }
+
+  if (allowedRoles && !allowedRoles.includes(role as AppRole)) {
+    return { error: "Sin permiso" };
+  }
+
+  const supabaseAdmin = createAdminClient();
+
+  return {
+    user,
+    role: role as AppRole,
+    supabaseAdmin,
+  };
+}

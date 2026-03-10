@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { requireServerAuth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
 function slugify(text: string): string {
@@ -51,23 +52,11 @@ export async function replyTicket(
   ticketId: string,
   reply: string
 ): Promise<{ ok: boolean; error?: string }> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "No autenticado" };
+  const auth = await requireServerAuth(["consultor", "admin"]);
+  if (auth.error) return { ok: false, error: auth.error };
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  const role = profile?.role;
-  if (!["consultor", "admin"].includes(role ?? "")) {
-    return { ok: false, error: "Sin permiso" };
-  }
+  const { supabaseAdmin } = auth;
 
-  const supabaseAdmin = createAdminClient();
   const { error } = await supabaseAdmin
     .from("support_requests")
     .update({
@@ -94,25 +83,14 @@ export async function createTutorial(data: {
   content_body?: string;
   cover_image?: string;
 }): Promise<{ ok: boolean; error?: string }> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "No autenticado" };
+  const auth = await requireServerAuth(["admin"]);
+  if (auth.error) return { ok: false, error: auth.error };
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  if (profile?.role !== "admin") {
-    return { ok: false, error: "Solo administradores" };
-  }
+  const { supabaseAdmin } = auth;
 
   const slug =
     slugify(data.title) + "-" + Date.now().toString(36);
 
-  const supabaseAdmin = createAdminClient();
   const { error } = await supabaseAdmin.from("academy_content").insert({
     title: data.title,
     slug,
@@ -180,23 +158,11 @@ export async function updateTicketStatus(
   ticketId: string,
   status: string
 ): Promise<{ ok: boolean; error?: string }> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "No autenticado" };
+  const auth = await requireServerAuth(["consultor", "admin"]);
+  if (auth.error) return { ok: false, error: auth.error };
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  const role = profile?.role;
-  if (!["consultor", "admin"].includes(role ?? "")) {
-    return { ok: false, error: "Sin permiso" };
-  }
+  const { supabaseAdmin } = auth;
 
-  const supabaseAdmin = createAdminClient();
   const { error } = await supabaseAdmin
     .from("support_requests")
     .update({ status })
