@@ -20,8 +20,12 @@ export function PortalSidebar() {
   const sidebarContent = (
     <>
       <div className="p-4 border-b border-gray-200">
-        <Link href="/portal" className="font-semibold text-brand-600">
-          ZephyrOS
+        <Link href="/portal" className="flex items-center gap-2">
+          <img
+            src="https://supabase.kitdigitalzephyrstudio.es/storage/v1/object/public/img_web/logozephyrhub.png"
+            alt="ZephyrHub"
+            className="h-8 w-auto"
+          />
         </Link>
       </div>
       <nav className="flex-1 p-4 flex flex-col gap-1">
@@ -61,8 +65,12 @@ export function PortalSidebar() {
             <Menu className="w-6 h-6" />
           )}
         </button>
-        <Link href="/portal" className="font-semibold text-brand-600">
-          ZephyrOS
+        <Link href="/portal" className="flex items-center gap-2">
+          <img
+            src="https://supabase.kitdigitalzephyrstudio.es/storage/v1/object/public/img_web/logozephyrhub.png"
+            alt="ZephyrHub"
+            className="h-8 w-auto"
+          />
         </Link>
       </header>
 
