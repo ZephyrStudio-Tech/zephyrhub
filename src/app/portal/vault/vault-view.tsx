@@ -85,9 +85,9 @@ export function VaultView({
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Bóveda documental</h1>
+      <h1 className="text-2xl font-bold text-gray-900">Bóveda documental</h1>
       {error && (
-        <p className="rounded-lg bg-red-500/10 p-3 text-sm text-red-400">
+        <p className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
           {error}
         </p>
       )}
@@ -100,14 +100,14 @@ export function VaultView({
               key={slot.key}
               className={
                 isRejected
-                  ? "border-red-500/30 bg-red-500/5"
-                  : "border-white/10 bg-white/5"
+                  ? "border border-red-200 bg-red-50"
+                  : "border border-gray-200 bg-white"
               }
             >
               <CardHeader>
-                <CardTitle className="text-lg">{slot.label}</CardTitle>
+                <CardTitle className="text-lg text-gray-900">{slot.label}</CardTitle>
                 {doc && (
-                  <p className="text-sm text-muted">
+                  <p className="text-sm text-gray-600">
                     Estado:{" "}
                     {doc.status === "approved"
                       ? "Aprobado"
@@ -115,7 +115,7 @@ export function VaultView({
                         ? "Rechazado"
                         : "Pendiente de revisión"}
                     {doc.rejection_reason && (
-                      <span className="mt-2 block text-red-400">
+                      <span className="mt-2 block text-red-700">
                         Motivo: {doc.rejection_reason}
                       </span>
                     )}
@@ -123,7 +123,7 @@ export function VaultView({
                 )}
               </CardHeader>
               <CardContent>
-                <label className="block text-sm text-muted mb-2">
+                <label className="block text-sm text-gray-600 mb-2">
                   Subir archivo
                 </label>
                 <div className="flex gap-2">

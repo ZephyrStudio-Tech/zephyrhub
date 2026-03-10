@@ -90,7 +90,7 @@ export function TechEvidencesView({
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Evidencias · {clientName}</h1>
+      <h1 className="text-2xl font-bold text-gray-900">Evidencias · {clientName}</h1>
       <Card>
         <CardHeader>
           <CardTitle>Checklist técnico</CardTitle>
@@ -101,12 +101,12 @@ export function TechEvidencesView({
             return (
               <div
                 key={item.key}
-                className="flex items-center justify-between rounded-lg border border-white/10 p-4"
+                className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4"
               >
                 <span>{item.label}</span>
                 <div className="flex items-center gap-2">
                   {ev && (
-                    <span className="text-sm text-muted">
+                    <span className="text-sm text-gray-500">
                       Subido {new Date(ev.uploaded_at).toLocaleDateString("es")}
                     </span>
                   )}

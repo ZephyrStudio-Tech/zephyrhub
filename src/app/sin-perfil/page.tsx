@@ -9,11 +9,11 @@ export default async function SinPerfilPage() {
   if (!user) redirect("/login");
 
   return (
-    <main className="min-h-screen flex items-center justify-center p-8 bg-background">
-      <Card className="w-full max-w-md border-amber-500/30 bg-amber-500/5">
+    <main className="min-h-screen flex items-center justify-center p-8 bg-gray-50">
+      <Card className="w-full max-w-md border border-amber-200 bg-white">
         <CardHeader>
-          <CardTitle className="text-foreground">Cuenta sin perfil</CardTitle>
-          <p className="text-sm text-muted">
+          <CardTitle className="text-gray-900">Cuenta sin perfil</CardTitle>
+          <p className="text-sm text-gray-600">
             Tu usuario existe en el sistema pero no tiene un perfil asignado en la base de datos.
             Esto puede ocurrir si la cuenta se creó antes de activar el trigger de Supabase.
           </p>
@@ -22,19 +22,19 @@ export default async function SinPerfilPage() {
           <p className="text-sm">
             Pide a un administrador que ejecute en Supabase (SQL Editor):
           </p>
-          <pre className="rounded-lg bg-white/10 p-3 text-xs overflow-x-auto">
+          <pre className="rounded-lg bg-gray-900 text-gray-100 p-3 text-xs overflow-x-auto">
             {`INSERT INTO public.profiles (id, email, full_name, role)
 VALUES ('${user.id}', '${user.email}', '${user.user_metadata?.full_name ?? ""}', 'beneficiario')
 ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role;`}
           </pre>
-          <p className="text-sm text-muted">
-            Cambia <code className="rounded bg-white/10 px-1">beneficiario</code> por{" "}
-            <code className="rounded bg-white/10 px-1">admin</code>,{" "}
-            <code className="rounded bg-white/10 px-1">consultor</code> o{" "}
-            <code className="rounded bg-white/10 px-1">tecnico</code> según corresponda.
+          <p className="text-sm text-gray-600">
+            Cambia <code className="rounded bg-gray-100 px-1">beneficiario</code> por{" "}
+            <code className="rounded bg-gray-100 px-1">admin</code>,{" "}
+            <code className="rounded bg-gray-100 px-1">consultor</code> o{" "}
+            <code className="rounded bg-gray-100 px-1">tecnico</code> según corresponda.
           </p>
-          <p className="text-sm text-amber-600 dark:text-amber-400">
-            Si tu perfil ya existe en la tabla <code className="rounded bg-white/10 px-1">profiles</code>, el fallo suele ser RLS: en Supabase → Authentication → Policies, asegura que en <code className="rounded bg-white/10 px-1">profiles</code> haya una política que permita <strong>SELECT</strong> cuando <code className="rounded bg-white/10 px-1">auth.uid() = id</code>. Ver <code className="rounded bg-white/10 px-1">supabase/migrations/00001_profiles_rls_own_profile.sql</code>.
+          <p className="text-sm text-amber-700">
+            Si tu perfil ya existe en la tabla <code className="rounded bg-gray-100 px-1">profiles</code>, el fallo suele ser RLS: en Supabase → Authentication → Policies, asegura que en <code className="rounded bg-gray-100 px-1">profiles</code> haya una política que permita <strong>SELECT</strong> cuando <code className="rounded bg-gray-100 px-1">auth.uid() = id</code>. Ver <code className="rounded bg-gray-100 px-1">supabase/migrations/00001_profiles_rls_own_profile.sql</code>.
           </p>
           <form action={signOut}>
             <Button type="submit" variant="outline" className="w-full">

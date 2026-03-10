@@ -83,16 +83,16 @@ export function PortalDashboard({
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">
+        <h1 className="text-2xl font-bold text-gray-900">
           {client.company_name || "Mi expediente"}
         </h1>
-        <p className="text-muted">Estado actual: {client.current_state}</p>
+        <p className="text-gray-500">Estado actual: {client.current_state}</p>
       </div>
 
       {alerts.length > 0 && (
-        <Card className="border-amber-500/30 bg-amber-500/5">
+        <Card>
           <CardHeader>
-            <CardTitle className="text-amber-400">Avisos</CardTitle>
+            <CardTitle className="text-amber-700">Avisos</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {alerts.map((a) => (
@@ -119,9 +119,9 @@ export function PortalDashboard({
                     className={cn(
                       "flex h-10 w-10 items-center justify-center rounded-full text-sm font-medium",
                       isActive
-                        ? "bg-accent text-background"
-                        : "bg-white/10 text-muted",
-                      isCurrent && "ring-2 ring-accent ring-offset-2 ring-offset-background"
+                        ? "bg-brand-500 text-white"
+                        : "bg-white text-gray-400 border border-gray-200",
+                      isCurrent && "ring-2 ring-brand-500 ring-offset-2 ring-offset-gray-50"
                     )}
                   >
                     {i + 1}
@@ -129,7 +129,7 @@ export function PortalDashboard({
                   <span
                     className={cn(
                       "text-sm",
-                      isActive ? "text-foreground" : "text-muted"
+                      isActive ? "text-gray-900" : "text-gray-500"
                     )}
                   >
                     {phase.label}
@@ -138,7 +138,7 @@ export function PortalDashboard({
                     <div
                       className={cn(
                         "h-0.5 w-8",
-                        isActive ? "bg-accent" : "bg-white/10"
+                        isActive ? "bg-brand-500" : "bg-gray-200"
                       )}
                     />
                   )}
