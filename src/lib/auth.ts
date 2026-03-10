@@ -26,7 +26,10 @@ export const getSession = cache(async () => {
  * Devuelve usuario, rol y cliente admin de Supabase si todo es correcto.
  * Caso contrario, devuelve un objeto con error.
  */
-export async function requireServerAuth(allowedRoles?: AppRole[]) {
+export async function requireServerAuth(allowedRoles?: AppRole[]): Promise<
+  | { error: string; user?: never; role?: never; supabaseAdmin?: never }
+  | { error?: never; user: any; role: AppRole; supabaseAdmin: any }
+> {
   const { user, role } = await getSession();
 
   if (!user) {
