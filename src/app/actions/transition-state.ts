@@ -1,6 +1,7 @@
 "use server";
 
-import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
+import { requireServerAuth } from "@/lib/auth";
 import { validateTransition } from "@/lib/state-machine/machine";
 import { revalidatePath } from "next/cache";
 
@@ -8,13 +9,12 @@ export async function transitionClientState(
   clientId: string,
   toState: string
 ): Promise<{ ok: boolean; error?: string }> {
+  const auth = await requireServerAuth(["admin", "consultor"]);
+  if (auth.error) return { ok: false, error: auth.error };
+
+  const { user, role, supabaseAdmin } = auth;
+
   const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "No autenticado" };
-
   const { data: client, error: clientError } = await supabase
     .from("clients")
     .select("current_state, consultant_id")
@@ -27,18 +27,11 @@ export async function transitionClientState(
   const validation = validateTransition(fromState, toState);
   if (!validation.valid) return { ok: false, error: validation.error };
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  const role = profile?.role;
-  const canChange =
-    role === "admin" ||
-    (role === "consultor" && client.consultant_id === user.id);
-  if (!canChange) return { ok: false, error: "Sin permiso para cambiar estado" };
+  // Business logic: consultores can only change state for their own clients
+  if (role === "consultor" && client.consultant_id !== user.id) {
+    return { ok: false, error: "Sin permiso para cambiar estado" };
+  }
 
-  const supabaseAdmin = createAdminClient();
   const { error: updateError } = await supabaseAdmin
     .from("clients")
     .update({

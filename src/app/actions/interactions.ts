@@ -1,18 +1,15 @@
 "use server";
 
-import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { requireServerAuth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
 export async function registerCallMissed(
   clientId: string
 ): Promise<{ ok: boolean; error?: string }> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "No autenticado" };
+  const auth = await requireServerAuth();
+  if (auth.error) return { ok: false, error: auth.error };
 
-  const supabaseAdmin = createAdminClient();
+  const { user, supabaseAdmin } = auth;
   const now = new Date();
   const { error: interactionErr } = await supabaseAdmin.from("interactions").insert({
     client_id: clientId,
@@ -57,13 +54,10 @@ export async function registerCallMissed(
 export async function registerCallSuccess(
   clientId: string
 ): Promise<{ ok: boolean; error?: string }> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "No autenticado" };
+  const auth = await requireServerAuth();
+  if (auth.error) return { ok: false, error: auth.error };
 
-  const supabaseAdmin = createAdminClient();
+  const { user, supabaseAdmin } = auth;
   const { error } = await supabaseAdmin.from("interactions").insert({
     client_id: clientId,
     actor_id: user.id,
