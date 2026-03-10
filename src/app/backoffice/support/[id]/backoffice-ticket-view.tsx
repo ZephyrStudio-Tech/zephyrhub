@@ -115,8 +115,10 @@ export function BackofficeTicketView({
   // Supabase Realtime: nuevos mensajes + cambios de estado.
   useEffect(() => {
     const supabase = createClient();
+    const channelName = `ticket-chat-${ticket.id}`;
+
     const channel = supabase
-      .channel(`ticket-backoffice-${ticket.id}`)
+      .channel(channelName)
       .on(
         "postgres_changes",
         {
@@ -126,6 +128,7 @@ export function BackofficeTicketView({
           filter: `ticket_id=eq.${ticket.id}`,
         },
         (payload) => {
+          console.log("🟢 [Realtime] Nuevo mensaje recibido (backoffice):", payload.new);
           const newMessage = payload.new as TicketMessage;
           setMessages((prev) => {
             // Si ya tenemos el mensaje real por ID, no hacemos nada.
@@ -159,11 +162,14 @@ export function BackofficeTicketView({
           filter: `id=eq.${ticket.id}`,
         },
         (payload) => {
+          console.log("🔵 [Realtime] Estado actualizado (backoffice):", payload.new);
           const nextStatus = (payload.new as { status?: string | null }).status;
           if (nextStatus) setStatus(nextStatus);
         }
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        console.log(`📡 [Realtime Status Backoffice] ${status}`, err ? err : "");
+      });
 
     return () => {
       supabase.removeChannel(channel);

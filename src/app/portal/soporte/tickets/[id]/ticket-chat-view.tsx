@@ -114,8 +114,10 @@ export function TicketChatView({
   // Supabase Realtime: nuevos mensajes + cambios de estado del ticket.
   useEffect(() => {
     const supabase = createClient();
+    const channelName = `ticket-chat-${ticket.id}`;
+
     const channel = supabase
-      .channel(`ticket-portal-${ticket.id}`)
+      .channel(channelName)
       .on(
         "postgres_changes",
         {
@@ -125,6 +127,7 @@ export function TicketChatView({
           filter: `ticket_id=eq.${ticket.id}`,
         },
         (payload) => {
+          console.log("🟢 [Realtime] Nuevo mensaje recibido (portal):", payload.new);
           const newMessage = payload.new as TicketMessage;
           setMessages((prev) => {
             // Si ya tenemos el mensaje real por ID, no hacemos nada.
@@ -158,11 +161,14 @@ export function TicketChatView({
           filter: `id=eq.${ticket.id}`,
         },
         (payload) => {
+          console.log("🔵 [Realtime] Estado actualizado (portal):", payload.new);
           const nextStatus = (payload.new as { status?: string | null }).status;
           if (nextStatus) setStatus(nextStatus);
         }
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        console.log(`📡 [Realtime Status Portal] ${status}`, err ? err : "");
+      });
 
     return () => {
       supabase.removeChannel(channel);
