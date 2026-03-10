@@ -12,18 +12,21 @@ export default async function PortalSoportePage() {
   if (!user) redirect("/login");
 
   const supabase = await createClient();
-  const { data: recentTickets } = await supabase
-    .from("support_requests")
-    .select("id, category, message, status, admin_reply, created_at")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(2);
 
-  const { data: latestArticles } = await supabase
-    .from("academy_content")
-    .select("id, title, slug, description, cover_image, content_type")
-    .order("created_at", { ascending: false })
-    .limit(3);
+  // Execute both queries in parallel
+  const [{ data: recentTickets }, { data: latestArticles }] = await Promise.all([
+    supabase
+      .from("support_requests")
+      .select("id, category, message, status, admin_reply, created_at")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(2),
+    supabase
+      .from("academy_content")
+      .select("id, title, slug, description, cover_image, content_type")
+      .order("created_at", { ascending: false })
+      .limit(3),
+  ]);
 
   return (
     <div className="space-y-12">

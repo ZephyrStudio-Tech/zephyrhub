@@ -35,19 +35,21 @@ export default async function BackofficeTicketPage({
   const { id } = await params;
   const supabase = createAdminClient();
 
-  const { data: ticket } = await supabase
-    .from("support_requests")
-    .select("id, user_id, client_id, category, message, status, created_at, updated_at")
-    .eq("id", id)
-    .single();
+  // Execute both queries in parallel
+  const [{ data: ticket }, { data: messages }] = await Promise.all([
+    supabase
+      .from("support_requests")
+      .select("id, user_id, client_id, category, message, status, created_at, updated_at")
+      .eq("id", id)
+      .single(),
+    supabase
+      .from("ticket_messages")
+      .select("id, ticket_id, message, attachment_url, sender_role, created_at")
+      .eq("ticket_id", id)
+      .order("created_at", { ascending: true }),
+  ]);
 
   if (!ticket) redirect("/backoffice/support");
-
-  const { data: messages } = await supabase
-    .from("ticket_messages")
-    .select("id, ticket_id, message, attachment_url, sender_role, created_at")
-    .eq("ticket_id", id)
-    .order("created_at", { ascending: true });
 
   return (
     <BackofficeTicketView
