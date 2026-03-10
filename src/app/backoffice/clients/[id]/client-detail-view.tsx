@@ -119,18 +119,18 @@ export function ClientDetailView({
         <Card>
           <CardHeader>
             <CardTitle>{client.company_name || client.cif || "Cliente"}</CardTitle>
-            <p className="text-sm text-muted">
+            <p className="text-sm text-gray-600">
               Estado:{" "}
-              <span className="rounded bg-accent/20 px-2 py-0.5 text-accent">
+              <span className="rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700 border border-brand-100">
                 {client.current_state}
               </span>
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <label className="text-sm text-muted">Cambiar estado</label>
+              <label className="text-sm text-gray-600">Cambiar estado</label>
               <select
-                className="mt-1 w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
                 value={client.current_state}
                 disabled={changing}
                 onChange={(e) => onStateChange(e.target.value)}
@@ -188,13 +188,13 @@ export function ClientDetailView({
               {interactions.slice(0, 20).map((i) => (
                 <li key={i.id} className="flex justify-between">
                   <span>{i.type}</span>
-                  <span className="text-muted">
+                  <span className="text-gray-500">
                     {new Date(i.created_at).toLocaleString("es")}
                   </span>
                 </li>
               ))}
               {interactions.length === 0 && (
-                <li className="text-muted">Ninguna</li>
+                <li className="text-gray-500">Ninguna</li>
               )}
             </ul>
           </CardContent>
@@ -212,13 +212,13 @@ export function ClientDetailView({
                 key={slot.key}
                 className={
                   doc?.status === "rejected"
-                    ? "rounded-lg border border-red-500/30 bg-red-500/5 p-3"
-                    : "rounded-lg border border-white/10 p-3"
+                    ? "rounded-lg border border-red-200 bg-red-50 p-3"
+                    : "rounded-lg border border-gray-200 bg-white p-3"
                 }
               >
                 <div className="flex items-center justify-between">
                   <span className="font-medium">{slot.label}</span>
-                  <span className="text-sm text-muted">
+                  <span className="text-sm text-gray-500">
                     {doc
                       ? `v${doc.version} - ${doc.status}`
                       : "Sin documento"}
@@ -245,7 +245,7 @@ export function ClientDetailView({
                         <input
                           type="text"
                           placeholder="Motivo rechazo"
-                          className="flex-1 rounded border border-white/20 bg-white/5 px-2 py-1 text-sm"
+                          className="flex-1 rounded border border-gray-300 bg-white px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-error-500"
                           value={rejectReason}
                           onChange={(e) => setRejectReason(e.target.value)}
                         />
@@ -261,7 +261,7 @@ export function ClientDetailView({
                   </div>
                 )}
                 {doc?.rejection_reason && (
-                  <p className="mt-1 text-sm text-red-400">
+                  <p className="mt-1 text-sm text-red-700">
                     Motivo: {doc.rejection_reason}
                   </p>
                 )}

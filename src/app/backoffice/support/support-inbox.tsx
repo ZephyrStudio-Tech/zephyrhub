@@ -2,10 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { replyTicket } from "@/app/actions/help-center";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 type Ticket = {
@@ -23,28 +21,11 @@ type Ticket = {
 export function SupportInbox({ tickets }: { tickets: Ticket[] }) {
   const router = useRouter();
   const [filter, setFilter] = useState<"all" | "abierto" | "resuelto">("all");
-  const [selected, setSelected] = useState<Ticket | null>(null);
-  const [reply, setReply] = useState("");
-  const [sending, setSending] = useState(false);
 
   const filtered =
     filter === "all"
       ? tickets
       : tickets.filter((t) => t.status?.toLowerCase() === filter);
-
-  async function handleReply() {
-    if (!selected || !reply.trim()) return;
-    setSending(true);
-    const res = await replyTicket(selected.id, reply.trim());
-    setSending(false);
-    if (res.ok) {
-      setSelected(null);
-      setReply("");
-      router.refresh();
-    } else {
-      alert(res.error);
-    }
-  }
 
   return (
     <>
@@ -74,9 +55,9 @@ export function SupportInbox({ tickets }: { tickets: Ticket[] }) {
         </Button>
       </div>
 
-      <Card className="border-white/10 bg-white/5">
+      <Card>
         <CardHeader>
-          <CardTitle className="text-foreground">Tickets</CardTitle>
+          <CardTitle>Tickets</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -95,12 +76,10 @@ export function SupportInbox({ tickets }: { tickets: Ticket[] }) {
                   <tr
                     key={t.id}
                     className={cn(
-                      "border-b border-white/5 cursor-pointer hover:bg-white/5",
-                      selected?.id === t.id && "bg-white/10"
+                      "border-b border-gray-100 cursor-pointer hover:bg-gray-50",
                     )}
                     onClick={() => {
-                      setSelected(t);
-                      setReply(t.admin_reply ?? "");
+                      router.push(`/backoffice/support/${t.id}`);
                     }}
                   >
                     <td className="py-3 pr-4">
@@ -116,24 +95,16 @@ export function SupportInbox({ tickets }: { tickets: Ticket[] }) {
                       </span>
                     </td>
                     <td className="py-3 pr-4 text-foreground">{t.category}</td>
-                    <td className="py-3 pr-4 text-muted max-w-[200px] truncate">
+                    <td className="py-3 pr-4 text-gray-500 max-w-[260px] truncate">
                       {t.message ?? "—"}
                     </td>
-                    <td className="py-3 pr-4 text-muted">
+                    <td className="py-3 pr-4 text-gray-500">
                       {new Date(t.created_at).toLocaleDateString("es")}
                     </td>
                     <td className="py-3">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelected(t);
-                          setReply(t.admin_reply ?? "");
-                        }}
-                      >
-                        {t.admin_reply ? "Ver / Editar" : "Responder"}
-                      </Button>
+                      <span className="text-xs text-brand-600 font-medium">
+                        Ver hilo →
+                      </span>
                     </td>
                   </tr>
                 ))}
@@ -141,62 +112,10 @@ export function SupportInbox({ tickets }: { tickets: Ticket[] }) {
             </table>
           </div>
           {filtered.length === 0 && (
-            <p className="py-8 text-center text-muted">No hay tickets.</p>
+            <p className="py-8 text-center text-gray-500">No hay tickets.</p>
           )}
         </CardContent>
       </Card>
-
-      {selected && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
-          onClick={() => setSelected(null)}
-        >
-          <Card
-            className="w-full max-w-lg border-white/20 bg-background"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-foreground">
-                Ticket · {selected.category}
-              </CardTitle>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSelected(null)}
-              >
-                Cerrar
-              </Button>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <p className="text-xs text-muted mb-1">Mensaje del cliente</p>
-                <p className="text-sm text-foreground rounded-lg bg-white/5 border border-white/10 p-3">
-                  {selected.message ?? "—"}
-                </p>
-              </div>
-              <div>
-                <label className="text-xs text-muted block mb-1">
-                  Respuesta (admin_reply)
-                </label>
-                <textarea
-                  className="w-full min-h-[120px] rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-sm text-foreground placeholder:text-muted"
-                  placeholder="Escribe la respuesta al cliente..."
-                  value={reply}
-                  onChange={(e) => setReply(e.target.value)}
-                  disabled={sending}
-                />
-              </div>
-              <Button
-                onClick={handleReply}
-                disabled={sending || !reply.trim()}
-                className="w-full"
-              >
-                {sending ? "Enviando…" : "Enviar y marcar como resuelto"}
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      )}
     </>
   );
 }

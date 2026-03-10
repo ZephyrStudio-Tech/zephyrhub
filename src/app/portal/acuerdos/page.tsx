@@ -15,7 +15,7 @@ export default async function PortalAcuerdosPage() {
 
   if (!client) {
     return (
-      <div className="rounded-xl border border-white/10 bg-white/5 p-8 text-center text-muted">
+      <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-gray-500 shadow-card">
         No tienes expediente asignado.
       </div>
     );
@@ -29,19 +29,19 @@ export default async function PortalAcuerdosPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Acuerdos</h1>
+      <h1 className="text-2xl font-bold text-gray-900">Acuerdos</h1>
       {!agreements?.length ? (
-        <p className="text-muted">Aún no hay acuerdos generados.</p>
+        <p className="text-gray-500">Aún no hay acuerdos generados.</p>
       ) : (
         <ul className="space-y-2">
           {agreements.map((a) => (
-            <li key={a.id} className="rounded-lg border border-white/10 p-4">
-              <span className="text-sm text-muted">
+            <li key={a.id} className="rounded-lg border border-gray-200 bg-white p-4 shadow-card flex items-center justify-between">
+              <span className="text-sm text-gray-500">
                 {new Date(a.created_at).toLocaleDateString("es")}
               </span>
               <a
                 href="#"
-                className="ml-2 text-accent hover:underline"
+                className="ml-2 text-brand-600 hover:text-brand-700 hover:underline text-sm font-medium"
               >
                 Ver acuerdo
               </a>

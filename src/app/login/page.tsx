@@ -53,10 +53,10 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center p-8 bg-background">
-      <Card className="w-full max-w-md border-white/10 bg-white/5">
+    <main className="min-h-screen flex items-center justify-center p-8 bg-gray-50">
+      <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="text-2xl text-foreground">ZephyrOS</CardTitle>
+          <CardTitle className="text-2xl text-gray-900">ZephyrOS</CardTitle>
           <CardDescription>Iniciar sesión</CardDescription>
         </CardHeader>
         <CardContent>
