@@ -53,8 +53,12 @@ export function Sidebar({ role, userLabel }: { role: Role; userLabel: string }) 
             <Menu className="w-6 h-6" />
           )}
         </button>
-        <Link href="/backoffice/preconsultoria" className="font-bold text-slate-900">
-          Zephyr<span className="text-primary">OS</span>
+        <Link href="/backoffice/preconsultoria" className="flex items-center gap-2">
+          <img
+            src="https://supabase.kitdigitalzephyrstudio.es/storage/v1/object/public/img_web/logozephyrhub.png"
+            alt="ZephyrHub"
+            className="h-8 w-auto"
+          />
         </Link>
         <div className="w-10" />
       </header>
@@ -78,9 +82,13 @@ export function Sidebar({ role, userLabel }: { role: Role; userLabel: string }) 
         <div className="flex h-full flex-col">
           {/* Desktop Header */}
           <div className="hidden lg:flex h-16 items-center border-b border-slate-200 px-6 dark:border-slate-800">
-            <Link href="/backoffice/preconsultoria" className="font-bold text-slate-900 dark:text-white">
-              Zephyr<span className="text-primary">OS</span>
-            </Link>
+        <Link href="/backoffice/preconsultoria" className="flex items-center gap-2">
+          <img
+            src="https://supabase.kitdigitalzephyrstudio.es/storage/v1/object/public/img_web/logozephyrhub.png"
+            alt="ZephyrHub"
+            className="h-8 w-auto"
+          />
+        </Link>
           </div>
 
           {/* Navigation */}

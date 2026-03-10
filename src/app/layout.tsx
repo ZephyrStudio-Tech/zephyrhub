@@ -10,8 +10,11 @@ const plusJakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "ZephyrOS",
-  description: "Sistema operativo interno y externo de ZephyrStudio - Kit Digital",
+  title: "ZephyrHub - Kit Digital",
+  description: "Centro de operaciones B2B - Gestión completa del Kit Digital",
+  icons: {
+    icon: "https://supabase.kitdigitalzephyrstudio.es/storage/v1/object/public/img_web/logozephyrhub.png",
+  },
 };
 
 export default function RootLayout({
