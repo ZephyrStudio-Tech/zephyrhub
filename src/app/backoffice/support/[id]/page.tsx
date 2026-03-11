@@ -12,6 +12,10 @@ type Ticket = {
   status: string;
   created_at: string;
   updated_at: string | null;
+  profiles?: {
+    full_name?: string;
+    email?: string;
+  }[];
 };
 
 type TicketMessage = {
@@ -39,7 +43,7 @@ export default async function BackofficeTicketPage({
   const [{ data: ticket }, { data: messages }] = await Promise.all([
     supabase
       .from("support_requests")
-      .select("id, user_id, client_id, category, message, status, created_at, updated_at")
+      .select("id, user_id, client_id, category, message, status, created_at, updated_at, profiles(full_name, email)")
       .eq("id", id)
       .single(),
     supabase
@@ -52,10 +56,24 @@ export default async function BackofficeTicketPage({
   if (!ticket) redirect("/backoffice/support");
 
   return (
-    <BackofficeTicketView
-      ticket={ticket as Ticket}
-      messages={(messages ?? []) as TicketMessage[]}
-    />
+    <div>
+      {/* Header */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-1 text-sm text-gray-500">
+            <span>Home</span>
+            <span>/</span>
+            <span>Support Reply</span>
+          </div>
+        </div>
+        <h1 className="text-3xl font-bold text-gray-900">Support Reply</h1>
+      </div>
+
+      <BackofficeTicketView
+        ticket={ticket as Ticket}
+        messages={(messages ?? []) as TicketMessage[]}
+      />
+    </div>
   );
 }
 
