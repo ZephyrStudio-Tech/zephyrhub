@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { Search, Filter, MoreVertical } from "lucide-react";
 
 type Ticket = {
   id: string;
@@ -16,106 +15,205 @@ type Ticket = {
   admin_reply: string | null;
   created_at: string;
   updated_at: string | null;
+  profiles?: {
+    full_name?: string;
+    email?: string;
+  }[];
 };
 
 export function SupportInbox({ tickets }: { tickets: Ticket[] }) {
   const router = useRouter();
-  const [filter, setFilter] = useState<"all" | "abierto" | "resuelto">("all");
+  const [filter, setFilter] = useState<"all" | "abierto" | "resuelto" | "pending">("all");
+  const [search, setSearch] = useState("");
+  const [selectedTickets, setSelectedTickets] = useState<Set<string>>(new Set());
 
-  const filtered =
-    filter === "all"
-      ? tickets
-      : tickets.filter((t) => t.status?.toLowerCase() === filter);
+  const filtered = tickets.filter((t) => {
+    // Apply status filter
+    if (filter === "abierto") return t.status?.toLowerCase() === "abierto" || t.status?.toLowerCase() === "pending";
+    if (filter === "resuelto") return t.status?.toLowerCase() === "resuelto" || t.status?.toLowerCase() === "cerrado";
+    if (filter === "pending") return t.status?.toLowerCase() !== "resuelto" && t.status?.toLowerCase() !== "cerrado";
+    
+    // Search filter
+    if (search) {
+      const searchLower = search.toLowerCase();
+      return (
+        t.id.toLowerCase().includes(searchLower) ||
+        t.profiles?.[0]?.full_name?.toLowerCase().includes(searchLower) ||
+        t.category.toLowerCase().includes(searchLower) ||
+        t.message?.toLowerCase().includes(searchLower)
+      );
+    }
+    return true;
+  });
+
+  const toggleSelectAll = () => {
+    if (selectedTickets.size === filtered.length) {
+      setSelectedTickets(new Set());
+    } else {
+      setSelectedTickets(new Set(filtered.map((t) => t.id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const newSet = new Set(selectedTickets);
+    if (newSet.has(id)) {
+      newSet.delete(id);
+    } else {
+      newSet.add(id);
+    }
+    setSelectedTickets(newSet);
+  };
 
   return (
-    <>
-      <div className="flex gap-2 mb-6">
-        <Button
-          variant={filter === "all" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setFilter("all")}
-        >
-          Todos
-        </Button>
-        <Button
-          variant={filter === "abierto" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setFilter("abierto")}
-          className={filter === "abierto" ? "bg-amber-600 hover:bg-amber-700" : ""}
-        >
-          Abiertos
-        </Button>
-        <Button
-          variant={filter === "resuelto" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setFilter("resuelto")}
-          className={filter === "resuelto" ? "bg-emerald-600 hover:bg-emerald-700" : ""}
-        >
-          Resueltos
-        </Button>
+    <div className="bg-white border border-gray-200 rounded-xl shadow-card overflow-hidden">
+      {/* Toolbar */}
+      <div className="border-b border-gray-100 p-6 flex items-center justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">Support Tickets</h2>
+          <p className="text-sm text-gray-500 mt-1">Manage and respond to customer support requests</p>
+        </div>
+        
+        <div className="flex items-center gap-3">
+          {/* Tabs */}
+          <div className="bg-gray-50 p-1 rounded-lg flex gap-1">
+            <button
+              onClick={() => setFilter("all")}
+              className={cn(
+                "px-3 py-1.5 rounded text-sm font-medium transition-colors",
+                filter === "all"
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-600 hover:text-gray-900"
+              )}
+            >
+              All
+            </button>
+            <button
+              onClick={() => setFilter("pending")}
+              className={cn(
+                "px-3 py-1.5 rounded text-sm font-medium transition-colors",
+                filter === "pending"
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-600 hover:text-gray-900"
+              )}
+            >
+              Pending
+            </button>
+            <button
+              onClick={() => setFilter("resuelto")}
+              className={cn(
+                "px-3 py-1.5 rounded text-sm font-medium transition-colors",
+                filter === "resuelto"
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-600 hover:text-gray-900"
+              )}
+            >
+              Solved
+            </button>
+          </div>
+
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 pr-3 py-1.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+            />
+          </div>
+
+          {/* Filter Button */}
+          <button className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2">
+            <Filter className="w-4 h-4" />
+            Filter
+          </button>
+        </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Tickets</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead>
-                <tr className="border-b border-white/10 text-muted">
-                  <th className="pb-3 pr-4">Estado</th>
-                  <th className="pb-3 pr-4">Categoría</th>
-                  <th className="pb-3 pr-4">Mensaje</th>
-                  <th className="pb-3 pr-4">Fecha</th>
-                  <th className="pb-3">Acción</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((t) => (
-                  <tr
-                    key={t.id}
+      {/* Table */}
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead className="border-b border-gray-100 bg-gray-50">
+            <tr>
+              <th className="py-4 px-6 text-left">
+                <input
+                  type="checkbox"
+                  checked={selectedTickets.size > 0 && selectedTickets.size === filtered.length}
+                  onChange={toggleSelectAll}
+                  className="w-4 h-4 rounded border-gray-300 cursor-pointer"
+                />
+              </th>
+              <th className="py-4 px-6 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Ticket ID</th>
+              <th className="py-4 px-6 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Requested By</th>
+              <th className="py-4 px-6 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Subject</th>
+              <th className="py-4 px-6 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Create Date</th>
+              <th className="py-4 px-6 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Status</th>
+              <th className="py-4 px-6 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((t) => (
+              <tr
+                key={t.id}
+                className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+              >
+                <td className="py-4 px-6">
+                  <input
+                    type="checkbox"
+                    checked={selectedTickets.has(t.id)}
+                    onChange={() => toggleSelect(t.id)}
+                    className="w-4 h-4 rounded border-gray-300 cursor-pointer"
+                  />
+                </td>
+                <td className="py-4 px-6">
+                  <span className="text-sm text-gray-500 font-mono">#{t.id.slice(0, 8)}</span>
+                </td>
+                <td className="py-4 px-6">
+                  <div className="text-sm">
+                    <p className="font-semibold text-gray-900">{t.profiles?.[0]?.full_name || "Unknown"}</p>
+                    <p className="text-xs text-gray-500">{t.profiles?.[0]?.email || "—"}</p>
+                  </div>
+                </td>
+                <td className="py-4 px-6">
+                  <p className="text-sm text-gray-900 max-w-[240px] truncate">{t.category}</p>
+                </td>
+                <td className="py-4 px-6">
+                  <p className="text-sm text-gray-600">{new Date(t.created_at).toLocaleDateString("es")}</p>
+                </td>
+                <td className="py-4 px-6">
+                  <span
                     className={cn(
-                      "border-b border-gray-100 cursor-pointer hover:bg-gray-50",
+                      "inline-flex px-2.5 py-1.5 rounded-full text-xs font-medium",
+                      t.status?.toLowerCase() === "resuelto" || t.status?.toLowerCase() === "cerrado"
+                        ? "bg-success-50 text-success-700"
+                        : "bg-warning-50 text-warning-700"
                     )}
-                    onClick={() => {
-                      router.push(`/backoffice/support/${t.id}`);
-                    }}
                   >
-                    <td className="py-3 pr-4">
-                      <span
-                        className={cn(
-                          "inline-flex px-2 py-0.5 rounded text-xs font-medium border",
-                          (t.status?.toLowerCase() ?? "") === "resuelto"
-                            ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
-                            : "bg-amber-500/10 text-amber-400 border-amber-500/30"
-                        )}
-                      >
-                        {t.status ?? "abierto"}
-                      </span>
-                    </td>
-                    <td className="py-3 pr-4 text-foreground">{t.category}</td>
-                    <td className="py-3 pr-4 text-gray-500 max-w-[260px] truncate">
-                      {t.message ?? "—"}
-                    </td>
-                    <td className="py-3 pr-4 text-gray-500">
-                      {new Date(t.created_at).toLocaleDateString("es")}
-                    </td>
-                    <td className="py-3">
-                      <span className="text-xs text-brand-600 font-medium">
-                        Ver hilo →
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {filtered.length === 0 && (
-            <p className="py-8 text-center text-gray-500">No hay tickets.</p>
-          )}
-        </CardContent>
-      </Card>
-    </>
+                    {t.status === "resuelto" || t.status === "cerrado" ? "Solved" : "Pending"}
+                  </span>
+                </td>
+                <td className="py-4 px-6">
+                  <button
+                    onClick={() => router.push(`/backoffice/support/${t.id}`)}
+                    className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+                    aria-label="Open ticket"
+                  >
+                    <MoreVertical className="w-4 h-4" />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Empty State */}
+      {filtered.length === 0 && (
+        <div className="py-12 text-center">
+          <p className="text-gray-500">No tickets found.</p>
+        </div>
+      )}
+    </div>
   );
 }
