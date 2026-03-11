@@ -18,7 +18,7 @@ type Ticket = {
   profiles?: {
     full_name?: string;
     email?: string;
-  };
+  }[];
 };
 
 export function SupportInbox({ tickets }: { tickets: Ticket[] }) {
@@ -38,7 +38,7 @@ export function SupportInbox({ tickets }: { tickets: Ticket[] }) {
       const searchLower = search.toLowerCase();
       return (
         t.id.toLowerCase().includes(searchLower) ||
-        t.profiles?.full_name?.toLowerCase().includes(searchLower) ||
+        t.profiles?.[0]?.full_name?.toLowerCase().includes(searchLower) ||
         t.category.toLowerCase().includes(searchLower) ||
         t.message?.toLowerCase().includes(searchLower)
       );
@@ -171,8 +171,8 @@ export function SupportInbox({ tickets }: { tickets: Ticket[] }) {
                 </td>
                 <td className="py-4 px-6">
                   <div className="text-sm">
-                    <p className="font-semibold text-gray-900">{t.profiles?.full_name || "Unknown"}</p>
-                    <p className="text-xs text-gray-500">{t.profiles?.email || "—"}</p>
+                    <p className="font-semibold text-gray-900">{t.profiles?.[0]?.full_name || "Unknown"}</p>
+                    <p className="text-xs text-gray-500">{t.profiles?.[0]?.email || "—"}</p>
                   </div>
                 </td>
                 <td className="py-4 px-6">
