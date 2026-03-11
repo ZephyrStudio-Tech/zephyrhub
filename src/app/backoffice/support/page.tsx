@@ -2,6 +2,7 @@ import { getSession } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { SupportInbox } from "./support-inbox";
+import { MessageCircle, CheckCircle, AlertCircle } from "lucide-react";
 
 export default async function BackofficeSupportPage() {
   const { user, role } = await getSession();
@@ -11,19 +12,61 @@ export default async function BackofficeSupportPage() {
   const supabase = createAdminClient();
   const { data: tickets } = await supabase
     .from("support_requests")
-    .select("id, user_id, client_id, category, message, status, admin_reply, created_at, updated_at")
+    .select("id, user_id, client_id, category, message, status, admin_reply, created_at, updated_at, profiles(full_name, email)")
     .order("created_at", { ascending: false });
+
+  // Calculate statistics
+  const totalTickets = tickets?.length ?? 0;
+  const solvedTickets = tickets?.filter((t) => t.status === "resuelto" || t.status === "cerrado").length ?? 0;
+  const pendingTickets = totalTickets - solvedTickets;
 
   return (
     <div className="space-y-8">
+      {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">
-          Bandeja de soporte
-        </h1>
-        <p className="text-slate-500 text-sm mt-1">
-          Gestiona los tickets de los clientes. Responde y marca como resuelto.
-        </p>
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="text-3xl font-bold text-gray-900">Support List</h1>
+          <p className="text-sm text-gray-500">Home / Support List</p>
+        </div>
       </div>
+
+      {/* Statistics Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        {/* Total Tickets Card */}
+        <div className="bg-white border border-gray-200 rounded-xl shadow-card p-6 flex items-start gap-4">
+          <div className="bg-brand-50 p-3 rounded-lg">
+            <MessageCircle className="w-6 h-6 text-brand-500" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm text-gray-500 mb-1">Total Tickets</p>
+            <p className="text-2xl font-bold text-gray-900">{totalTickets}</p>
+          </div>
+        </div>
+
+        {/* Solved Tickets Card */}
+        <div className="bg-white border border-gray-200 rounded-xl shadow-card p-6 flex items-start gap-4">
+          <div className="bg-success-50 p-3 rounded-lg">
+            <CheckCircle className="w-6 h-6 text-success-700" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm text-gray-500 mb-1">Solved</p>
+            <p className="text-2xl font-bold text-gray-900">{solvedTickets}</p>
+          </div>
+        </div>
+
+        {/* Pending Tickets Card */}
+        <div className="bg-white border border-gray-200 rounded-xl shadow-card p-6 flex items-start gap-4">
+          <div className="bg-warning-50 p-3 rounded-lg">
+            <AlertCircle className="w-6 h-6 text-warning-700" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm text-gray-500 mb-1">Pending</p>
+            <p className="text-2xl font-bold text-gray-900">{pendingTickets}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Support Inbox */}
       <SupportInbox tickets={tickets ?? []} />
     </div>
   );
