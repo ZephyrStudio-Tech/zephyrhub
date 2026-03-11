@@ -107,7 +107,7 @@ export function BackofficeTicketView({
             (m) =>
               m.message === t.message &&
               (m.sender_role ?? "").toLowerCase() ===
-                (t.sender_role ?? "").toLowerCase()
+              (t.sender_role ?? "").toLowerCase()
           )
         ) {
           merged.push(t);
@@ -153,7 +153,7 @@ export function BackofficeTicketView({
                   m.id.startsWith("temp-") &&
                   m.message === newMessage.message &&
                   (m.sender_role ?? "").toLowerCase() ===
-                    (newMessage.sender_role ?? "").toLowerCase()
+                  (newMessage.sender_role ?? "").toLowerCase()
                 )
             );
 
@@ -199,10 +199,8 @@ export function BackofficeTicketView({
   const customerEmail = ticket.profiles?.[0]?.email || "Sin email";
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-10rem)] min-h-[600px]">
-      {/* Left Column - Chat */}
-      <Card className="flex flex-col h-full overflow-hidden lg:col-span-2">
-        {/* Chat Header */}
+    <div className="flex flex-col lg:grid lg:grid-cols-3 gap-6 lg:h-[calc(100vh-10rem)]">
+      <Card className="flex flex-col flex-1 min-h-[600px] lg:min-h-0 lg:h-full overflow-hidden lg:col-span-2">
         <div className="flex-shrink-0 border-b border-gray-100 p-6">
           <h2 className="text-lg font-semibold text-gray-900">
             Ticket #{ticket.id.slice(0, 6)} - {ticket.category}
