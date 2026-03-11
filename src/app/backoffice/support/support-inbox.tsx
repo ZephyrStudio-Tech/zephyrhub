@@ -15,10 +15,7 @@ type Ticket = {
   admin_reply: string | null;
   created_at: string;
   updated_at: string | null;
-  profiles?: {
-    full_name?: string;
-    email?: string;
-  }[];
+  profiles?: { full_name?: string; email?: string; } | any;
 };
 
 export function SupportInbox({ tickets }: { tickets: Ticket[] }) {
@@ -26,6 +23,7 @@ export function SupportInbox({ tickets }: { tickets: Ticket[] }) {
   const [filter, setFilter] = useState<"all" | "abierto" | "resuelto" | "pending">("all");
   const [search, setSearch] = useState("");
   const [selectedTickets, setSelectedTickets] = useState<Set<string>>(new Set());
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
   const filtered = tickets.filter((t) => {
     // Apply status filter
@@ -38,7 +36,7 @@ export function SupportInbox({ tickets }: { tickets: Ticket[] }) {
       const searchLower = search.toLowerCase();
       return (
         t.id.toLowerCase().includes(searchLower) ||
-        t.profiles?.[0]?.full_name?.toLowerCase().includes(searchLower) ||
+        (t.profiles?.full_name || t.profiles?.[0]?.full_name)?.toLowerCase().includes(searchLower) ||
         t.category.toLowerCase().includes(searchLower) ||
         t.message?.toLowerCase().includes(searchLower)
       );
@@ -156,13 +154,15 @@ export function SupportInbox({ tickets }: { tickets: Ticket[] }) {
             {filtered.map((t) => (
               <tr
                 key={t.id}
-                className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                className="border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer"
+                onClick={() => router.push('/backoffice/support/' + t.id)}
               >
                 <td className="py-4 px-6">
                   <input
                     type="checkbox"
                     checked={selectedTickets.has(t.id)}
                     onChange={() => toggleSelect(t.id)}
+                    onClick={(e) => e.stopPropagation()}
                     className="w-4 h-4 rounded border-gray-300 cursor-pointer"
                   />
                 </td>
@@ -171,8 +171,8 @@ export function SupportInbox({ tickets }: { tickets: Ticket[] }) {
                 </td>
                 <td className="py-4 px-6">
                   <div className="text-sm">
-                    <p className="font-semibold text-gray-900">{t.profiles?.[0]?.full_name || "Unknown"}</p>
-                    <p className="text-xs text-gray-500">{t.profiles?.[0]?.email || "—"}</p>
+                    <p className="font-semibold text-gray-900">{t.profiles?.full_name || t.profiles?.[0]?.full_name || "Unknown"}</p>
+                    <p className="text-xs text-gray-500">{t.profiles?.email || t.profiles?.[0]?.email || "—"}</p>
                   </div>
                 </td>
                 <td className="py-4 px-6">
@@ -194,13 +194,31 @@ export function SupportInbox({ tickets }: { tickets: Ticket[] }) {
                   </span>
                 </td>
                 <td className="py-4 px-6">
-                  <button
-                    onClick={() => router.push(`/backoffice/support/${t.id}`)}
-                    className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
-                    aria-label="Open ticket"
-                  >
-                    <MoreVertical className="w-4 h-4" />
-                  </button>
+                  <div className="relative">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setOpenDropdown(openDropdown === t.id ? null : t.id); }}
+                      className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+                      aria-label="Open ticket"
+                    >
+                      <MoreVertical className="w-4 h-4" />
+                    </button>
+                    {openDropdown === t.id && (
+                      <div className="absolute right-0 mt-2 w-32 bg-white rounded-xl shadow-lg border border-gray-100 z-50 py-2">
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); router.push('/backoffice/support/' + t.id); }}
+                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                        >
+                          View More
+                        </button>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); alert('Funcionalidad pendiente'); }}
+                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
