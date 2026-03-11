@@ -14,7 +14,7 @@ export default async function PortalLayout({
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 flex flex-col md:flex-row">
       <PortalSidebar />
-      <main className="flex-1 overflow-y-auto pt-16 md:pt-0">
+      <main className="flex-1 overflow-y-auto pt-16 md:pt-0 md:ml-64 w-full">
         <div className="p-4 sm:p-6 md:p-8">{children}</div>
       </main>
     </div>

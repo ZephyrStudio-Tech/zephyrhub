@@ -42,7 +42,7 @@ export function TicketsList({ tickets }: { tickets: Ticket[] }) {
     <Card className="overflow-hidden shadow-card">
       <div className="divide-y divide-gray-100">
         {tickets.map((ticket) => (
-          <Link key={ticket.id} href={`/portal/tickets/${ticket.id}`}>
+          <Link key={ticket.id} href={`/portal/soporte/tickets/${ticket.id}`}>
             <div className="flex items-center justify-between p-5 hover:bg-gray-50 transition-all duration-200 hover:pl-6 cursor-pointer group">
               {/* Left Column */}
               <div className="flex items-start gap-4 flex-1 min-w-0">

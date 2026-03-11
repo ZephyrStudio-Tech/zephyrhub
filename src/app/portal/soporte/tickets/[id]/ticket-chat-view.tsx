@@ -9,11 +9,14 @@ import { createClient } from "@/lib/supabase/client";
 
 type Ticket = {
   id: string;
+  user_id: string | null;
+  client_id: string | null;
   category: string;
   message: string | null;
   status: string;
   created_at: string;
   updated_at: string | null;
+  profiles?: { full_name?: string; email?: string } | any;
 };
 
 type TicketMessage = {
@@ -33,15 +36,24 @@ function formatDateTime(value: string) {
   }
 }
 
+function getInitials(name: string) {
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+}
+
 function statusBadge(status: string | null | undefined) {
   const s = (status ?? "abierto").toLowerCase();
   if (s === "resuelto" || s === "cerrado") {
-    return "bg-emerald-50 text-emerald-700 border-emerald-200";
+    return "bg-success-50 text-success-700 border-success-200";
   }
   if (s === "en_proceso" || s === "en proceso") {
     return "bg-brand-50 text-brand-700 border-brand-200";
   }
-  return "bg-amber-50 text-amber-700 border-amber-200";
+  return "bg-warning-50 text-warning-700 border-warning-200";
 }
 
 export function TicketChatView({
@@ -51,7 +63,9 @@ export function TicketChatView({
   ticket: Ticket;
   messages: TicketMessage[];
 }) {
-  const [status, setStatus] = useState(ticket.status ?? "abierto");
+  const [text, setText] = useState("");
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
   const [messages, setMessages] = useState<TicketMessage[]>(() => {
     const initial: TicketMessage = {
       id: "initial",
@@ -63,12 +77,9 @@ export function TicketChatView({
     };
     return [initial, ...(initialMessages ?? [])];
   });
-  const [text, setText] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
-  const bottomRef = useRef<HTMLDivElement | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-  // Sincronizar el estado local con los datos frescos del servidor tras un router.refresh()
+  // Sincronizar el estado local con los datos frescos del servidor
   useEffect(() => {
     const base: TicketMessage[] = [
       {
@@ -83,11 +94,9 @@ export function TicketChatView({
     ];
 
     setMessages((prev) => {
-      // Guardar los mensajes temporales (Optimistic UI)
       const temps = prev.filter((m) => m.id.startsWith("temp-"));
-
-      // Combinar los del servidor con los temporales sin duplicar
       const merged = [...base];
+
       temps.forEach((t) => {
         if (
           !merged.some(
@@ -107,11 +116,9 @@ export function TicketChatView({
           new Date(b.created_at).getTime()
       );
     });
+  }, [initialMessages, ticket.id, ticket.message, ticket.created_at]);
 
-    setStatus(ticket.status ?? "abierto");
-  }, [initialMessages, ticket.status, ticket.id, ticket.message, ticket.created_at]);
-
-  // Supabase Realtime: nuevos mensajes + cambios de estado del ticket.
+  // Supabase Realtime
   useEffect(() => {
     const supabase = createClient();
     const channelName = `ticket-chat-${ticket.id}`;
@@ -127,13 +134,10 @@ export function TicketChatView({
           filter: `ticket_id=eq.${ticket.id}`,
         },
         (payload) => {
-          console.log("🟢 [Realtime] Nuevo mensaje recibido (portal):", payload.new);
           const newMessage = payload.new as TicketMessage;
           setMessages((prev) => {
-            // Si ya tenemos el mensaje real por ID, no hacemos nada.
             if (prev.some((m) => m.id === newMessage.id)) return prev;
 
-            // Si existe un mensaje temporal idéntico, lo descartamos a favor del real.
             const filtered = prev.filter(
               (m) =>
                 !(
@@ -152,76 +156,68 @@ export function TicketChatView({
           });
         }
       )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "support_requests",
-          filter: `id=eq.${ticket.id}`,
-        },
-        (payload) => {
-          console.log("🔵 [Realtime] Estado actualizado (portal):", payload.new);
-          const nextStatus = (payload.new as { status?: string | null }).status;
-          if (nextStatus) setStatus(nextStatus);
-        }
-      )
-      .subscribe((status, err) => {
-        console.log(`📡 [Realtime Status Portal] ${status}`, err ? err : "");
-      });
+      .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
   }, [ticket.id]);
 
-  // Scroll automático al último mensaje.
+  // Scroll automático
   useEffect(() => {
-    if (bottomRef.current) {
-      bottomRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
     }
   }, [messages.length]);
 
+  const customerName = ticket.profiles?.full_name || ticket.profiles?.[0]?.full_name || "Tú";
+  const customerEmail = ticket.profiles?.email || ticket.profiles?.[0]?.email || "Sin email";
+
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-start justify-between gap-4">
-          <CardTitle>Conversación</CardTitle>
-          <span
-            className={cn(
-              "inline-flex px-2.5 py-1 rounded-full text-xs font-medium border",
-              statusBadge(status)
-            )}
-          >
-            {status ?? "abierto"}
-          </span>
+    <div className="flex flex-col lg:grid lg:grid-cols-3 gap-6 lg:h-[calc(100vh-10rem)]">
+      {/* Left Column - Chat */}
+      <Card className="flex flex-col flex-1 min-h-[600px] lg:min-h-0 lg:h-full overflow-hidden lg:col-span-2">
+        {/* Chat Header */}
+        <div className="flex-shrink-0 border-b border-gray-100 p-6">
+          <h2 className="text-lg font-semibold text-gray-900">
+            Ticket #{ticket.id.slice(0, 6)} - {ticket.category}
+          </h2>
+          <p className="text-sm text-gray-500 mt-1">
+            {formatDateTime(ticket.created_at)}
+          </p>
         </div>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
+
+        {/* Messages Container */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {messages.map((m) => {
             const isClient = (m.sender_role ?? "").toLowerCase() === "cliente";
+            const senderName = isClient ? customerName : "Soporte";
+            const senderInitials = getInitials(senderName);
+
             return (
-              <div
-                key={m.id}
-                className={cn("flex", isClient ? "justify-end" : "justify-start")}
-              >
+              <div key={m.id} className="flex gap-4">
+                {/* Avatar */}
                 <div
                   className={cn(
-                    "max-w-[80%] rounded-2xl border px-4 py-3 text-sm shadow-xs",
-                    isClient
-                      ? "bg-gray-100 border-gray-200 text-gray-900"
-                      : "bg-brand-500 border-brand-600 text-white"
+                    "flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold text-white",
+                    isClient ? "bg-gray-800" : "bg-brand-500"
                   )}
                 >
-                  <div className="whitespace-pre-wrap">{m.message}</div>
-                  <div
-                    className={cn(
-                      "mt-2 text-[11px]",
-                      isClient ? "text-gray-500" : "text-white/80"
-                    )}
-                  >
-                    {formatDateTime(m.created_at)}
+                  {senderInitials}
+                </div>
+
+                {/* Message Content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-sm font-semibold text-gray-900">
+                      {senderName}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      {formatDateTime(m.created_at)}
+                    </span>
+                  </div>
+                  <div className="mt-1 bg-gray-50 rounded-lg p-3 text-sm text-gray-900 border border-gray-100">
+                    <div className="whitespace-pre-wrap">{m.message}</div>
                   </div>
                 </div>
               </div>
@@ -233,64 +229,120 @@ export function TicketChatView({
               {error}
             </div>
           )}
+
+          <div ref={messagesEndRef} />
         </div>
 
-        <div ref={bottomRef} />
-
-        <div className="mt-6 border-t border-gray-200 pt-4">
-          <div className="flex gap-2">
+        {/* Input Area */}
+        <div className="flex-shrink-0 border-t border-gray-100 p-4">
+          <div className="border border-gray-300 rounded-xl focus-within:border-brand-500 focus-within:ring-1 focus-within:ring-brand-500 transition-all">
             <textarea
-              className="min-h-[44px] w-full resize-y rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1 focus-visible:ring-offset-gray-50"
-              placeholder="Escribe tu mensaje..."
+              className="w-full resize-none rounded-t-xl border-0 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none"
+              placeholder="Escribe una respuesta..."
               value={text}
               disabled={isPending}
               onChange={(e) => setText(e.target.value)}
+              rows={3}
             />
-            <Button
-              type="button"
-              disabled={isPending || text.trim().length === 0}
-              onClick={() => {
-                const msg = text.trim();
-                if (!msg) return;
-                const tempId = `temp-${Date.now()}`;
-                const optimistic: TicketMessage = {
-                  id: tempId,
-                  ticket_id: ticket.id,
-                  message: msg,
-                  attachment_url: null,
-                  sender_role: "cliente",
-                  created_at: new Date().toISOString(),
-                };
-
-                // Optimistic UI: añadimos el mensaje al instante.
-                setMessages((prev) => [...prev, optimistic]);
-                setText("");
-
-                startTransition(async () => {
-                  setError(null);
-                  const res = await addTicketMessage({
-                    ticketId: ticket.id,
+            <div className="bg-gray-50 border-t border-gray-200 rounded-b-xl p-3 flex justify-end">
+              <Button
+                type="button"
+                disabled={isPending || text.trim().length === 0}
+                onClick={() => {
+                  const msg = text.trim();
+                  if (!msg) return;
+                  const tempId = `temp-${Date.now()}`;
+                  const optimistic: TicketMessage = {
+                    id: tempId,
+                    ticket_id: ticket.id,
                     message: msg,
-                    isClient: true,
-                  });
-                  if (!res.ok) {
-                    // Rollback: eliminamos el mensaje temporal.
-                    setMessages((prev) => prev.filter((m) => m.id !== tempId));
-                    const message = res.error ?? "No se pudo enviar el mensaje.";
-                    setError(message);
-                    if (typeof window !== "undefined") {
-                      window.alert(message);
+                    attachment_url: null,
+                    sender_role: "cliente",
+                    created_at: new Date().toISOString(),
+                  };
+
+                  setMessages((prev) => [...prev, optimistic]);
+                  setText("");
+
+                  startTransition(async () => {
+                    setError(null);
+                    const res = await addTicketMessage({
+                      ticketId: ticket.id,
+                      message: msg,
+                      isClient: true,
+                    });
+                    if (!res.ok) {
+                      setMessages((prev) => prev.filter((m) => m.id !== tempId));
+                      const message = res.error ?? "No se pudo enviar el mensaje.";
+                      setError(message);
+                      if (typeof window !== "undefined") {
+                        window.alert(message);
+                      }
                     }
-                  }
-                });
-              }}
-            >
-              Enviar
-            </Button>
+                  });
+                }}
+              >
+                Enviar
+              </Button>
+            </div>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </Card>
+
+      {/* Right Column - Ticket Details */}
+      <Card className="h-fit">
+        <CardHeader>
+          <CardTitle>Detalles del Ticket</CardTitle>
+        </CardHeader>
+        <CardContent className="divide-y divide-gray-100">
+          {/* Customer */}
+          <div className="flex justify-between items-center py-4">
+            <span className="text-sm text-gray-600">Cliente</span>
+            <span className="text-sm font-medium text-gray-900">{customerName}</span>
+          </div>
+
+          {/* Email */}
+          <div className="flex justify-between items-center py-4">
+            <span className="text-sm text-gray-600">Email</span>
+            <span className="text-sm font-medium text-gray-900 break-all">{customerEmail}</span>
+          </div>
+
+          {/* Ticket ID */}
+          <div className="flex justify-between items-center py-4">
+            <span className="text-sm text-gray-600">Ticket ID</span>
+            <span className="text-sm font-mono text-gray-900">#{ticket.id.slice(0, 8)}</span>
+          </div>
+
+          {/* Category */}
+          <div className="flex justify-between items-center py-4">
+            <span className="text-sm text-gray-600">Categoría</span>
+            <span className="text-sm font-medium text-gray-900">{ticket.category}</span>
+          </div>
+
+          {/* Created */}
+          <div className="flex justify-between items-center py-4">
+            <span className="text-sm text-gray-600">Creado</span>
+            <span className="text-sm text-gray-900">{new Date(ticket.created_at).toLocaleDateString("es")}</span>
+          </div>
+
+          {/* Status - Static Badge (No select for clients) */}
+          <div className="flex justify-between items-center py-4">
+            <span className="text-sm text-gray-600">Estado</span>
+            <span
+              className={cn(
+                "inline-flex px-2.5 py-1.5 rounded-full text-xs font-medium",
+                statusBadge(ticket.status)
+              )}
+            >
+              {ticket.status === "resuelto" || ticket.status === "cerrado"
+                ? "Resuelto"
+                : ticket.status === "en_proceso"
+                  ? "En Proceso"
+                  : "Abierto"}
+            </span>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
-

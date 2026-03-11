@@ -1,8 +1,14 @@
+"use client";
+
 import Link from "next/link";
+import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { MessageSquare, ChevronRight } from "lucide-react";
 
 type Ticket = {
   id: string;
+  user_id: string | null;
+  client_id: string | null;
   category: string;
   message: string | null;
   status: string;
@@ -10,48 +16,84 @@ type Ticket = {
   updated_at: string | null;
 };
 
-function badge(status: string | null | undefined) {
+function statusBadge(status: string | null | undefined) {
   const s = (status ?? "abierto").toLowerCase();
   if (s === "resuelto" || s === "cerrado") {
-    return "bg-emerald-50 text-emerald-700 border-emerald-200";
+    return "bg-success-50 text-success-700 border border-success-200";
   }
   if (s === "en_proceso" || s === "en proceso") {
-    return "bg-brand-50 text-brand-700 border-brand-200";
+    return "bg-brand-50 text-brand-700 border border-brand-200";
   }
-  return "bg-amber-50 text-amber-700 border-amber-200";
+  return "bg-warning-50 text-warning-700 border border-warning-200";
 }
 
 export function TicketsList({ tickets }: { tickets: Ticket[] }) {
-  if (!tickets || tickets.length === 0) {
-    return <p className="py-8 text-center text-gray-500">No tienes tickets aún.</p>;
+  if (tickets.length === 0) {
+    return (
+      <Card className="overflow-hidden">
+        <div className="py-12 text-center">
+          <p className="text-gray-500">No tienes tickets de soporte aún</p>
+        </div>
+      </Card>
+    );
   }
 
   return (
-    <ul className="divide-y divide-gray-100">
-      {tickets.map((t) => (
-        <li key={t.id}>
-          <Link
-            href={`/portal/soporte/tickets/${t.id}`}
-            className="flex items-center justify-between gap-4 py-4 hover:bg-gray-50 px-2 -mx-2 rounded-lg transition-colors"
-          >
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <span className={cn("inline-flex px-2.5 py-1 rounded-full text-xs font-medium border", badge(t.status))}>
-                  {t.status ?? "abierto"}
-                </span>
-                <span className="font-medium text-gray-900 truncate">{t.category}</span>
+    <Card className="overflow-hidden shadow-card">
+      <div className="divide-y divide-gray-100">
+        {tickets.map((ticket) => (
+          <Link key={ticket.id} href={`/portal/soporte/tickets/${ticket.id}`}>
+            <div className="flex items-center justify-between p-5 hover:bg-gray-50 transition-all duration-200 hover:pl-6 cursor-pointer group">
+              {/* Left Column */}
+              <div className="flex items-start gap-4 flex-1 min-w-0">
+                {/* Icon */}
+                <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-brand-50 text-brand-500 flex items-center justify-center group-hover:bg-brand-100 transition-colors">
+                  <MessageSquare className="w-5 h-5" />
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-900 truncate">
+                    {ticket.category}
+                  </p>
+                  <p className="text-xs text-gray-400 font-mono mt-0.5">
+                    #{ticket.id.slice(0, 8)}
+                  </p>
+                  <p className="text-sm text-gray-600 truncate mt-1">
+                    {ticket.message || "—"}
+                  </p>
+                </div>
               </div>
-              <p className="text-sm text-gray-500 truncate mt-1">
-                {t.message ?? "—"}
-              </p>
+
+              {/* Right Column */}
+              <div className="flex items-center gap-6 flex-shrink-0 ml-4">
+                {/* Date */}
+                <span className="text-sm text-gray-500 whitespace-nowrap">
+                  {new Date(ticket.created_at).toLocaleDateString("es")}
+                </span>
+
+                {/* Status Badge */}
+                <span
+                  className={cn(
+                    "inline-flex px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap",
+                    statusBadge(ticket.status)
+                  )}
+                >
+                  {ticket.status === "resuelto" || ticket.status === "cerrado"
+                    ? "Resuelto"
+                    : ticket.status === "en_proceso"
+                      ? "En Proceso"
+                      : "Abierto"}
+                </span>
+
+                {/* Chevron */}
+                <ChevronRight className="w-5 h-5 text-gray-300 group-hover:translate-x-1 group-hover:text-gray-400 transition-all" />
+              </div>
             </div>
-            <span className="text-sm text-brand-600 font-medium shrink-0">
-              Ver hilo →
-            </span>
           </Link>
-        </li>
-      ))}
-    </ul>
+        ))}
+      </div>
+    </Card>
   );
 }
 

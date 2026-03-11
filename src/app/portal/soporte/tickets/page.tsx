@@ -1,12 +1,15 @@
-import Link from "next/link";
-import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { redirect } from "next/navigation";
 import { TicketsList } from "./tickets-list";
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 type Ticket = {
   id: string;
+  user_id: string | null;
+  client_id: string | null;
   category: string;
   message: string | null;
   status: string;
@@ -21,39 +24,30 @@ export default async function PortalTicketsPage() {
   const supabase = await createClient();
   const { data: tickets } = await supabase
     .from("support_requests")
-    .select("id, category, message, status, created_at, updated_at")
+    .select("id, user_id, client_id, category, message, status, created_at, updated_at")
     .eq("user_id", user.id)
-    .order("updated_at", { ascending: false })
     .order("created_at", { ascending: false });
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
-            Mis tickets
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Consulta tus conversaciones con soporte.
-          </p>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">Mis tickets de soporte</h1>
+          <p className="text-gray-500">Gestiona tus solicitudes de soporte y consulta el estado</p>
         </div>
-        <Link
-          href="/portal/soporte/tickets/nuevo"
-          className="inline-flex h-10 items-center justify-center rounded-lg bg-brand-500 px-4 text-sm font-medium text-white hover:bg-brand-600"
-        >
-          + Nuevo ticket
+        <Link href="/portal/soporte/tickets/new">
+          <Button className="gap-2">
+            <Plus className="w-4 h-4" />
+            Nuevo ticket
+          </Button>
         </Link>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Tickets</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <TicketsList tickets={(tickets ?? []) as Ticket[]} />
-        </CardContent>
-      </Card>
+      {/* Tickets List */}
+      <TicketsList tickets={(tickets ?? []) as Ticket[]} />
     </div>
   );
 }
+
 
