@@ -50,7 +50,7 @@ export default async function PortalTicketPage({
       .order("created_at", { ascending: true }),
   ]);
 
-  if (!ticket) redirect("/portal/tickets");
+  if (!ticket) redirect("/portal/soporte/tickets");
 
   return (
     <div>
