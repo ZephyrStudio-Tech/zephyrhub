@@ -12,8 +12,6 @@ export function PortalSidebar() {
 
   const navItems = [
     { href: "/portal", label: "Inicio" },
-    { href: "/portal/vault", label: "Documentos" },
-    { href: "/portal/acuerdos", label: "Acuerdos" },
     { href: "/portal/soporte", label: "Centro de Ayuda" },
   ];
 
