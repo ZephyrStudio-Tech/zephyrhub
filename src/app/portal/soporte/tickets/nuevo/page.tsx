@@ -15,12 +15,57 @@ const CATEGORIES = [
   "Pregunta general",
 ] as const;
 
+const DOCUMENT_OPTIONS = [
+  "Modelo 036 — Alta/modificación censal",
+  "Modelo 037 — Alta/modificación censal (autónomos)",
+  "Certificado de estar al corriente con la Seguridad Social",
+  "Certificado de estar al corriente con Hacienda (AEAT)",
+  "DNI / NIF del representante legal",
+  "Escrituras de constitución de la empresa",
+  "Informe de vida laboral",
+  "Otro (especificar abajo)",
+] as const;
+
 export default function NuevoTicketPage() {
   const router = useRouter();
   const [category, setCategory] = useState<string>(CATEGORIES[0]);
   const [message, setMessage] = useState("");
+  const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set());
+  const [additionalContext, setAdditionalContext] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  const isDocumentCategory = category === "Documentación";
+
+  const toggleDoc = (doc: string) => {
+    setSelectedDocs((prev) => {
+      const next = new Set(prev);
+      if (next.has(doc)) {
+        next.delete(doc);
+      } else {
+        next.add(doc);
+      }
+      return next;
+    });
+  };
+
+  const buildFinalMessage = (): string => {
+    if (!isDocumentCategory) {
+      return message.trim();
+    }
+    const docs = Array.from(selectedDocs);
+    if (docs.length === 0) return "";
+    
+    let finalMsg = "Documentación solicitada:\n" + docs.map((d) => `- ${d}`).join("\n");
+    if (additionalContext.trim()) {
+      finalMsg += "\n\n" + additionalContext.trim();
+    }
+    return finalMsg;
+  };
+
+  const canSubmit = isDocumentCategory 
+    ? selectedDocs.size > 0 
+    : message.trim().length > 0;
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -62,18 +107,59 @@ export default function NuevoTicketPage() {
               </select>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Mensaje
-              </label>
-              <textarea
-                className="min-h-[140px] w-full resize-y rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1 focus-visible:ring-offset-gray-50"
-                placeholder="Cuéntanos qué ocurre, pasos para reproducir, capturas, etc."
-                value={message}
-                disabled={isPending}
-                onChange={(e) => setMessage(e.target.value)}
-              />
-            </div>
+            {/* Document checkboxes - only for Documentación category */}
+            {isDocumentCategory ? (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Selecciona los documentos que necesitas
+                  </label>
+                  <div className="space-y-2">
+                    {DOCUMENT_OPTIONS.map((doc) => (
+                      <label
+                        key={doc}
+                        className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedDocs.has(doc)}
+                          onChange={() => toggleDoc(doc)}
+                          disabled={isPending}
+                          className="mt-0.5 h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+                        />
+                        <span className="text-sm text-gray-700">{doc}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Contexto adicional (opcional)
+                  </label>
+                  <textarea
+                    className="min-h-[100px] w-full resize-y rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1 focus-visible:ring-offset-gray-50"
+                    placeholder="Especifica cualquier detalle adicional sobre los documentos solicitados..."
+                    value={additionalContext}
+                    disabled={isPending}
+                    onChange={(e) => setAdditionalContext(e.target.value)}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Mensaje
+                </label>
+                <textarea
+                  className="min-h-[140px] w-full resize-y rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-1 focus-visible:ring-offset-gray-50"
+                  placeholder="Cuéntanos qué ocurre, pasos para reproducir, capturas, etc."
+                  value={message}
+                  disabled={isPending}
+                  onChange={(e) => setMessage(e.target.value)}
+                />
+              </div>
+            )}
 
             {error && (
               <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -92,13 +178,13 @@ export default function NuevoTicketPage() {
               </Button>
               <Button
                 type="button"
-                disabled={isPending || message.trim().length === 0}
+                disabled={isPending || !canSubmit}
                 onClick={() => {
-                  const msg = message.trim();
-                  if (!msg) return;
+                  const finalMessage = buildFinalMessage();
+                  if (!finalMessage) return;
                   startTransition(async () => {
                     setError(null);
-                    const res = await createTicket({ category, message: msg });
+                    const res = await createTicket({ category, message: finalMessage });
                     if (!res.ok) {
                       setError(res.error ?? "No se pudo crear el ticket.");
                       return;

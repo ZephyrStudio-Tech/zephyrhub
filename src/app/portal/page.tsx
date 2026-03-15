@@ -40,20 +40,29 @@ export default async function PortalPage() {
     );
   }
 
-  const { data: alerts } = client
-    ? await supabase
-        .from("alerts")
-        .select("id, message, created_at, read_at")
-        .eq("client_id", client.id)
-        .is("read_at", null)
-        .order("created_at", { ascending: false })
-        .limit(5)
-    : { data: [] };
+  const [{ data: alerts }, { data: interactions }] = client
+    ? await Promise.all([
+        supabase
+          .from("alerts")
+          .select("id, message, created_at, read_at")
+          .eq("client_id", client.id)
+          .is("read_at", null)
+          .order("created_at", { ascending: false })
+          .limit(5),
+        supabase
+          .from("interactions")
+          .select("id, type, metadata, created_at")
+          .eq("client_id", client.id)
+          .eq("type", "state_change")
+          .order("created_at", { ascending: true }),
+      ])
+    : [{ data: [] }, { data: [] }];
 
   return (
     <PortalDashboard
       client={client ?? null}
       alerts={alerts ?? []}
+      interactions={interactions ?? []}
       role={role}
     />
   );
