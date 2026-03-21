@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Pencil, Trash2, Check, X } from "lucide-react";
 import Image from "next/image";
 
-type Device = {
+export type Device = {
   id: string;
   name: string;
   brand: string | null;
@@ -25,7 +25,7 @@ type Device = {
   sale_price: number;
   bono_coverage: number;
   stock: number | null;
-  available: boolean;
+  is_available: boolean;
   images: string[];
   created_at: string;
 };
@@ -52,7 +52,7 @@ type DeviceFormData = {
   sale_price: number;
   bono_coverage: number;
   stock: number;
-  available: boolean;
+  is_available: boolean;
   images: string[];
 };
 
@@ -79,7 +79,7 @@ function DeviceForm({
       sale_price: device.sale_price,
       bono_coverage: device.bono_coverage,
       stock: device.stock || 0,
-      available: device.available,
+      is_available: device.is_available,
       images: device.images,
     } : {
       name: "",
@@ -92,7 +92,7 @@ function DeviceForm({
       sale_price: 0,
       bono_coverage: 1000,
       stock: 0,
-      available: true,
+      is_available: true,
       images: [],
     }
   );
@@ -319,8 +319,8 @@ function DeviceForm({
       <div className="flex items-center gap-3">
         <input
           type="checkbox"
-          checked={formData.available}
-          onChange={(e) => handleChange("available", e.target.checked)}
+          checked={formData.is_available}
+          onChange={(e) => handleChange("is_available", e.target.checked)}
           className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
           disabled={isPending}
         />
@@ -462,12 +462,12 @@ export function DevicesCatalog({ devices: initialDevices }: { devices: Device[] 
                   <div className="absolute top-2 right-2 flex gap-2">
                     <span
                       className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        device.available
+                        device.is_available
                           ? "bg-green-100 text-green-700"
                           : "bg-red-100 text-red-700"
                       }`}
                     >
-                      {device.available ? "Disponible" : "No disponible"}
+                      {device.is_available ? "Disponible" : "No disponible"}
                     </span>
                   </div>
                 </div>
@@ -548,12 +548,12 @@ export function DevicesCatalog({ devices: initialDevices }: { devices: Device[] 
                     </Button>
                     <Button
                       size="sm"
-                      variant={device.available ? "outline" : "default"}
+                      variant={device.is_available ? "outline" : "default"}
                       className="flex-1 gap-2"
-                      onClick={() => handleToggleAvailability(device.id, device.available)}
+                      onClick={() => handleToggleAvailability(device.id, device.is_available)}
                       disabled={isPending}
                     >
-                      {device.available ? (
+                      {device.is_available ? (
                         <>
                           <X className="w-4 h-4" />
                           Desactivar

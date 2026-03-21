@@ -1,30 +1,8 @@
 import { getSession } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { DevicesCatalog } from "./devices-catalog";
+import { DevicesCatalog, type Device } from "./devices-catalog";
 import { Package, CheckCircle, XCircle } from "lucide-react";
-
-type Device = {
-  id: string;
-  name: string;
-  brand: string | null;
-  model: string | null;
-  category: string;
-  description: string | null;
-  specs: {
-    ram?: string;
-    storage?: string;
-    screen?: string;
-    processor?: string;
-  } | null;
-  cost_price: number;
-  sale_price: number;
-  bono_coverage: number;
-  stock: number | null;
-  available: boolean;
-  images: string[];
-  created_at: string;
-};
 
 export default async function BackofficeDevicesPage() {
   const { user, role } = await getSession();
@@ -38,7 +16,7 @@ export default async function BackofficeDevicesPage() {
     .order("created_at", { ascending: false });
 
   const totalDevices = devices?.length ?? 0;
-  const availableDevices = devices?.filter((d) => d.available).length ?? 0;
+  const availableDevices = devices?.filter((d) => d.is_available).length ?? 0;
   const unavailableDevices = totalDevices - availableDevices;
 
   return (
