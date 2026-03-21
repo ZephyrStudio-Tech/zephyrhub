@@ -94,7 +94,7 @@ function LeadCard({
           {title}
         </p>
         <span className={cn("text-xs font-medium px-2 py-0.5 rounded border", getServiceColor(lead.service_requested))}>
-          {lead.service_requested?.replace("_", " ").charAt(0).toUpperCase() + lead.service_requested?.replace("_", " ").slice(1) || "—"}
+          {lead.service_requested ? lead.service_requested.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()) : "—"}
         </span>
       </div>
       <p className="text-xs text-slate-500 mt-0.5">
