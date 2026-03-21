@@ -1,6 +1,7 @@
 "use server";
 
 import { requireServerAuth } from "@/lib/auth";
+import { Resend } from "resend";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -163,6 +164,7 @@ export async function createAssociateAction(data: any) {
   if (auth.error) return { ok: false, error: auth.error };
 
   const { supabaseAdmin } = auth;
+  const resend = new Resend(process.env.RESEND_API_KEY);
 
   // 1. Create user in Auth
   const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
@@ -185,7 +187,6 @@ export async function createAssociateAction(data: any) {
   });
 
   if (profileError) {
-    // Cleanup auth user? Supabase admin can do it if needed.
     return { ok: false, error: profileError.message };
   }
 
@@ -201,6 +202,65 @@ export async function createAssociateAction(data: any) {
   });
 
   if (assocError) return { ok: false, error: assocError.message };
+
+  // 4. Send welcome email
+  if (process.env.RESEND_API_KEY) {
+    try {
+      await resend.emails.send({
+        from: "ZephyrStudio <hola@kitdigitalzephyrstudio.es>",
+        to: data.email,
+        subject: "Tu acceso como Asociado ZephyrStudio",
+        html: `
+<!doctype html>
+<html>
+<head>
+  <style>
+    body { background-color: #030305; font-family: -apple-system, system-ui, sans-serif; margin: 0; padding: 40px 20px; }
+    .container { max-width: 600px; margin: 0 auto; }
+    .card { background-color: #0a0f1e; border: 1px solid #1a2540; border-radius: 20px; padding: 32px; color: #94a3b8; }
+    .badge { display: inline-block; background: #150a28; border: 1px solid #2a1a4a; border-radius: 100px; padding: 5px 14px; font-size: 10px; font-weight: 700; text-transform: uppercase; color: #c084fc; margin-bottom: 20px; }
+    h1 { color: #ffffff; font-size: 24px; font-weight: 800; margin: 0 0 16px 0; }
+    .creds { background: #050d1a; border: 1px solid #0e3a5c; border-radius: 12px; padding: 20px; margin: 24px 0; }
+    .creds-row { font-size: 14px; margin-bottom: 8px; color: #94a3b8; }
+    .creds-val { color: #ffffff; font-weight: 600; }
+    .pass { font-family: monospace; color: #c084fc; background: rgba(0,0,0,0.2); padding: 2px 6px; border-radius: 4px; }
+    .steps { margin: 24px 0; }
+    .step { position: relative; padding-left: 24px; margin-bottom: 12px; font-size: 13px; }
+    .step-num { position: absolute; left: 0; color: #c084fc; font-weight: 700; }
+    .btn { display: inline-block; background: #c084fc; color: #000000 !important; font-size: 14px; font-weight: 700; text-decoration: none; padding: 14px 32px; border-radius: 100px; margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="badge">Bienvenido Asociado</div>
+      <h1>Hola <span style="color:#c084fc;">${data.full_name.split(' ')[0]}</span>, Ya eres asociado</h1>
+      <p>Tu cuenta de asociado en ZephyrStudio está activa. Podrás enviar referidos y hacer seguimiento de tus comisiones en tiempo real.</p>
+
+      <div class="creds">
+        <div class="creds-row">Portal: <span class="creds-val">app.kitdigitalzephyrstudio.es/asociado</span></div>
+        <div class="creds-row">Usuario: <span class="creds-val">${data.email}</span></div>
+        <div class="creds-row">Contraseña: <span class="creds-val pass">${data.password}</span></div>
+      </div>
+
+      <div class="steps">
+        <div class="step"><span class="step-num">01</span> Accede y cambia tu contraseña temporal.</div>
+        <div class="step"><span class="step-num">02</span> Añade tus datos fiscales e IBAN para recibir comisiones.</div>
+        <div class="step"><span class="step-num">03</span> Envía tu primer referido desde "Mis referidos".</div>
+        <div class="step"><span class="step-num">04</span> Recibirás 200€ por cada expediente que lleguemos a cobrar.</div>
+      </div>
+
+      <a href="https://app.kitdigitalzephyrstudio.es/asociado" class="btn">Entrar a mi Portal →</a>
+    </div>
+  </div>
+</body>
+</html>
+        `
+      });
+    } catch (e) {
+      console.error("[Associate Email Error]", e);
+    }
+  }
 
   revalidatePath("/backoffice/asociados");
   return { ok: true };
