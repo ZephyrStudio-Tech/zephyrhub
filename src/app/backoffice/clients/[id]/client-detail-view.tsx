@@ -242,7 +242,7 @@ export function ClientDetailView({
           <CardContent className="space-y-4">
             {/* Service Description */}
             <div>
-              <label className="text-sm font-medium text-gray-700">Descripción del servicio</label>
+              <label className="text-sm font-medium text-gray-700">Descripci��n del servicio</label>
               {editingDescription ? (
                 <div className="mt-2 flex gap-2">
                   <textarea
@@ -643,7 +643,7 @@ export function ClientDetailView({
                                 OK
                               </Button>
                               <Button
-                                size="xs"
+                                size="sm"
                                 variant="outline"
                                 onClick={() => {
                                   setReceivingPayment(null);
