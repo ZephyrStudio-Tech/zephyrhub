@@ -19,7 +19,7 @@ export default async function BackofficeClientPage({
   let query = supabase
     .from("clients")
     .select(
-      "id, company_name, cif, current_state, service_type, consultant_id, user_id, created_at"
+      "id, company_name, cif, current_state, service_type, consultant_id, user_id, created_at, has_web_contract, has_ecommerce_contract, has_device, service_description, bono_granted_at"
     )
     .eq("id", id)
     .single();
@@ -29,8 +29,8 @@ export default async function BackofficeClientPage({
     if (!c || c.consultant_id !== user.id) notFound();
   }
 
-  // Execute all three queries in parallel
-  const [{ data: client, error }, { data: interactions }, { data: documents }] =
+  // Execute all queries in parallel
+  const [{ data: client, error }, { data: interactions }, { data: documents }, { data: contracts }, { data: deviceOrders }, { data: payments }] =
     await Promise.all([
       query,
       supabase
@@ -47,6 +47,21 @@ export default async function BackofficeClientPage({
         .eq("client_id", id)
         .order("slot_type")
         .order("version", { ascending: false }),
+      supabase
+        .from("contracts")
+        .select("id, type, current_state")
+        .eq("client_id", id),
+      supabase
+        .from("device_orders")
+        .select("id, status, device_id, shipping_address, shipping_city, shipping_postal_code, surcharge, payment_status, tracking_number, tracking_url")
+        .eq("client_id", id)
+        .order("created_at", { ascending: false })
+        .limit(1),
+      supabase
+        .from("payments")
+        .select("id, contract_type, phase, expected_amount, received_amount, received_at, agent_commission")
+        .eq("client_id", id)
+        .order("created_at", { ascending: true }),
     ]);
 
   if (error || !client) notFound();
@@ -59,6 +74,9 @@ export default async function BackofficeClientPage({
       client={client}
       interactions={interactions ?? []}
       documents={documents ?? []}
+      contracts={contracts ?? []}
+      deviceOrders={deviceOrders ?? []}
+      payments={payments ?? []}
       slots={slots}
       phases={PHASES}
       suggestedNext={suggestedNext}

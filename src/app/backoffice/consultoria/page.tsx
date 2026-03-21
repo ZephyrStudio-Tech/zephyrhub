@@ -9,18 +9,37 @@ export default async function ConsultoriaPage() {
   if (!user) redirect("/login");
 
   const supabase = await createClient();
+  const supabaseAdmin = await import("@/lib/supabase/server").then(m => m.createAdminClient());
+
   let query = supabase
     .from("clients")
-    .select("id, company_name, cif, current_state, service_type, consultant_id, created_at")
+    .select("id, company_name, cif, current_state, service_type, consultant_id, created_at, pending_docs")
     .order("created_at", { ascending: false });
 
   if (role === "consultor") {
     query = query.eq("consultant_id", user.id);
   }
 
-  const { data: clients } = await query;
+  const { data: rawClients } = await query;
 
-  const clientCount = clients?.length ?? 0;
+  // For each client, calculate last_interaction_at
+  const clients = await Promise.all(
+    (rawClients ?? []).map(async (client) => {
+      const { data: interactions } = await supabaseAdmin
+        .from("interactions")
+        .select("created_at")
+        .eq("client_id", client.id)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      return {
+        ...client,
+        last_interaction_at: interactions?.[0]?.created_at ?? null,
+      };
+    })
+  );
+
+  const clientCount = clients.length ?? 0;
 
   return (
     <div className="space-y-8">
@@ -39,7 +58,7 @@ export default async function ConsultoriaPage() {
         expediente{clientCount !== 1 ? "s" : ""}
       </div>
       <PipelineView
-        clients={clients ?? []}
+        clients={clients}
         stateLabels={CONSULTORIA_STATE_LABELS}
       />
     </div>
