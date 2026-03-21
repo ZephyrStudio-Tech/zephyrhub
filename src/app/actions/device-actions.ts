@@ -19,7 +19,7 @@ type DeviceInput = {
   sale_price: number;
   bono_coverage: number;
   stock: number | null;
-  available: boolean;
+  is_available: boolean;
   images: string[];
 };
 
@@ -55,7 +55,7 @@ export async function createDevice(
     sale_price: data.sale_price,
     bono_coverage: data.bono_coverage,
     stock: data.stock,
-    available: data.available,
+    is_available: data.is_available,
     images: data.images,
   });
 
@@ -100,7 +100,7 @@ export async function updateDevice(
       sale_price: data.sale_price,
       bono_coverage: data.bono_coverage,
       stock: data.stock,
-      available: data.available,
+      is_available: data.is_available,
       images: data.images,
     })
     .eq("id", deviceId);
@@ -113,7 +113,7 @@ export async function updateDevice(
 
 export async function toggleDeviceAvailability(
   deviceId: string,
-  available: boolean
+  is_available: boolean
 ): Promise<{ ok: boolean; error?: string }> {
   const supabase = await createClient();
   const {
@@ -135,7 +135,7 @@ export async function toggleDeviceAvailability(
   const supabaseAdmin = createAdminClient();
   const { error } = await supabaseAdmin
     .from("devices")
-    .update({ available })
+    .update({ is_available })
     .eq("id", deviceId);
 
   if (error) return { ok: false, error: error.message };
