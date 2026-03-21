@@ -45,14 +45,24 @@ export default async function PreconsultoriaPage() {
 
   // Bulk fetch data to avoid N+1 queries
   const [
-    { data: interactionStats },
+    { data: latestInteractions },
+    { data: callMissedCounts },
     { data: allReferrals }
   ] = await Promise.all([
+    // Latest interaction for each lead using a more efficient query if possible,
+    // or just fetching all and reducing (safer without custom Postgres functions)
     supabaseAdmin
       .from("interactions")
-      .select("client_id, type, created_at")
+      .select("client_id, created_at")
       .in("client_id", leadIds)
       .order("created_at", { ascending: false }),
+
+    // Count of missed calls per lead
+    supabaseAdmin
+      .from("interactions")
+      .select("client_id")
+      .in("client_id", leadIds)
+      .eq("type", "call_missed"),
 
     supabaseAdmin
       .from("referrals")
@@ -61,10 +71,9 @@ export default async function PreconsultoriaPage() {
   ]);
 
   const leads = (rawLeads ?? []).map((lead) => {
-    const leadInteractions = (interactionStats ?? []).filter(i => i.client_id === lead.id);
-    const latestInteraction = leadInteractions[0];
+    const latestInteraction = (latestInteractions ?? []).find(i => i.client_id === lead.id);
     const referral = (allReferrals ?? []).find(r => r.client_id === lead.id);
-    const missedCount = leadInteractions.filter(i => i.type === "call_missed").length;
+    const missedCount = (callMissedCounts ?? []).filter(i => i.client_id === lead.id).length;
 
     return {
       ...lead,

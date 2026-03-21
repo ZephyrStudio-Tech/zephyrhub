@@ -164,7 +164,6 @@ export async function createAssociateAction(data: any) {
   if (auth.error) return { ok: false, error: auth.error };
 
   const { supabaseAdmin } = auth;
-  const resend = new Resend(process.env.RESEND_API_KEY);
 
   // 1. Create user in Auth
   const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
@@ -206,6 +205,8 @@ export async function createAssociateAction(data: any) {
   // 4. Send welcome email
   if (process.env.RESEND_API_KEY) {
     try {
+      console.log("[Email] Enviando email de bienvenida a", data.email, "con rol asociado");
+      const resend = new Resend(process.env.RESEND_API_KEY);
       await resend.emails.send({
         from: "ZephyrStudio <hola@kitdigitalzephyrstudio.es>",
         to: data.email,

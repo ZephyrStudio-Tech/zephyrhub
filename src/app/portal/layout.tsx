@@ -9,6 +9,7 @@ export default async function PortalLayout({
 }) {
   const { user, role } = await getSession();
   if (!user) redirect("/login");
+  if (role === "asociado") redirect("/asociado");
   if (role !== "beneficiario" && role !== "admin") redirect("/backoffice");
 
   return (

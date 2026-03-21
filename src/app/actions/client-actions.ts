@@ -279,7 +279,6 @@ export async function createInternalUser(data: any) {
   if (auth.error) return { ok: false, error: auth.error };
 
   const { supabaseAdmin } = auth;
-  const resend = new Resend(process.env.RESEND_API_KEY);
 
   // 1. Create user in Auth
   const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
@@ -306,6 +305,8 @@ export async function createInternalUser(data: any) {
   // 3. Send welcome email
   if (process.env.RESEND_API_KEY) {
     try {
+      console.log("[Email] Enviando email de bienvenida a", data.email, "con rol", data.role);
+      const resend = new Resend(process.env.RESEND_API_KEY);
       const roleColors = {
         admin: { primary: "#f87171", bg: "#1a0a0a", border: "#3f1f1f", label: "Administrador" },
         consultor: { primary: "#60a5fa", bg: "#0a1628", border: "#1a2f4a", label: "Consultor" },
