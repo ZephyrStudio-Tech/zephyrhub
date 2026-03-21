@@ -41,31 +41,33 @@ function getClientCost(salePrice: number, bonoCoverage: number): number {
   return Math.max(0, cost);
 }
 
+type DeviceFormData = {
+  name: string;
+  brand: string;
+  model: string;
+  category: string;
+  description: string;
+  specs: { ram?: string; storage?: string; screen?: string; processor?: string };
+  cost_price: number;
+  sale_price: number;
+  bono_coverage: number;
+  stock: number;
+  available: boolean;
+  images: string[];
+};
+
 function DeviceForm({
   device,
   onSubmit,
   onCancel,
   isPending,
 }: {
-  device?: Device;
-  onSubmit: (data: any) => void;
+  device?: Device | null;
+  onSubmit: (data: DeviceFormData) => void;
   onCancel: () => void;
   isPending: boolean;
 }) {
-  const [formData, setFormData] = useState<{
-    name: string;
-    brand: string;
-    model: string;
-    category: string;
-    description: string;
-    specs: { ram?: string; storage?: string; screen?: string; processor?: string };
-    cost_price: number;
-    sale_price: number;
-    bono_coverage: number;
-    stock: number;
-    available: boolean;
-    images: string[];
-  }>(
+  const [formData, setFormData] = useState<DeviceFormData>(
     device ? {
       name: device.name,
       brand: device.brand || "",
@@ -98,7 +100,7 @@ function DeviceForm({
     (device?.images || []).join("\n")
   );
 
-  const handleChange = (field: string, value: any) => {
+  const handleChange = <K extends keyof DeviceFormData>(field: K, value: DeviceFormData[K]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -365,7 +367,7 @@ export function DevicesCatalog({ devices: initialDevices }: { devices: Device[] 
   const [showForm, setShowForm] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  const handleCreate = (data: any) => {
+  const handleCreate = (data: DeviceFormData) => {
     startTransition(async () => {
       const res = await createDevice(data);
       if (res.ok) {
@@ -377,7 +379,7 @@ export function DevicesCatalog({ devices: initialDevices }: { devices: Device[] 
     });
   };
 
-  const handleUpdate = (data: any) => {
+  const handleUpdate = (data: DeviceFormData) => {
     if (!editingId) return;
     startTransition(async () => {
       const res = await updateDevice(editingId, data);
