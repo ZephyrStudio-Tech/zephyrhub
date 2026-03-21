@@ -2,12 +2,14 @@ import { getSession } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { SupportInbox } from "./support-inbox";
-import { MessageCircle, CheckCircle, AlertCircle } from "lucide-react";
+import { MessageCircle, CheckCircle, AlertCircle, Plus } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export default async function BackofficeSupportPage() {
   const { user, role } = await getSession();
   if (!user) redirect("/login");
-  if (!["consultor", "admin"].includes(role ?? "")) redirect("/backoffice");
+  if (!["consultor", "admin", "tecnico"].includes(role ?? "")) redirect("/backoffice");
 
   const supabase = createAdminClient();
   const { data: tickets } = await supabase
@@ -23,11 +25,17 @@ export default async function BackofficeSupportPage() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div>
-        <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between">
+        <div>
           <h1 className="text-3xl font-bold text-gray-900">Support List</h1>
-          <p className="text-sm text-gray-500">Home / Support List</p>
+          <p className="text-sm text-gray-500 mt-1">Home / Support List</p>
         </div>
+        <Link href="/backoffice/support/nuevo">
+          <Button className="gap-2">
+            <Plus className="w-4 h-4" />
+            Nuevo ticket
+          </Button>
+        </Link>
       </div>
 
       {/* Statistics Grid */}

@@ -25,16 +25,19 @@ export async function createTicket(data: {
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "No autenticado" };
 
-  const { data: client } = await supabase
+  // Try to find the client associated with this user (may not exist for internal users)
+  const { data: clients } = await supabase
     .from("clients")
     .select("id")
     .eq("user_id", user.id)
-    .single();
+    .limit(1);
+
+  const clientId = clients?.[0]?.id ?? null;
 
   const supabaseAdmin = createAdminClient();
   const { error } = await supabaseAdmin.from("support_requests").insert({
     user_id: user.id,
-    client_id: client?.id ?? null,
+    client_id: clientId,
     category: data.category || "general",
     message: data.message || null,
     status: "abierto",
