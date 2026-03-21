@@ -34,6 +34,7 @@ function generatePassword(): string {
   return "Kit" + Math.floor(1000 + Math.random() * 9000).toString();
 }
 
+
 /**
  * Actualiza el current_state de un lead en triage_leads (para el Kanban de Preconsultoría).
  */

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createAssociateAction } from "@/app/actions/referral-actions";
+import { generateStaffPassword } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +13,11 @@ import { Loader2, UserPlus, Key, Wallet, User } from "lucide-react";
 export function NewAssociateForm() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [tempPassword, setTempPassword] = useState("");
+
+  useEffect(() => {
+    setTempPassword(generateStaffPassword());
+  }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -45,8 +51,19 @@ export function NewAssociateForm() {
             <Input id="email" name="email" type="email" required placeholder="ejemplo@correo.com" className="bg-white border-slate-200" />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password" className="text-sm font-bold text-slate-700">Contraseña temporal *</Label>
-            <Input id="password" name="password" type="text" required placeholder="Escribe una contraseña segura" className="bg-white border-slate-200 font-mono" />
+            <Label htmlFor="password">Contraseña temporal *</Label>
+            <div className="flex gap-2">
+              <Input
+                id="password"
+                name="password"
+                type="text"
+                required
+                value={tempPassword}
+                onChange={(e) => setTempPassword(e.target.value)}
+                className="bg-white border-slate-200 font-mono"
+              />
+              <Button type="button" variant="outline" size="sm" onClick={() => setTempPassword(generateStaffPassword())}>Regenerar</Button>
+            </div>
           </div>
         </CardContent>
       </Card>

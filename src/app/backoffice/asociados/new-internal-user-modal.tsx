@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createInternalUser } from "@/app/actions/client-actions";
+import { generateStaffPassword } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +13,14 @@ import { Plus, X, Loader2, ShieldCheck } from "lucide-react";
 export function NewInternalUserModal() {
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [tempPassword, setTempPassword] = useState("");
   const router = useRouter();
+
+  useEffect(() => {
+    if (isOpen) {
+      setTempPassword(generateStaffPassword());
+    }
+  }, [isOpen]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -61,7 +69,18 @@ export function NewInternalUserModal() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Contraseña temporal *</Label>
-              <Input id="password" name="password" type="text" required placeholder="Mínimo 6 caracteres" className="font-mono" />
+              <div className="flex gap-2">
+                <Input
+                  id="password"
+                  name="password"
+                  type="text"
+                  required
+                  value={tempPassword}
+                  onChange={(e) => setTempPassword(e.target.value)}
+                  className="font-mono"
+                />
+                <Button type="button" variant="outline" size="sm" onClick={() => setTempPassword(generateStaffPassword())}>Regenerar</Button>
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="role">Rol asignado</Label>
