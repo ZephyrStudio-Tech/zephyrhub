@@ -52,14 +52,40 @@ function DeviceForm({
   onCancel: () => void;
   isPending: boolean;
 }) {
-  const [formData, setFormData] = useState(
-    device || {
+  const [formData, setFormData] = useState<{
+    name: string;
+    brand: string;
+    model: string;
+    category: string;
+    description: string;
+    specs: { ram?: string; storage?: string; screen?: string; processor?: string };
+    cost_price: number;
+    sale_price: number;
+    bono_coverage: number;
+    stock: number;
+    available: boolean;
+    images: string[];
+  }>(
+    device ? {
+      name: device.name,
+      brand: device.brand || "",
+      model: device.model || "",
+      category: device.category,
+      description: device.description || "",
+      specs: device.specs || {},
+      cost_price: device.cost_price,
+      sale_price: device.sale_price,
+      bono_coverage: device.bono_coverage,
+      stock: device.stock || 0,
+      available: device.available,
+      images: device.images,
+    } : {
       name: "",
       brand: "",
       model: "",
       category: "Portátil",
       description: "",
-      specs: { ram: "", storage: "", screen: "", processor: "" },
+      specs: {},
       cost_price: 0,
       sale_price: 0,
       bono_coverage: 1000,
