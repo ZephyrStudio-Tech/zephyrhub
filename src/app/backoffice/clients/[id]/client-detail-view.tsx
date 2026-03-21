@@ -636,7 +636,7 @@ export function ClientDetailView({
                                 onChange={(e) => setPaymentDate(e.target.value)}
                               />
                               <Button
-                                size="xs"
+                                size="sm"
                                 onClick={() => onMarkPaymentReceived(payment.id)}
                                 disabled={!paymentAmount}
                               >
