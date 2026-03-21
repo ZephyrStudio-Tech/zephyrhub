@@ -26,13 +26,13 @@ export default async function PortalPage() {
 
   if (!client && role === "admin") {
     return (
-      <div className="rounded-xl border border-white/10 bg-white/5 p-8 text-center space-y-4">
-        <p className="text-muted">
+      <div className="rounded-xl border border-slate-200 bg-white p-8 text-center space-y-4">
+        <p className="text-slate-600 font-medium">
           Estás en el portal como administrador. Los admins no tienen expediente asignado (son personal).
         </p>
         <a
-          href="/backoffice"
-          className="inline-block rounded-lg bg-accent px-4 py-2 text-background font-medium hover:opacity-90"
+          href="/backoffice/dashboard"
+          className="inline-block rounded-lg bg-primary px-4 py-2 text-white font-medium hover:opacity-90"
         >
           Ir al backoffice
         </a>
@@ -40,7 +40,7 @@ export default async function PortalPage() {
     );
   }
 
-  const [{ data: alerts }, { data: interactions }] = client
+  const [{ data: alerts }, { data: interactions }, { data: contracts }] = client
     ? await Promise.all([
         supabase
           .from("alerts")
@@ -55,14 +55,20 @@ export default async function PortalPage() {
           .eq("client_id", client.id)
           .eq("type", "state_change")
           .order("created_at", { ascending: true }),
+        supabase
+          .from("contracts")
+          .select("id, type, current_state")
+          .eq("client_id", client.id)
+          .order("type"),
       ])
-    : [{ data: [] }, { data: [] }];
+    : [{ data: [] }, { data: [] }, { data: [] }];
 
   return (
     <PortalDashboard
       client={client ?? null}
       alerts={alerts ?? []}
       interactions={interactions ?? []}
+      contracts={contracts ?? []}
       role={role}
     />
   );
