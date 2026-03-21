@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Pencil, Trash2, Check, X } from "lucide-react";
 import Image from "next/image";
 
-type Device = {
+export type Device = {
   id: string;
   name: string;
   brand: string | null;
