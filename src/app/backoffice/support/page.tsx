@@ -12,10 +12,28 @@ export default async function BackofficeSupportPage() {
   if (!["consultor", "admin", "tecnico"].includes(role ?? "")) redirect("/backoffice");
 
   const supabase = createAdminClient();
-  const { data: tickets } = await supabase
+  let query = supabase
     .from("support_requests")
     .select("id, user_id, client_id, category, message, status, admin_reply, created_at, updated_at, profiles(full_name, email)")
     .order("created_at", { ascending: false });
+
+  if (role === "consultor") {
+    // Subquery-like behavior: consultant sees their own user tickets OR tickets for clients they manage
+    const { data: managedClients } = await supabase
+      .from("clients")
+      .select("id")
+      .eq("consultant_id", user.id);
+
+    const clientIds = (managedClients || []).map(c => c.id);
+
+    if (clientIds.length > 0) {
+      query = query.or(`user_id.eq.${user.id},client_id.in.(${clientIds.join(",")})`);
+    } else {
+      query = query.eq("user_id", user.id);
+    }
+  }
+
+  const { data: tickets } = await query;
 
   // Calculate statistics
   const totalTickets = tickets?.length ?? 0;

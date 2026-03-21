@@ -18,6 +18,7 @@ function slugify(text: string): string {
 export async function createTicket(data: {
   category: string;
   message: string;
+  clientId?: string | null;
 }): Promise<{ ok: boolean; error?: string }> {
   const supabase = await createClient();
   const {
@@ -25,14 +26,17 @@ export async function createTicket(data: {
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "No autenticado" };
 
-  // Try to find the client associated with this user (may not exist for internal users)
-  const { data: clients } = await supabase
-    .from("clients")
-    .select("id")
-    .eq("user_id", user.id)
-    .limit(1);
+  let clientId = data.clientId ?? null;
 
-  const clientId = clients?.[0]?.id ?? null;
+  if (!clientId) {
+    // Try to find the client associated with this user (for beneficiaries)
+    const { data: clients } = await supabase
+      .from("clients")
+      .select("id")
+      .eq("user_id", user.id)
+      .limit(1);
+    clientId = clients?.[0]?.id ?? null;
+  }
 
   const supabaseAdmin = createAdminClient();
   const { error } = await supabaseAdmin.from("support_requests").insert({

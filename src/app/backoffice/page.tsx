@@ -2,7 +2,8 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 
 export default async function BackofficeIndexPage() {
-  const { role } = await getSession();
+  const { user, role } = await getSession();
+  if (!user) redirect("/login");
 
   if (role === "admin") {
     redirect("/backoffice/dashboard");
@@ -12,5 +13,9 @@ export default async function BackofficeIndexPage() {
     redirect("/backoffice/preconsultoria");
   }
 
-  redirect("/login");
+  if (role === "asociado") {
+    redirect("/asociado");
+  }
+
+  redirect("/portal");
 }
