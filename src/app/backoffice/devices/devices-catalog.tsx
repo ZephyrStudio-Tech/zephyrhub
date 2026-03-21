@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Pencil, Trash2, Check, X } from "lucide-react";
 import Image from "next/image";
+import { cn } from "@/lib/utils";
 
 export type Device = {
   id: string;
