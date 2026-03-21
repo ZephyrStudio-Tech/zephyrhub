@@ -28,6 +28,7 @@ const NAV = {
   tecnico: [
     { href: "/backoffice/preconsultoria", label: "Preconsultoría" },
     { href: "/backoffice/consultoria", label: "Consultoría" },
+    { href: "/backoffice/support", label: "Soporte" },
     { href: "/backoffice/tech", label: "Evidencias" },
   ],
 } as const;
