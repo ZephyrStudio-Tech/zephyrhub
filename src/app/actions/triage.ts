@@ -60,6 +60,49 @@ export async function updateTriageLeadState(
   return { ok: true };
 }
 
+export async function createTriageLead(data: any) {
+  const auth = await requireServerAuth(["consultor", "admin"]);
+  if (auth.error) return { ok: false, error: auth.error };
+
+  const { supabaseAdmin } = auth;
+
+  const { error } = await supabaseAdmin.from("triage_leads").insert({
+    full_name: data.full_name,
+    email: data.email,
+    phone: data.phone,
+    company_name: data.company_name,
+    entity_type: data.entity_type,
+    service_requested: data.service_requested,
+    complemento: data.notes,
+    current_state: "nuevo_lead",
+    status: "pending",
+  });
+
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/backoffice/preconsultoria");
+  return { ok: true };
+}
+
+export async function addTriageNote(leadId: string, note: string) {
+  const auth = await requireServerAuth(["consultor", "tecnico", "admin"]);
+  if (auth.error) return { ok: false, error: auth.error };
+
+  const { user, supabaseAdmin } = auth;
+
+  const { error } = await supabaseAdmin.from("interactions").insert({
+    client_id: leadId,
+    actor_id: user.id,
+    type: "note",
+    metadata: { note },
+  });
+
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/backoffice/preconsultoria");
+  return { ok: true };
+}
+
 /**
  * Pasa un lead de Preconsultoría a Consultoría: crea usuario en Auth, expediente en clients,
  * marca el lead como completed. Devuelve la contraseña generada para mostrarla al usuario.

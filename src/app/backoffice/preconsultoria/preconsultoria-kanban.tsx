@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useState, useTransition } from "react";
+import { useCallback, useState, useTransition, useRef } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -20,6 +20,7 @@ import type { PipelineState } from "@/lib/state-machine/constants";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Phone, PhoneMissed, Users } from "lucide-react";
+import { LeadProfileSheet } from "./lead-profile-sheet";
 
 type Lead = {
   id: string;
@@ -44,7 +45,7 @@ function getServiceColor(service: string | null): string {
   if (service === "web") return "bg-blue-100 text-blue-700 border-blue-200";
   if (service === "ecommerce") return "bg-amber-100 text-amber-700 border-amber-200";
   if (service === "seo") return "bg-green-100 text-green-700 border-green-200";
-  if (service === "factura") return "bg-purple-100 text-purple-700 border-purple-200";
+  if (service === "factura" || service === "factura_electronica") return "bg-purple-100 text-purple-700 border-purple-200";
   return "bg-gray-100 text-gray-700 border-gray-200";
 }
 
@@ -74,18 +75,39 @@ function LeadCard({
   onMoveToConsultoria,
   onCallMissed,
   onCallSuccess,
+  onSelect,
 }: {
   lead: Lead;
   onMoveToConsultoria: (leadId: string) => void;
   onCallMissed: (leadId: string) => void;
   onCallSuccess: (leadId: string) => void;
+  onSelect: (lead: Lead) => void;
 }) {
   const isListo = lead.current_state === "listo_para_tramitar";
   const title = lead.company_name?.trim() || lead.full_name || lead.email || lead.id.slice(0, 8);
   const daysSince = getDaysSinceLastInteraction(lead.last_interaction_at, lead.created_at);
+  const dragStartPos = useRef<{ x: number, y: number } | null>(null);
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    dragStartPos.current = { x: e.clientX, y: e.clientY };
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (!dragStartPos.current) return;
+    const dist = Math.sqrt(
+      Math.pow(e.clientX - dragStartPos.current.x, 2) +
+      Math.pow(e.clientY - dragStartPos.current.y, 2)
+    );
+    if (dist < 5) {
+      onSelect(lead);
+    }
+    dragStartPos.current = null;
+  };
 
   return (
     <div
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
       className={cn(
         "rounded-xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 shadow-sm hover:shadow-md transition-all text-left"
       )}
@@ -171,11 +193,13 @@ function DraggableLeadCard({
   onMoveToConsultoria,
   onCallMissed,
   onCallSuccess,
+  onSelect,
 }: {
   lead: Lead;
   onMoveToConsultoria: (leadId: string) => void;
   onCallMissed: (leadId: string) => void;
   onCallSuccess: (leadId: string) => void;
+  onSelect: (lead: Lead) => void;
 }) {
   const { attributes, listeners, setNodeRef } = useDraggable({
     id: lead.id,
@@ -194,6 +218,7 @@ function DraggableLeadCard({
         onMoveToConsultoria={onMoveToConsultoria}
         onCallMissed={onCallMissed}
         onCallSuccess={onCallSuccess}
+        onSelect={onSelect}
       />
     </div>
   );
@@ -206,6 +231,7 @@ function DroppableColumn({
   onMoveToConsultoria,
   onCallMissed,
   onCallSuccess,
+  onSelect,
 }: {
   stateId: string;
   label: string;
@@ -213,6 +239,7 @@ function DroppableColumn({
   onMoveToConsultoria: (leadId: string) => void;
   onCallMissed: (leadId: string) => void;
   onCallSuccess: (leadId: string) => void;
+  onSelect: (lead: Lead) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id: stateId,
@@ -241,6 +268,7 @@ function DroppableColumn({
               onMoveToConsultoria={onMoveToConsultoria}
               onCallMissed={onCallMissed}
               onCallSuccess={onCallSuccess}
+              onSelect={onSelect}
             />
           ))}
         </div>
@@ -254,6 +282,7 @@ export function PreconsultoriaKanban({ leads }: { leads: Lead[] }) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [changing, setChanging] = useState(false);
   const [passwordModal, setPasswordModal] = useState<string | null>(null);
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const sensors = useSensors(
@@ -293,6 +322,7 @@ export function PreconsultoriaKanban({ leads }: { leads: Lead[] }) {
       setChanging(false);
       if (res.ok) {
         if (res.password) setPasswordModal(res.password);
+        setSelectedLead(null);
         router.refresh();
       } else {
         alert(res.error);
@@ -342,6 +372,7 @@ export function PreconsultoriaKanban({ leads }: { leads: Lead[] }) {
               onMoveToConsultoria={handleMoveToConsultoria}
               onCallMissed={handleCallMissed}
               onCallSuccess={handleCallSuccess}
+              onSelect={setSelectedLead}
             />
           ))}
         </div>
@@ -362,6 +393,16 @@ export function PreconsultoriaKanban({ leads }: { leads: Lead[] }) {
           ) : null}
         </DragOverlay>
       </DndContext>
+
+      {selectedLead && (
+        <LeadProfileSheet
+          lead={selectedLead}
+          onClose={() => setSelectedLead(null)}
+          onCallMissed={handleCallMissed}
+          onCallSuccess={handleCallSuccess}
+          onMoveToConsultoria={handleMoveToConsultoria}
+        />
+      )}
 
       {passwordModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">

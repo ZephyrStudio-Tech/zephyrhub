@@ -32,8 +32,8 @@ export type Device = {
 
 const CATEGORIES = ["Portátil", "Móvil", "Tablet", "Sobremesa", "Otro"];
 
-function getMargin(salePrice: number, costPrice: number): number {
-  return salePrice - costPrice;
+function getMargin(salePrice: number, costPrice: number, bonoCoverage: number): number {
+  return Math.max(salePrice, bonoCoverage) - costPrice;
 }
 
 function getClientCost(salePrice: number, bonoCoverage: number): number {
@@ -440,8 +440,9 @@ export function DevicesCatalog({ devices: initialDevices }: { devices: Device[] 
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {devices.map((device) => {
-            const margin = getMargin(device.sale_price, device.cost_price);
+            const margin = getMargin(device.sale_price, device.cost_price, device.bono_coverage);
             const clientCost = getClientCost(device.sale_price, device.bono_coverage);
+            const totalRevenue = Math.max(device.sale_price, device.bono_coverage);
             const mainImage = device.images?.[0];
 
             return (
@@ -508,23 +509,27 @@ export function DevicesCatalog({ devices: initialDevices }: { devices: Device[] 
                       <span className="font-medium">€{device.cost_price.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600 dark:text-gray-400">Venta:</span>
+                      <span className="text-gray-600 dark:text-gray-400">Precio venta:</span>
                       <span className="font-medium">€{device.sale_price.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600 dark:text-gray-400">Margen:</span>
-                      <span className={`font-medium ${margin >= 0 ? "text-green-600" : "text-red-600"}`}>
-                        €{margin.toFixed(2)}
-                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600 dark:text-gray-400">Bono cubre:</span>
                       <span className="font-medium">€{device.bono_coverage.toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between bg-blue-50 dark:bg-blue-900/20 p-2 rounded">
+                    <div className="flex justify-between">
                       <span className="text-gray-600 dark:text-gray-400">Cliente paga:</span>
-                      <span className="font-medium text-blue-600 dark:text-blue-400">
-                        €{clientCost.toFixed(2)}
+                      <span className={cn("font-medium", clientCost > 0 ? "text-amber-600" : "text-slate-400")}>
+                        {clientCost > 0 ? `€${clientCost.toFixed(2)}` : "Sin coste"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between border-t border-slate-100 dark:border-slate-800 pt-1 mt-1">
+                      <span className="text-gray-600 dark:text-gray-400 font-medium">Ingreso total:</span>
+                      <span className="font-bold text-slate-900 dark:text-white">€{totalRevenue.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between bg-emerald-50 dark:bg-emerald-900/20 p-2 rounded mt-2">
+                      <span className="text-emerald-700 dark:text-emerald-400 font-bold">Margen neto:</span>
+                      <span className={cn("font-bold", margin >= 0 ? "text-emerald-700" : "text-red-600")}>
+                        €{margin.toFixed(2)}
                       </span>
                     </div>
                   </div>

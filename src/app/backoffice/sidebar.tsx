@@ -22,7 +22,7 @@ const NAV = {
     { href: "/backoffice/devices", label: "Catálogo" },
     { href: "/backoffice/logs", label: "Logs" },
     { href: "/backoffice/assign", label: "Asignar consultores" },
-    { href: "/backoffice/asociados", label: "Asociados" },
+    { href: "/backoffice/asociados", label: "Usuarios" },
     { href: "/backoffice/referidos", label: "Referidos" },
   ],
   consultor: [
