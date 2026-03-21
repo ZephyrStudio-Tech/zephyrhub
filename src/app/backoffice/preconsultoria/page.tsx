@@ -11,7 +11,7 @@ export default async function PreconsultoriaPage() {
   const supabaseAdmin = await import("@/lib/supabase/server").then(m => m.createAdminClient());
 
   // Get leads with their interaction data
-  const { data: leads: rawLeads } = await supabase
+  const { data: rawLeads } = await supabase
     .from("triage_leads")
     .select(
       "id, full_name, company_name, email, phone, current_state, service_requested, created_at"
