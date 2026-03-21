@@ -1,4 +1,4 @@
-# ZephyrOS
+# ZephyrHUB
 
 Sistema operativo interno y externo de ZephyrStudio para la gestión de expedientes del Kit Digital (ERP y Portal B2B).
 
