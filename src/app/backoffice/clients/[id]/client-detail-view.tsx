@@ -68,7 +68,7 @@ type DeviceOrder = {
   device_id: string | null;
   shipping_address: string | null;
   shipping_city: string | null;
-  shipping_postal_code: string | null;
+  shipping_zip: string | null;
   surcharge: number | null;
   payment_status: string | null;
   tracking_number: string | null;
@@ -78,7 +78,7 @@ type DeviceOrder = {
 type Payment = {
   id: string;
   contract_type: "web" | "ecommerce";
-  phase: number;
+  phase: "fase_i" | "fase_ii";
   expected_amount: number;
   received_amount: number | null;
   received_at: string | null;
@@ -651,7 +651,7 @@ export function ClientDetailView({
                     {payments.map((payment) => (
                       <tr key={payment.id} className="border-b border-gray-100 hover:bg-gray-50">
                         <td className="py-3 px-2">
-                          {payment.contract_type === "web" ? "Web" : "E-commerce"} - Fase {payment.phase}
+                          {payment.contract_type === "web" ? "Web" : "E-commerce"} - {payment.phase === "fase_i" ? "Fase I" : "Fase II"}
                         </td>
                         <td className="text-right py-3 px-2">€{payment.expected_amount.toFixed(2)}</td>
                         <td className="text-right py-3 px-2">

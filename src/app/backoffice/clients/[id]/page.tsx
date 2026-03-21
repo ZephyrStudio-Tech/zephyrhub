@@ -53,7 +53,7 @@ export default async function BackofficeClientPage({
         .eq("client_id", id),
       supabase
         .from("device_orders")
-        .select("id, status, device_id, shipping_address, shipping_city, shipping_postal_code, surcharge, payment_status, tracking_number, tracking_url")
+        .select("id, status, device_id, shipping_address, shipping_city, shipping_zip, surcharge, payment_status, tracking_number, tracking_url")
         .eq("client_id", id)
         .order("created_at", { ascending: false })
         .limit(1),

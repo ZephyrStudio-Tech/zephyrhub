@@ -20,37 +20,60 @@ export default async function PreconsultoriaPage() {
     .in("status", ["pending", "in_progress"])
     .order("created_at", { ascending: false });
 
-  // For each lead, calculate last_interaction_at, call_missed_count, and referral_id
-  const leads = await Promise.all(
-    (rawLeads ?? []).map(async (lead) => {
-      const [{ data: interactions }, { count: missedCount }, { data: referral }] = await Promise.all([
-        supabaseAdmin
-          .from("interactions")
-          .select("created_at")
-          .eq("client_id", lead.id)
-          .order("created_at", { ascending: false })
-          .limit(1),
-        supabaseAdmin
-          .from("interactions")
-          .select("id", { count: "exact", head: true })
-          .eq("client_id", lead.id)
-          .eq("type", "call_missed"),
-        supabaseAdmin
-          .from("referrals")
-          .select("id")
-          .eq("client_id", lead.id)
-          .single(),
-      ]);
+  const leadIds = (rawLeads ?? []).map(l => l.id);
 
-      return {
-        ...lead,
-        current_state: lead.current_state ?? "nuevo_lead",
-        last_interaction_at: interactions?.[0]?.created_at ?? null,
-        call_missed_count: missedCount ?? 0,
-        has_referral: !!referral,
-      };
-    })
-  );
+  if (leadIds.length === 0) {
+    return (
+      <div className="space-y-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">
+              Preconsultoría
+            </h1>
+            <p className="text-slate-500 text-sm mt-1">
+              Leads en captación. Arrastra para cambiar estado. En &quot;Listo para tramitar&quot; usa &quot;Pasar a Consultoría&quot;.
+            </p>
+          </div>
+          <NewLeadModal />
+        </div>
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 p-8 text-center text-slate-500">
+          No hay leads activos en preconsultoría.
+        </div>
+      </div>
+    );
+  }
+
+  // Bulk fetch data to avoid N+1 queries
+  const [
+    { data: interactionStats },
+    { data: allReferrals }
+  ] = await Promise.all([
+    supabaseAdmin
+      .from("interactions")
+      .select("client_id, type, created_at")
+      .in("client_id", leadIds)
+      .order("created_at", { ascending: false }),
+
+    supabaseAdmin
+      .from("referrals")
+      .select("client_id")
+      .in("client_id", leadIds)
+  ]);
+
+  const leads = (rawLeads ?? []).map((lead) => {
+    const leadInteractions = (interactionStats ?? []).filter(i => i.client_id === lead.id);
+    const latestInteraction = leadInteractions[0];
+    const referral = (allReferrals ?? []).find(r => r.client_id === lead.id);
+    const missedCount = leadInteractions.filter(i => i.type === "call_missed").length;
+
+    return {
+      ...lead,
+      current_state: lead.current_state ?? "nuevo_lead",
+      last_interaction_at: latestInteraction?.created_at ?? null,
+      call_missed_count: missedCount,
+      has_referral: !!referral,
+    };
+  });
 
   return (
     <div className="space-y-8">
@@ -65,13 +88,7 @@ export default async function PreconsultoriaPage() {
         </div>
         <NewLeadModal />
       </div>
-      {leads.length === 0 ? (
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 p-8 text-center text-slate-500">
-          No hay leads activos en preconsultoría.
-        </div>
-      ) : (
-        <PreconsultoriaKanban leads={leads} />
-      )}
+      <PreconsultoriaKanban leads={leads} />
     </div>
   );
 }

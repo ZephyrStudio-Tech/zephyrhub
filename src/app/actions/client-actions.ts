@@ -43,15 +43,22 @@ export async function updateContractState(
   // Get the contract to find the client_id for audit log and ownership check
   const { data: contract } = await supabaseAdmin
     .from("contracts")
-    .select("id, client_id, clients(consultant_id)")
+    .select("id, client_id")
     .eq("id", contractId)
     .single();
 
   if (!contract) return { ok: false, error: "Contrato no encontrado" };
 
   // Ownership check for consultores
-  if (role === "consultor" && contract.clients?.consultant_id !== user.id) {
-    return { ok: false, error: "Sin permiso para este cliente" };
+  if (role === "consultor") {
+    const { data: client } = await supabaseAdmin
+      .from("clients")
+      .select("consultant_id")
+      .eq("id", contract.client_id)
+      .single();
+    if (client?.consultant_id !== user.id) {
+      return { ok: false, error: "Sin permiso para este cliente" };
+    }
   }
 
   // Update contract state
@@ -64,10 +71,11 @@ export async function updateContractState(
 
   // Register in audit logs
   await supabaseAdmin.from("audit_logs").insert({
-    client_id: contract.client_id,
     actor_id: user.id,
     action: "update_contract_state",
-    changes: { contract_id: contractId, new_state: newState },
+    entity_type: "contract",
+    entity_id: contractId,
+    payload: { client_id: contract.client_id, new_state: newState },
   });
 
   revalidatePath("/backoffice/clients/[id]", "layout");
@@ -85,14 +93,21 @@ export async function updateDeviceOrderStatus(
 
   const { data: order } = await supabaseAdmin
     .from("device_orders")
-    .select("client_id, clients(consultant_id)")
+    .select("client_id")
     .eq("id", deviceOrderId)
     .single();
 
   if (!order) return { ok: false, error: "Pedido no encontrado" };
 
-  if (role === "consultor" && order.clients?.consultant_id !== user.id) {
-    return { ok: false, error: "Sin permiso para este cliente" };
+  if (role === "consultor") {
+    const { data: client } = await supabaseAdmin
+      .from("clients")
+      .select("consultant_id")
+      .eq("id", order.client_id)
+      .single();
+    if (client?.consultant_id !== user.id) {
+      return { ok: false, error: "Sin permiso para este cliente" };
+    }
   }
 
   const { error } = await supabaseAdmin
@@ -118,14 +133,21 @@ export async function updateDeviceOrderTracking(
 
   const { data: order } = await supabaseAdmin
     .from("device_orders")
-    .select("client_id, clients(consultant_id)")
+    .select("client_id")
     .eq("id", deviceOrderId)
     .single();
 
   if (!order) return { ok: false, error: "Pedido no encontrado" };
 
-  if (role === "consultor" && order.clients?.consultant_id !== user.id) {
-    return { ok: false, error: "Sin permiso para este cliente" };
+  if (role === "consultor") {
+    const { data: client } = await supabaseAdmin
+      .from("clients")
+      .select("consultant_id")
+      .eq("id", order.client_id)
+      .single();
+    if (client?.consultant_id !== user.id) {
+      return { ok: false, error: "Sin permiso para este cliente" };
+    }
   }
 
   const { error } = await supabaseAdmin
