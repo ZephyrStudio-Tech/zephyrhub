@@ -292,13 +292,13 @@ export async function createInternalUser(data: any) {
     return { ok: false, error: authError?.message || "Error al crear usuario" };
   }
 
-  // 2. Create profile
-  const { error: profileError } = await supabaseAdmin.from("profiles").insert({
+  // 2. Create profile (upsert to handle existing profile created by trigger)
+  const { error: profileError } = await supabaseAdmin.from("profiles").upsert({
     id: authUser.user.id,
     role: data.role,
     email: data.email,
     full_name: data.full_name,
-  });
+  }, { onConflict: "id" });
 
   if (profileError) return { ok: false, error: profileError.message };
 
