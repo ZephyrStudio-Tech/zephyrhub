@@ -178,12 +178,12 @@ export async function createAssociateAction(data: any) {
   }
 
   // 2. Create profile
-  const { error: profileError } = await supabaseAdmin.from("profiles").insert({
+  const { error: profileError } = await supabaseAdmin.from("profiles").upsert({
     id: authUser.user.id,
     role: "asociado",
     email: data.email,
     full_name: data.full_name,
-  });
+  }, { onConflict: "id" });
 
   if (profileError) {
     return { ok: false, error: profileError.message };

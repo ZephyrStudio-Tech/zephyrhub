@@ -145,6 +145,15 @@ export async function moveToConsultoria(
   const serviceType = mapServiceType(lead.service_requested);
   const companyName = (lead.company_name?.trim() || lead.full_name) || "Sin nombre";
 
+  const { error: profileError } = await supabaseAdmin.from("profiles").upsert({
+    id: newUser.user.id,
+    role: "beneficiario",
+    email: lead.email,
+    full_name: lead.full_name,
+  }, { onConflict: "id" });
+
+  if (profileError) return { ok: false, error: profileError.message };
+
   const { error: insertClientErr } = await supabaseAdmin.from("clients").insert({
     user_id: newUser.user.id,
     company_name: companyName,
