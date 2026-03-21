@@ -2,6 +2,7 @@ import { getSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { PreconsultoriaKanban } from "./preconsultoria-kanban";
+import { NewLeadModal } from "./new-lead-modal";
 
 export default async function PreconsultoriaPage() {
   const { user } = await getSession();
@@ -53,13 +54,16 @@ export default async function PreconsultoriaPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">
-          Preconsultoría
-        </h1>
-        <p className="text-slate-500 text-sm mt-1">
-          Leads en captación. Arrastra para cambiar estado. En &quot;Listo para tramitar&quot; usa &quot;Pasar a Consultoría&quot;.
-        </p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">
+            Preconsultoría
+          </h1>
+          <p className="text-slate-500 text-sm mt-1">
+            Leads en captación. Arrastra para cambiar estado. En &quot;Listo para tramitar&quot; usa &quot;Pasar a Consultoría&quot;.
+          </p>
+        </div>
+        <NewLeadModal />
       </div>
       {leads.length === 0 ? (
         <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 p-8 text-center text-slate-500">

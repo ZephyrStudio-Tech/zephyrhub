@@ -250,3 +250,52 @@ export async function assignConsultant(
   revalidatePath("/backoffice/assign");
   return { ok: true };
 }
+
+export async function createInternalUser(data: any) {
+  const auth = await requireServerAuth(["admin"]);
+  if (auth.error) return { ok: false, error: auth.error };
+
+  const { supabaseAdmin } = auth;
+
+  // 1. Create user in Auth
+  const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
+    email: data.email,
+    password: data.password,
+    email_confirm: true,
+    user_metadata: { full_name: data.full_name },
+  });
+
+  if (authError || !authUser.user) {
+    return { ok: false, error: authError?.message || "Error al crear usuario" };
+  }
+
+  // 2. Create profile
+  const { error: profileError } = await supabaseAdmin.from("profiles").insert({
+    id: authUser.user.id,
+    role: data.role,
+    email: data.email,
+    full_name: data.full_name,
+  });
+
+  if (profileError) return { ok: false, error: profileError.message };
+
+  revalidatePath("/backoffice/asociados");
+  return { ok: true };
+}
+
+export async function updateInternalUserRole(userId: string, newRole: string) {
+  const auth = await requireServerAuth(["admin"]);
+  if (auth.error) return { ok: false, error: auth.error };
+
+  const { supabaseAdmin } = auth;
+
+  const { error } = await supabaseAdmin
+    .from("profiles")
+    .update({ role: newRole })
+    .eq("id", userId);
+
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/backoffice/asociados");
+  return { ok: true };
+}
