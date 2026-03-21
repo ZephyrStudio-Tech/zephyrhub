@@ -1,7 +1,7 @@
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { cache } from "react";
 
-export type AppRole = "beneficiario" | "consultor" | "tecnico" | "admin";
+export type AppRole = "beneficiario" | "consultor" | "tecnico" | "admin" | "asociado";
 
 export const getSession = cache(async () => {
   const supabase = await createClient();

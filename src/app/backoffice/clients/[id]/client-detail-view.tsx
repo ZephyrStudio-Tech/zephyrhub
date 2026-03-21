@@ -6,6 +6,7 @@ import { transitionClientState } from "@/app/actions/transition-state";
 import { approveDocument, rejectDocument } from "@/app/actions/documents";
 import { registerCallMissed, registerCallSuccess } from "@/app/actions/interactions";
 import { generateAgreement } from "@/app/actions/agreements";
+import { linkReferralToClient } from "@/app/actions/referral-actions";
 import {
   updateContractState,
   updateDeviceOrderStatus,
@@ -18,6 +19,7 @@ import type { PipelineState } from "@/lib/state-machine/constants";
 import { PIPELINE_STATE_LABELS } from "@/lib/state-machine/constants";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Plus, Trash2 } from "lucide-react";
 
 type Client = {
@@ -92,6 +94,7 @@ export function ClientDetailView({
   contracts,
   deviceOrders,
   payments,
+  referral,
   slots,
   phases,
   suggestedNext,
@@ -102,6 +105,7 @@ export function ClientDetailView({
   contracts: Contract[];
   deviceOrders: DeviceOrder[];
   payments: Payment[];
+  referral: any;
   slots: Slot[];
   phases: { name: string; states: PipelineState[] }[];
   suggestedNext: PipelineState | null;
@@ -120,6 +124,17 @@ export function ClientDetailView({
   const [trackingNumber, setTrackingNumber] = useState("");
   const [trackingUrl, setTrackingUrl] = useState("");
   const [isPending, startTransition] = useTransition();
+  const [linking, setLinking] = useState(false);
+  const [referralId, setReferralId] = useState("");
+
+  async function onLinkReferral() {
+    if (!referralId.trim()) return;
+    setLinking(true);
+    const res = await linkReferralToClient(referralId, client.id);
+    setLinking(false);
+    if (res.ok) router.refresh();
+    else alert(res.error);
+  }
 
   async function onStateChange(toState: string) {
     setChanging(true);
@@ -336,6 +351,33 @@ export function ClientDetailView({
             >
               Llamada exitosa
             </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Referido por</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {referral ? (
+              <div className="space-y-1">
+                <p className="text-sm font-bold text-slate-900">{referral.associates?.full_name}</p>
+                <p className="text-xs text-slate-500">Estado comisión: <span className="font-bold text-brand-600 uppercase">{referral.commission_status}</span></p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-xs text-slate-500">Este cliente no está vinculado a ningún referido.</p>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="ID del referido"
+                    className="h-9 text-xs"
+                    value={referralId}
+                    onChange={(e) => setReferralId(e.target.value)}
+                  />
+                  <Button size="sm" onClick={onLinkReferral} disabled={linking}>Vincular</Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
