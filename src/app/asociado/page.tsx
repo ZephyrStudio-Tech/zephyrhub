@@ -88,9 +88,9 @@ export default async function AssociateDashboard() {
               <p className="text-lg font-bold text-brand-900">Tienes €{reclaimableCommission} reclamables</p>
               <p className="text-sm text-brand-800">El bono de tus referidos ya ha sido cobrado. Puedes solicitar tu pago ahora.</p>
             </div>
-            <Link href="/asociado/soporte/tickets/nuevo?subject=Reclamar comisión">
+            <Link href="/asociado/referidos">
               <Button size="lg" className="bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-200 transition-all hover:scale-105 active:scale-95">
-                Contactar para reclamar
+                Ver mis referidos
               </Button>
             </Link>
           </div>

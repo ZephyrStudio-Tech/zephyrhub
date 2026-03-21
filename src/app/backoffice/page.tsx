@@ -8,5 +8,9 @@ export default async function BackofficeIndexPage() {
     redirect("/backoffice/dashboard");
   }
 
-  redirect("/backoffice/preconsultoria");
+  if (role === "tecnico" || role === "consultor") {
+    redirect("/backoffice/preconsultoria");
+  }
+
+  redirect("/login");
 }
