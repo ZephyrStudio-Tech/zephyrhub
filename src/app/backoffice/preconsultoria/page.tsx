@@ -19,10 +19,10 @@ export default async function PreconsultoriaPage() {
     .in("status", ["pending", "in_progress"])
     .order("created_at", { ascending: false });
 
-  // For each lead, calculate last_interaction_at and call_missed_count
+  // For each lead, calculate last_interaction_at, call_missed_count, and referral_id
   const leads = await Promise.all(
     (rawLeads ?? []).map(async (lead) => {
-      const [{ data: interactions }, { count: missedCount }] = await Promise.all([
+      const [{ data: interactions }, { count: missedCount }, { data: referral }] = await Promise.all([
         supabaseAdmin
           .from("interactions")
           .select("created_at")
@@ -34,6 +34,11 @@ export default async function PreconsultoriaPage() {
           .select("id", { count: "exact", head: true })
           .eq("client_id", lead.id)
           .eq("type", "call_missed"),
+        supabaseAdmin
+          .from("referrals")
+          .select("id")
+          .eq("client_id", lead.id)
+          .single(),
       ]);
 
       return {
@@ -41,6 +46,7 @@ export default async function PreconsultoriaPage() {
         current_state: lead.current_state ?? "nuevo_lead",
         last_interaction_at: interactions?.[0]?.created_at ?? null,
         call_missed_count: missedCount ?? 0,
+        has_referral: !!referral,
       };
     })
   );

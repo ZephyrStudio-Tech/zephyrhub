@@ -30,7 +30,7 @@ export default async function BackofficeClientPage({
   }
 
   // Execute all queries in parallel
-  const [{ data: client, error }, { data: interactions }, { data: documents }, { data: contracts }, { data: deviceOrders }, { data: payments }] =
+  const [{ data: client, error }, { data: interactions }, { data: documents }, { data: contracts }, { data: deviceOrders }, { data: payments }, { data: referral }] =
     await Promise.all([
       query,
       supabase
@@ -62,6 +62,11 @@ export default async function BackofficeClientPage({
         .select("id, contract_type, phase, expected_amount, received_amount, received_at, agent_commission")
         .eq("client_id", id)
         .order("created_at", { ascending: true }),
+      supabase
+        .from("referrals")
+        .select("id, commission_status, associates(full_name)")
+        .eq("client_id", id)
+        .single(),
     ]);
 
   if (error || !client) notFound();
@@ -77,6 +82,7 @@ export default async function BackofficeClientPage({
       contracts={contracts ?? []}
       deviceOrders={deviceOrders ?? []}
       payments={payments ?? []}
+      referral={referral ?? null}
       slots={slots}
       phases={PHASES}
       suggestedNext={suggestedNext}

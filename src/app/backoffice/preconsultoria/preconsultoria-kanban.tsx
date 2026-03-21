@@ -19,7 +19,7 @@ import { PRECONSULTORIA_STATE_LABELS } from "@/lib/state-machine/constants";
 import type { PipelineState } from "@/lib/state-machine/constants";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Phone, PhoneMissed } from "lucide-react";
+import { Phone, PhoneMissed, Users } from "lucide-react";
 
 type Lead = {
   id: string;
@@ -32,6 +32,7 @@ type Lead = {
   created_at: string | null;
   last_interaction_at: string | null;
   call_missed_count: number;
+  has_referral?: boolean;
 };
 
 const PRECONSULTORIA_IDS = new Set(
@@ -97,6 +98,14 @@ function LeadCard({
           {lead.service_requested ? lead.service_requested.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()) : "—"}
         </span>
       </div>
+
+      {lead.has_referral && (
+        <div className="flex items-center gap-1 mb-2">
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-brand-50 text-brand-600 border border-brand-100 text-[10px] font-bold uppercase tracking-wider">
+            <Users className="w-2.5 h-2.5" /> Referido
+          </span>
+        </div>
+      )}
       <p className="text-xs text-slate-500 mt-0.5">
         {lead.email ?? lead.phone ?? "—"}
       </p>

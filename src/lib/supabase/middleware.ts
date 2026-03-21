@@ -44,8 +44,23 @@ export async function updateSession(request: NextRequest) {
 
   // Si ya está logueado e intenta ir al login, lo mandamos al index protegido (el layout decidirá su destino final)
   if (user && request.nextUrl.pathname === "/login") {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    const role = profile?.role;
     const url = request.nextUrl.clone();
-    url.pathname = "/portal"; // Ruta por defecto segura, los layouts harán la redirección final si es admin o consultor
+
+    if (role === "asociado") {
+      url.pathname = "/asociado";
+    } else if (["admin", "consultor", "tecnico"].includes(role)) {
+      url.pathname = "/backoffice";
+    } else {
+      url.pathname = "/portal";
+    }
+
     const res = NextResponse.redirect(url);
     response.cookies.getAll().forEach((c) => res.cookies.set(c.name, c.value));
     return res;
@@ -58,6 +73,7 @@ function isProtectedPath(pathname: string) {
   return (
     pathname.startsWith("/portal") ||
     pathname.startsWith("/backoffice") ||
-    pathname.startsWith("/admin")
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/asociado")
   );
 }

@@ -9,6 +9,7 @@ export default async function BackofficeLayout({
 }) {
   const { user, role } = await getSession();
   if (!user) redirect("/login");
+  if (role === "asociado") redirect("/asociado");
   if (!["consultor", "tecnico", "admin"].includes(role ?? "")) redirect("/portal");
 
   const userLabel = user.user_metadata?.full_name ?? user.email ?? "Usuario";
