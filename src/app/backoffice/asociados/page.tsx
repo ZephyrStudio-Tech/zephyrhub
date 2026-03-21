@@ -24,9 +24,9 @@ export default async function AssociatesListPage() {
     .order("full_name");
 
   const processedAssociates = (associates || []).map(a => {
-    const refs = a.referrals_data || [];
-    const pending = refs.filter(r => r.commission_status === "confirmada").reduce((acc, r) => acc + (r.commission_amount || 0), 0);
-    const reclaimable = refs.filter(r => r.commission_status === "reclamable").reduce((acc, r) => acc + (r.commission_amount || 0), 0);
+    const refs = (a.referrals_data as any[]) || [];
+    const pending = refs.filter((r: any) => r.commission_status === "confirmada").reduce((acc: number, r: any) => acc + (r.commission_amount || 0), 0);
+    const reclaimable = refs.filter((r: any) => r.commission_status === "reclamable").reduce((acc: number, r: any) => acc + (r.commission_amount || 0), 0);
 
     return {
       ...a,
