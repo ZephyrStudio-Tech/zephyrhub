@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { requireServerAuth } from "@/lib/auth";
 import { getSuggestedNextState } from "@/lib/state-machine/constants";
 import type { PipelineState } from "@/lib/state-machine/constants";
 import { revalidatePath } from "next/cache";
@@ -14,13 +15,10 @@ export async function getSuggestedNext(
 export async function dismissAlert(
   alertId: string
 ): Promise<{ ok: boolean; error?: string }> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "No autenticado" };
+  const auth = await requireServerAuth();
+  if (auth.error) return { ok: false, error: auth.error };
 
-  const supabaseAdmin = createAdminClient();
+  const { supabaseAdmin } = auth;
   const { error } = await supabaseAdmin
     .from("alerts")
     .update({ read_at: new Date().toISOString() })
@@ -36,22 +34,24 @@ export async function updateContractState(
   contractId: string,
   newState: string
 ): Promise<{ ok: boolean; error?: string }> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "No autenticado" };
+  const auth = await requireServerAuth(["admin", "tecnico", "consultor"]);
+  if (auth.error) return { ok: false, error: auth.error };
 
-  const supabaseAdmin = createAdminClient();
+  const { user, role, supabaseAdmin } = auth;
 
-  // Get the contract to find the client_id for audit log
+  // Get the contract to find the client_id for audit log and ownership check
   const { data: contract } = await supabaseAdmin
     .from("contracts")
-    .select("id, client_id")
+    .select("id, client_id, clients(consultant_id)")
     .eq("id", contractId)
     .single();
 
   if (!contract) return { ok: false, error: "Contrato no encontrado" };
+
+  // Ownership check for consultores
+  if (role === "consultor" && contract.clients?.consultant_id !== user.id) {
+    return { ok: false, error: "Sin permiso para este cliente" };
+  }
 
   // Update contract state
   const { error: updateError } = await supabaseAdmin
@@ -77,13 +77,23 @@ export async function updateDeviceOrderStatus(
   deviceOrderId: string,
   status: string
 ): Promise<{ ok: boolean; error?: string }> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "No autenticado" };
+  const auth = await requireServerAuth(["admin", "tecnico", "consultor"]);
+  if (auth.error) return { ok: false, error: auth.error };
 
-  const supabaseAdmin = createAdminClient();
+  const { user, role, supabaseAdmin } = auth;
+
+  const { data: order } = await supabaseAdmin
+    .from("device_orders")
+    .select("client_id, clients(consultant_id)")
+    .eq("id", deviceOrderId)
+    .single();
+
+  if (!order) return { ok: false, error: "Pedido no encontrado" };
+
+  if (role === "consultor" && order.clients?.consultant_id !== user.id) {
+    return { ok: false, error: "Sin permiso para este cliente" };
+  }
+
   const { error } = await supabaseAdmin
     .from("device_orders")
     .update({ status })
@@ -100,13 +110,23 @@ export async function updateDeviceOrderTracking(
   trackingNumber: string,
   trackingUrl: string
 ): Promise<{ ok: boolean; error?: string }> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "No autenticado" };
+  const auth = await requireServerAuth(["admin", "tecnico", "consultor"]);
+  if (auth.error) return { ok: false, error: auth.error };
 
-  const supabaseAdmin = createAdminClient();
+  const { user, role, supabaseAdmin } = auth;
+
+  const { data: order } = await supabaseAdmin
+    .from("device_orders")
+    .select("client_id, clients(consultant_id)")
+    .eq("id", deviceOrderId)
+    .single();
+
+  if (!order) return { ok: false, error: "Pedido no encontrado" };
+
+  if (role === "consultor" && order.clients?.consultant_id !== user.id) {
+    return { ok: false, error: "Sin permiso para este cliente" };
+  }
+
   const { error } = await supabaseAdmin
     .from("device_orders")
     .update({ tracking_number: trackingNumber, tracking_url: trackingUrl })
@@ -123,13 +143,10 @@ export async function markPaymentReceived(
   receivedAmount: number,
   receivedDate: string
 ): Promise<{ ok: boolean; error?: string }> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "No autenticado" };
+  const auth = await requireServerAuth(["admin", "tecnico"]);
+  if (auth.error) return { ok: false, error: auth.error };
 
-  const supabaseAdmin = createAdminClient();
+  const { user, supabaseAdmin } = auth;
   const { error } = await supabaseAdmin
     .from("payments")
     .update({ received_amount: receivedAmount, received_at: receivedDate })
@@ -145,13 +162,23 @@ export async function updateServiceDescription(
   clientId: string,
   description: string
 ): Promise<{ ok: boolean; error?: string }> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "No autenticado" };
+  const auth = await requireServerAuth(["admin", "tecnico", "consultor"]);
+  if (auth.error) return { ok: false, error: auth.error };
 
-  const supabaseAdmin = createAdminClient();
+  const { user, role, supabaseAdmin } = auth;
+
+  const { data: client } = await supabaseAdmin
+    .from("clients")
+    .select("consultant_id")
+    .eq("id", clientId)
+    .single();
+
+  if (!client) return { ok: false, error: "Cliente no encontrado" };
+
+  if (role === "consultor" && client.consultant_id !== user.id) {
+    return { ok: false, error: "Sin permiso para este cliente" };
+  }
+
   const { error } = await supabaseAdmin
     .from("clients")
     .update({ service_description: description })
@@ -167,13 +194,23 @@ export async function toggleHasDevice(
   clientId: string,
   enabled: boolean
 ): Promise<{ ok: boolean; error?: string }> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "No autenticado" };
+  const auth = await requireServerAuth(["admin", "tecnico", "consultor"]);
+  if (auth.error) return { ok: false, error: auth.error };
 
-  const supabaseAdmin = createAdminClient();
+  const { user, role, supabaseAdmin } = auth;
+
+  const { data: client } = await supabaseAdmin
+    .from("clients")
+    .select("consultant_id")
+    .eq("id", clientId)
+    .single();
+
+  if (!client) return { ok: false, error: "Cliente no encontrado" };
+
+  if (role === "consultor" && client.consultant_id !== user.id) {
+    return { ok: false, error: "Sin permiso para este cliente" };
+  }
+
   const { error } = await supabaseAdmin
     .from("clients")
     .update({ has_device: enabled })
@@ -183,5 +220,33 @@ export async function toggleHasDevice(
 
   // If enabling has_device, the trigger will create the device_order automatically
   revalidatePath("/backoffice/clients/[id]", "layout");
+  return { ok: true };
+}
+
+export async function assignConsultant(
+  clientId: string,
+  consultantId: string | null
+): Promise<{ ok: boolean; error?: string }> {
+  const auth = await requireServerAuth(["admin"]);
+  if (auth.error) return { ok: false, error: auth.error };
+
+  const { user, supabaseAdmin } = auth;
+
+  const { error } = await supabaseAdmin
+    .from("clients")
+    .update({ consultant_id: consultantId })
+    .eq("id", clientId);
+
+  if (error) return { ok: false, error: error.message };
+
+  await supabaseAdmin.from("audit_logs").insert({
+    actor_id: user.id,
+    action: "assign_consultant",
+    entity_type: "client",
+    entity_id: clientId,
+    payload: { consultant_id: consultantId },
+  });
+
+  revalidatePath("/backoffice/assign");
   return { ok: true };
 }
