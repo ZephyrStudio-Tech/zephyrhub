@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useCallback, useState, useTransition } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -14,10 +14,12 @@ import {
   useDroppable,
 } from "@dnd-kit/core";
 import { updateTriageLeadState, moveToConsultoria } from "@/app/actions/triage";
+import { registerCallMissed, registerCallSuccess } from "@/app/actions/interactions";
 import { PRECONSULTORIA_STATE_LABELS } from "@/lib/state-machine/constants";
 import type { PipelineState } from "@/lib/state-machine/constants";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Phone, PhoneMissed } from "lucide-react";
 
 type Lead = {
   id: string;
@@ -28,21 +30,58 @@ type Lead = {
   current_state: string;
   service_requested: string | null;
   created_at: string | null;
+  last_interaction_at: string | null;
+  call_missed_count: number;
 };
 
 const PRECONSULTORIA_IDS = new Set(
   PRECONSULTORIA_STATE_LABELS.map((s) => s.id)
 );
 
+function getServiceColor(service: string | null): string {
+  if (!service) return "bg-gray-100 text-gray-700 border-gray-200";
+  if (service === "web") return "bg-blue-100 text-blue-700 border-blue-200";
+  if (service === "ecommerce") return "bg-amber-100 text-amber-700 border-amber-200";
+  if (service === "seo") return "bg-green-100 text-green-700 border-green-200";
+  if (service === "factura") return "bg-purple-100 text-purple-700 border-purple-200";
+  return "bg-gray-100 text-gray-700 border-gray-200";
+}
+
+function getDaysSinceLastInteraction(
+  lastInteractionAt: string | null,
+  createdAt: string | null
+): { days: number; color: string; label: string } {
+  const referenceDate = lastInteractionAt || createdAt;
+  if (!referenceDate) return { days: 0, color: "text-gray-500", label: "Sin datos" };
+
+  const now = new Date();
+  const lastDate = new Date(referenceDate);
+  const diffMs = now.getTime() - lastDate.getTime();
+  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (days === 0) {
+    return { days, color: "text-green-600", label: "Hoy" };
+  } else if (days <= 3) {
+    return { days, color: "text-amber-600", label: `${days}d` };
+  } else {
+    return { days, color: "text-red-600", label: `${days}d sin actividad` };
+  }
+}
+
 function LeadCard({
   lead,
   onMoveToConsultoria,
+  onCallMissed,
+  onCallSuccess,
 }: {
   lead: Lead;
   onMoveToConsultoria: (leadId: string) => void;
+  onCallMissed: (leadId: string) => void;
+  onCallSuccess: (leadId: string) => void;
 }) {
   const isListo = lead.current_state === "listo_para_tramitar";
   const title = lead.company_name?.trim() || lead.full_name || lead.email || lead.id.slice(0, 8);
+  const daysSince = getDaysSinceLastInteraction(lead.last_interaction_at, lead.created_at);
 
   return (
     <div
@@ -50,17 +89,30 @@ function LeadCard({
         "rounded-xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 shadow-sm hover:shadow-md transition-all text-left"
       )}
     >
-      <p className="font-medium text-slate-800 dark:text-slate-200 text-sm truncate">
-        {title}
-      </p>
-      <p className="text-xs text-slate-500 mt-1">
+      <div className="flex items-start justify-between gap-2 mb-1">
+        <p className="font-medium text-slate-800 dark:text-slate-200 text-sm truncate flex-1">
+          {title}
+        </p>
+        <span className={cn("text-xs font-medium px-2 py-0.5 rounded border", getServiceColor(lead.service_requested))}>
+          {lead.service_requested?.replace("_", " ").charAt(0).toUpperCase() + lead.service_requested?.replace("_", " ").slice(1) || "—"}
+        </span>
+      </div>
+      <p className="text-xs text-slate-500 mt-0.5">
         {lead.email ?? lead.phone ?? "—"}
       </p>
-      {lead.service_requested && (
-        <p className="text-xs text-slate-500 capitalize mt-0.5">
-          {lead.service_requested.replace("_", " ")}
+
+      {/* Days since last interaction indicator */}
+      <div className={cn("text-xs mt-1.5 font-medium", daysSince.color)}>
+        {daysSince.label}
+      </div>
+
+      {/* Failed calls indicator */}
+      {lead.call_missed_count > 0 && (
+        <p className="text-xs text-red-600 mt-0.5">
+          {lead.call_missed_count} intento{lead.call_missed_count > 1 ? "s" : ""} fallido{lead.call_missed_count > 1 ? "s" : ""}
         </p>
       )}
+
       {isListo && (
         <Button
           type="button"
@@ -75,6 +127,32 @@ function LeadCard({
           Pasar a Consultoría
         </Button>
       )}
+
+      {/* Call action buttons */}
+      {!isListo && (
+        <div className="flex gap-2 mt-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onCallMissed(lead.id);
+            }}
+            className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors p-1.5 text-xs font-medium"
+            title="Intento fallido"
+          >
+            <PhoneMissed className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onCallSuccess(lead.id);
+            }}
+            className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors p-1.5 text-xs font-medium"
+            title="Llamada exitosa"
+          >
+            <Phone className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -82,9 +160,13 @@ function LeadCard({
 function DraggableLeadCard({
   lead,
   onMoveToConsultoria,
+  onCallMissed,
+  onCallSuccess,
 }: {
   lead: Lead;
   onMoveToConsultoria: (leadId: string) => void;
+  onCallMissed: (leadId: string) => void;
+  onCallSuccess: (leadId: string) => void;
 }) {
   const { attributes, listeners, setNodeRef } = useDraggable({
     id: lead.id,
@@ -98,7 +180,12 @@ function DraggableLeadCard({
       {...attributes}
       className="cursor-grab active:cursor-grabbing"
     >
-      <LeadCard lead={lead} onMoveToConsultoria={onMoveToConsultoria} />
+      <LeadCard 
+        lead={lead} 
+        onMoveToConsultoria={onMoveToConsultoria}
+        onCallMissed={onCallMissed}
+        onCallSuccess={onCallSuccess}
+      />
     </div>
   );
 }
@@ -108,11 +195,15 @@ function DroppableColumn({
   label,
   leads,
   onMoveToConsultoria,
+  onCallMissed,
+  onCallSuccess,
 }: {
   stateId: string;
   label: string;
   leads: Lead[];
   onMoveToConsultoria: (leadId: string) => void;
+  onCallMissed: (leadId: string) => void;
+  onCallSuccess: (leadId: string) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id: stateId,
@@ -139,6 +230,8 @@ function DroppableColumn({
               key={lead.id}
               lead={lead}
               onMoveToConsultoria={onMoveToConsultoria}
+              onCallMissed={onCallMissed}
+              onCallSuccess={onCallSuccess}
             />
           ))}
         </div>
@@ -152,6 +245,7 @@ export function PreconsultoriaKanban({ leads }: { leads: Lead[] }) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [changing, setChanging] = useState(false);
   const [passwordModal, setPasswordModal] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
@@ -198,6 +292,28 @@ export function PreconsultoriaKanban({ leads }: { leads: Lead[] }) {
     [changing, router]
   );
 
+  const handleCallMissed = useCallback(
+    (leadId: string) => {
+      startTransition(async () => {
+        const res = await registerCallMissed(leadId);
+        if (res.ok) router.refresh();
+        else alert(res.error);
+      });
+    },
+    [router]
+  );
+
+  const handleCallSuccess = useCallback(
+    (leadId: string) => {
+      startTransition(async () => {
+        const res = await registerCallSuccess(leadId);
+        if (res.ok) router.refresh();
+        else alert(res.error);
+      });
+    },
+    [router]
+  );
+
   const activeLead = activeId ? leads.find((l) => l.id === activeId) : null;
 
   return (
@@ -215,6 +331,8 @@ export function PreconsultoriaKanban({ leads }: { leads: Lead[] }) {
               label={label}
               leads={leads.filter((l) => l.current_state === id)}
               onMoveToConsultoria={handleMoveToConsultoria}
+              onCallMissed={handleCallMissed}
+              onCallSuccess={handleCallSuccess}
             />
           ))}
         </div>

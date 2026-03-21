@@ -8,7 +8,10 @@ export default async function PreconsultoriaPage() {
   if (!user) redirect("/login");
 
   const supabase = await createClient();
-  const { data: leads } = await supabase
+  const supabaseAdmin = await import("@/lib/supabase/server").then(m => m.createAdminClient());
+
+  // Get leads with their interaction data
+  const { data: leads: rawLeads } = await supabase
     .from("triage_leads")
     .select(
       "id, full_name, company_name, email, phone, current_state, service_requested, created_at"
@@ -16,10 +19,31 @@ export default async function PreconsultoriaPage() {
     .in("status", ["pending", "in_progress"])
     .order("created_at", { ascending: false });
 
-  const list = (leads ?? []).map((l) => ({
-    ...l,
-    current_state: l.current_state ?? "nuevo_lead",
-  }));
+  // For each lead, calculate last_interaction_at and call_missed_count
+  const leads = await Promise.all(
+    (rawLeads ?? []).map(async (lead) => {
+      const [{ data: interactions }, { count: missedCount }] = await Promise.all([
+        supabaseAdmin
+          .from("interactions")
+          .select("created_at")
+          .eq("client_id", lead.id)
+          .order("created_at", { ascending: false })
+          .limit(1),
+        supabaseAdmin
+          .from("interactions")
+          .select("id", { count: "exact", head: true })
+          .eq("client_id", lead.id)
+          .eq("type", "call_missed"),
+      ]);
+
+      return {
+        ...lead,
+        current_state: lead.current_state ?? "nuevo_lead",
+        last_interaction_at: interactions?.[0]?.created_at ?? null,
+        call_missed_count: missedCount ?? 0,
+      };
+    })
+  );
 
   return (
     <div className="space-y-8">
@@ -31,12 +55,12 @@ export default async function PreconsultoriaPage() {
           Leads en captación. Arrastra para cambiar estado. En &quot;Listo para tramitar&quot; usa &quot;Pasar a Consultoría&quot;.
         </p>
       </div>
-      {list.length === 0 ? (
+      {leads.length === 0 ? (
         <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 p-8 text-center text-slate-500">
           No hay leads activos en preconsultoría.
         </div>
       ) : (
-        <PreconsultoriaKanban leads={list} />
+        <PreconsultoriaKanban leads={leads} />
       )}
     </div>
   );

@@ -28,7 +28,39 @@ type Client = {
   service_type: string;
   consultant_id: string | null;
   created_at: string;
+  last_interaction_at: string | null;
+  pending_docs: boolean | null;
 };
+
+function getServiceColor(service: string | null): string {
+  if (!service) return "bg-gray-100 text-gray-700 border-gray-200";
+  if (service === "web") return "bg-blue-100 text-blue-700 border-blue-200";
+  if (service === "ecommerce") return "bg-amber-100 text-amber-700 border-amber-200";
+  if (service === "seo") return "bg-green-100 text-green-700 border-green-200";
+  if (service === "factura_electronica") return "bg-purple-100 text-purple-700 border-purple-200";
+  return "bg-gray-100 text-gray-700 border-gray-200";
+}
+
+function getDaysSinceLastInteraction(
+  lastInteractionAt: string | null,
+  createdAt: string | null
+): { color: string; label: string } {
+  const referenceDate = lastInteractionAt || createdAt;
+  if (!referenceDate) return { color: "text-gray-500", label: "Sin datos" };
+
+  const now = new Date();
+  const lastDate = new Date(referenceDate);
+  const diffMs = now.getTime() - lastDate.getTime();
+  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (days === 0) {
+    return { color: "text-green-600", label: "Hoy" };
+  } else if (days <= 3) {
+    return { color: "text-amber-600", label: `${days}d` };
+  } else {
+    return { color: "text-red-600", label: `${days}d sin actividad` };
+  }
+}
 
 function ClientCard({
   client,
@@ -39,6 +71,7 @@ function ClientCard({
 }) {
   const title =
     client.company_name || client.cif || client.id.slice(0, 8);
+  const daysSince = getDaysSinceLastInteraction(client.last_interaction_at, client.created_at);
 
   return (
     <Link
@@ -48,12 +81,22 @@ function ClientCard({
         isDragging && "opacity-90 shadow-lg ring-2 ring-primary/30"
       )}
     >
-      <p className="font-medium text-slate-800 dark:text-slate-200 text-sm truncate">
-        {title}
-      </p>
-      <p className="text-xs text-slate-500 mt-1 capitalize">
-        {client.service_type?.replace("_", " ")}
-      </p>
+      <div className="flex items-start justify-between gap-2 mb-1">
+        <p className="font-medium text-slate-800 dark:text-slate-200 text-sm truncate flex-1">
+          {title}
+        </p>
+        <span className={cn("text-xs font-medium px-2 py-0.5 rounded border whitespace-nowrap", getServiceColor(client.service_type))}>
+          {client.service_type?.replace("_", " ") || "—"}
+        </span>
+      </div>
+
+      <div className={cn("text-xs mt-1 font-medium", daysSince.color)}>
+        {daysSince.label}
+      </div>
+
+      {client.pending_docs && (
+        <p className="text-xs text-amber-600 mt-0.5">⚠️ Documentos pendientes</p>
+      )}
     </Link>
   );
 }
