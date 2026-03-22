@@ -82,7 +82,7 @@ export function NewLeadModal() {
                 <option value="web">Sitio Web</option>
                 <option value="ecommerce">E-commerce</option>
                 <option value="seo">SEO</option>
-                <option value="factura_electronica">Factura Electrónica</option>
+                <option value="factura">Factura Electrónica</option>
               </select>
             </div>
             <div className="space-y-2">
