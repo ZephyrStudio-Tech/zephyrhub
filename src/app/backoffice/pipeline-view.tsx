@@ -1,7 +1,5 @@
 "use client";
 
-"use client";
-
 import { useRouter } from "next/navigation";
 import { useCallback, useState, useRef } from "react";
 import {

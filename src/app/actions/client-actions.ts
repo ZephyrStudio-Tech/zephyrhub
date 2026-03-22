@@ -375,6 +375,69 @@ export async function createInternalUser(data: any) {
   return { ok: true };
 }
 
+export async function addClientNote(
+  clientId: string,
+  content: string
+): Promise<{ ok: boolean; error?: string }> {
+  const auth = await requireServerAuth(["admin", "consultor", "tecnico"]);
+  if (auth.error) return { ok: false, error: auth.error };
+
+  const { user, supabaseAdmin } = auth;
+
+  const { error } = await supabaseAdmin.from("interactions").insert({
+    client_id: clientId,
+    actor_id: user.id,
+    type: "note",
+    metadata: { content },
+  });
+
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/backoffice/clients/[id]", "layout");
+  return { ok: true };
+}
+
+export async function updateClientContactInfo(
+  clientId: string,
+  data: {
+    full_name?: string;
+    email?: string;
+    phone?: string;
+    cif?: string;
+    service_description?: string;
+  }
+): Promise<{ ok: boolean; error?: string }> {
+  const auth = await requireServerAuth(["admin", "consultor", "tecnico"]);
+  if (auth.error) return { ok: false, error: auth.error };
+
+  const { user, role, supabaseAdmin } = auth;
+
+  // Ownership check
+  if (role === "consultor") {
+    const { data: client } = await supabaseAdmin
+      .from("clients")
+      .select("consultant_id")
+      .eq("id", clientId)
+      .single();
+    if (client?.consultant_id !== user.id) {
+      return { ok: false, error: "Sin permiso para este cliente" };
+    }
+  }
+
+  const { error } = await supabaseAdmin
+    .from("clients")
+    .update({
+      ...data,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", clientId);
+
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/backoffice/clients/[id]", "layout");
+  return { ok: true };
+}
+
 export async function getClientDetail(clientId: string) {
   const auth = await requireServerAuth(["admin", "consultor", "tecnico"]);
   if (auth.error) return { ok: false, error: auth.error };
