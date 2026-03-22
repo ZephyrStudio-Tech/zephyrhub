@@ -77,7 +77,7 @@ export async function createTriageLead(data: any) {
       data.service_requested === "factura_electronica"
         ? "factura"
         : data.service_requested,
-    company_size: data.company_size || "1-9",
+    company_size: data.company_size || "0-2",
     current_state: "nuevo_lead",
     status: "pending",
   });
