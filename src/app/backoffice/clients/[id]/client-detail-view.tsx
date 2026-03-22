@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { transitionClientState } from "@/app/actions/transition-state";
 import { approveDocument, rejectDocument } from "@/app/actions/documents";
-import { registerCallMissed, registerCallSuccess } from "@/app/actions/interactions";
+import { registerCallMissed, registerCallSuccess, addClientNote } from "@/app/actions/interactions";
 import { generateAgreement } from "@/app/actions/agreements";
 import { linkReferralToClient, createAndLinkReferral } from "@/app/actions/referral-actions";
 import {
@@ -129,6 +129,13 @@ export function ClientDetailView({
   const [linking, setLinking] = useState(false);
   const [referralId, setReferralId] = useState("");
   const [associateId, setAssociateId] = useState("");
+  const [localInteractions, setLocalInteractions] = useState(interactions);
+  const [noteText, setNoteText] = useState("");
+
+  // Sync local interactions with props when they change
+  useEffect(() => {
+    setLocalInteractions(interactions);
+  }, [interactions]);
 
   async function onLinkReferral() {
     if (!referralId.trim()) return;
@@ -223,15 +230,66 @@ export function ClientDetailView({
   }
 
   async function onCallMissed() {
+    const tempId = "temp-" + Date.now();
+    const optimistic: Interaction = {
+      id: tempId,
+      type: "call_missed",
+      created_at: new Date().toISOString(),
+      metadata: {},
+      actor_id: "",
+    };
+    setLocalInteractions((prev) => [optimistic, ...prev]);
+
     const res = await registerCallMissed(client.id);
-    if (res.ok) router.refresh();
-    else alert(res.error);
+    if (res.ok) {
+      router.refresh();
+    } else {
+      setLocalInteractions((prev) => prev.filter((i) => i.id !== tempId));
+      alert(res.error);
+    }
   }
 
   async function onCallSuccess() {
+    const tempId = "temp-" + Date.now();
+    const optimistic: Interaction = {
+      id: tempId,
+      type: "call_success",
+      created_at: new Date().toISOString(),
+      metadata: {},
+      actor_id: "",
+    };
+    setLocalInteractions((prev) => [optimistic, ...prev]);
+
     const res = await registerCallSuccess(client.id);
-    if (res.ok) router.refresh();
-    else alert(res.error);
+    if (res.ok) {
+      router.refresh();
+    } else {
+      setLocalInteractions((prev) => prev.filter((i) => i.id !== tempId));
+      alert(res.error);
+    }
+  }
+
+  async function onAddNote() {
+    if (!noteText.trim()) return;
+    const msg = noteText.trim();
+    const tempId = "temp-" + Date.now();
+    const optimistic: Interaction = {
+      id: tempId,
+      type: "note",
+      created_at: new Date().toISOString(),
+      metadata: { content: msg },
+      actor_id: "",
+    };
+    setLocalInteractions((prev) => [optimistic, ...prev]);
+    setNoteText("");
+
+    const res = await addClientNote(client.id, msg);
+    if (res.ok) {
+      router.refresh();
+    } else {
+      setLocalInteractions((prev) => prev.filter((i) => i.id !== tempId));
+      alert(res.error);
+    }
   }
 
   async function onGenerateAgreement() {
@@ -434,22 +492,45 @@ export function ClientDetailView({
         </Card>
 
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Interacciones</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            <div className="flex gap-2">
+              <Input
+                placeholder="Añadir nota interna..."
+                value={noteText}
+                onChange={(e) => setNoteText(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && onAddNote()}
+              />
+              <Button size="sm" onClick={onAddNote} disabled={!noteText.trim()}>
+                Añadir
+              </Button>
+            </div>
             <ul className="space-y-2 text-sm">
-              {interactions.slice(0, 20).map((i) => (
-                <li key={i.id} className="flex justify-between">
-                  <span>{i.type}</span>
-                  <span className="text-gray-500">
-                    {new Date(i.created_at).toLocaleString("es")}
-                  </span>
+              {localInteractions.slice(0, 20).map((i) => (
+                <li key={i.id} className="flex flex-col border-b border-gray-50 pb-2 last:border-0">
+                  <div className="flex justify-between items-start">
+                    <span className="font-semibold uppercase text-[10px] text-slate-400">
+                      {i.type}
+                    </span>
+                    <span className="text-[10px] text-gray-400">
+                      {new Date(i.created_at).toLocaleString("es")}
+                    </span>
+                  </div>
+                  {i.type === "note" && (
+                    <p className="text-xs text-slate-700 mt-0.5">
+                      {(i.metadata as any)?.content || (i.metadata as any)?.note}
+                    </p>
+                  )}
+                  {i.type === "state_change" && (
+                    <p className="text-[10px] text-brand-600">
+                      {(i.metadata as any)?.from} → {(i.metadata as any)?.to}
+                    </p>
+                  )}
                 </li>
               ))}
-              {interactions.length === 0 && (
-                <li className="text-gray-500">Ninguna</li>
-              )}
+              {localInteractions.length === 0 && <li className="text-gray-500">Ninguna</li>}
             </ul>
           </CardContent>
         </Card>
@@ -595,11 +676,13 @@ export function ClientDetailView({
                         value={order.status || ""}
                         onChange={(e) => onDeviceOrderStatusChange(order.id, e.target.value)}
                       >
-                        <option value="pending">Pendiente</option>
-                        <option value="processing">Procesando</option>
-                        <option value="shipped">Enviado</option>
-                        <option value="delivered">Entregado</option>
-                        <option value="cancelled">Cancelado</option>
+                        <option value="pendiente_seleccion">Pendiente Selección</option>
+                        <option value="seleccionado">Seleccionado</option>
+                        <option value="pago_pendiente">Pago Pendiente</option>
+                        <option value="pago_completado">Pago Completado</option>
+                        <option value="en_preparacion">En Preparación</option>
+                        <option value="enviado">Enviado</option>
+                        <option value="entregado">Entregado</option>
                       </select>
                     </div>
                     <div>
