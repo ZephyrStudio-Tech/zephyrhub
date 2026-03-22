@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -63,6 +64,7 @@ export function TicketChatView({
   ticket: Ticket;
   messages: TicketMessage[];
 }) {
+  const router = useRouter();
   const [text, setText] = useState("");
   const [realtimeStatus, setRealtimeStatus] = useState<string>("CONNECTING");
   const [isPending, startTransition] = useTransition();
@@ -185,7 +187,7 @@ export function TicketChatView({
       clearTimeout(timeout);
       if (interval) clearInterval(interval);
     };
-  }, [realtimeStatus]);
+  }, [realtimeStatus, router]);
 
   // Scroll automático
   useEffect(() => {

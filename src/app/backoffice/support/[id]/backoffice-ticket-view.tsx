@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -66,6 +67,7 @@ export function BackofficeTicketView({
   ticket: Ticket;
   messages: TicketMessage[];
 }) {
+  const router = useRouter();
   const [text, setText] = useState("");
   const [status, setStatus] = useState(ticket.status ?? "abierto");
   const [realtimeStatus, setRealtimeStatus] = useState<string>("CONNECTING");
@@ -209,7 +211,7 @@ export function BackofficeTicketView({
       clearTimeout(timeout);
       if (interval) clearInterval(interval);
     };
-  }, [realtimeStatus]);
+  }, [realtimeStatus, router]);
 
   // Scroll automático al último mensaje.
   useEffect(() => {
