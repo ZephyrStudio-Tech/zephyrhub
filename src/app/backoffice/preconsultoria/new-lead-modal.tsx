@@ -69,6 +69,12 @@ export function NewLeadModal() {
                 <Input id="company_name" name="company_name" placeholder="Nombre de la empresa" />
               </div>
               <div className="space-y-2">
+                <Label htmlFor="province">Provincia *</Label>
+                <Input id="province" name="province" required placeholder="Ej: Madrid" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
                 <Label htmlFor="entity_type">Tipo de entidad</Label>
                 <select id="entity_type" name="entity_type" className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
                   <option value="autonomo">Autónomo</option>
