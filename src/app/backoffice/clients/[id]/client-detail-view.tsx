@@ -6,7 +6,7 @@ import { transitionClientState } from "@/app/actions/transition-state";
 import { approveDocument, rejectDocument } from "@/app/actions/documents";
 import { registerCallMissed, registerCallSuccess } from "@/app/actions/interactions";
 import { generateAgreement } from "@/app/actions/agreements";
-import { linkReferralToClient } from "@/app/actions/referral-actions";
+import { linkReferralToClient, createAndLinkReferral } from "@/app/actions/referral-actions";
 import {
   updateContractState,
   updateDeviceOrderStatus,
@@ -95,6 +95,7 @@ export function ClientDetailView({
   deviceOrders,
   payments,
   referral,
+  associates,
   slots,
   phases,
   suggestedNext,
@@ -106,6 +107,7 @@ export function ClientDetailView({
   deviceOrders: DeviceOrder[];
   payments: Payment[];
   referral: any;
+  associates: any[];
   slots: Slot[];
   phases: { name: string; states: PipelineState[] }[];
   suggestedNext: PipelineState | null;
@@ -126,11 +128,21 @@ export function ClientDetailView({
   const [isPending, startTransition] = useTransition();
   const [linking, setLinking] = useState(false);
   const [referralId, setReferralId] = useState("");
+  const [associateId, setAssociateId] = useState("");
 
   async function onLinkReferral() {
     if (!referralId.trim()) return;
     setLinking(true);
     const res = await linkReferralToClient(referralId, client.id);
+    setLinking(false);
+    if (res.ok) router.refresh();
+    else alert(res.error);
+  }
+
+  async function onCreateAndLinkReferral() {
+    if (!associateId) return;
+    setLinking(true);
+    const res = await createAndLinkReferral(client.id, associateId);
     setLinking(false);
     if (res.ok) router.refresh();
     else alert(res.error);
@@ -362,11 +374,49 @@ export function ClientDetailView({
             {referral ? (
               <div className="space-y-1">
                 <p className="text-sm font-bold text-slate-900">{referral.associates?.full_name}</p>
-                <p className="text-xs text-slate-500">Estado comisión: <span className="font-bold text-brand-600 uppercase">{referral.commission_status}</span></p>
+                <p className="text-xs text-slate-500">
+                  Estado comisión:{" "}
+                  <span className="font-bold text-brand-600 uppercase">
+                    {referral.commission_status}
+                  </span>
+                </p>
               </div>
             ) : (
-              <div className="space-y-3">
-                <p className="text-xs text-slate-500">Este cliente no está vinculado a ningún referido.</p>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-slate-700">Crear nuevo vínculo:</p>
+                  <div className="flex gap-2">
+                    <select
+                      className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500"
+                      value={associateId}
+                      onChange={(e) => setAssociateId(e.target.value)}
+                    >
+                      <option value="">Seleccionar asociado...</option>
+                      {associates.map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {a.full_name} {a.company_name ? `(${a.company_name})` : ""}
+                        </option>
+                      ))}
+                    </select>
+                    <Button
+                      size="sm"
+                      onClick={onCreateAndLinkReferral}
+                      disabled={linking || !associateId}
+                    >
+                      Crear
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-slate-200" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-white px-2 text-slate-400">O vincular existente</span>
+                  </div>
+                </div>
+
                 <div className="flex gap-2">
                   <Input
                     placeholder="ID del referido"
@@ -374,7 +424,9 @@ export function ClientDetailView({
                     value={referralId}
                     onChange={(e) => setReferralId(e.target.value)}
                   />
-                  <Button size="sm" onClick={onLinkReferral} disabled={linking}>Vincular</Button>
+                  <Button size="sm" variant="outline" onClick={onLinkReferral} disabled={linking}>
+                    Vincular
+                  </Button>
                 </div>
               </div>
             )}

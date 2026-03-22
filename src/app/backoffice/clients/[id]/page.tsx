@@ -30,48 +30,62 @@ export default async function BackofficeClientPage({
   }
 
   // Execute all queries in parallel
-  const [{ data: client, error }, { data: interactions }, { data: documents }, { data: contracts }, { data: deviceOrders }, { data: payments }, { data: referral }] =
-    await Promise.all([
-      query,
-      supabase
-        .from("interactions")
-        .select("id, type, metadata, created_at, actor_id")
-        .eq("client_id", id)
-        .order("created_at", { ascending: false })
-        .limit(50),
-      supabase
-        .from("documents")
-        .select(
-          "id, slot_type, version, status, rejection_reason, storage_path, uploaded_at"
-        )
-        .eq("client_id", id)
-        .order("slot_type")
-        .order("version", { ascending: false }),
-      supabase
-        .from("contracts")
-        .select("id, type, current_state")
-        .eq("client_id", id),
-      supabase
-        .from("device_orders")
-        .select("id, status, device_id, shipping_address, shipping_city, shipping_zip, surcharge, payment_status, tracking_number, tracking_url")
-        .eq("client_id", id)
-        .order("created_at", { ascending: false })
-        .limit(1),
-      supabase
-        .from("payments")
-        .select("id, contract_type, phase, expected_amount, received_amount, received_at, agent_commission")
-        .eq("client_id", id)
-        .order("created_at", { ascending: true }),
-      supabase
-        .from("referrals")
-        .select("id, commission_status, associates(full_name)")
-        .eq("client_id", id)
-        .single(),
-    ]);
+  const [
+    { data: client, error },
+    { data: interactions },
+    { data: documents },
+    { data: contracts },
+    { data: deviceOrders },
+    { data: payments },
+    { data: referral },
+    { data: associates },
+  ] = await Promise.all([
+    query,
+    supabase
+      .from("interactions")
+      .select("id, type, metadata, created_at, actor_id")
+      .eq("client_id", id)
+      .order("created_at", { ascending: false })
+      .limit(50),
+    supabase
+      .from("documents")
+      .select("id, slot_type, version, status, rejection_reason, storage_path, uploaded_at")
+      .eq("client_id", id)
+      .order("slot_type")
+      .order("version", { ascending: false }),
+    supabase.from("contracts").select("id, type, current_state").eq("client_id", id),
+    supabase
+      .from("device_orders")
+      .select(
+        "id, status, device_id, shipping_address, shipping_city, shipping_zip, surcharge, payment_status, tracking_number, tracking_url"
+      )
+      .eq("client_id", id)
+      .order("created_at", { ascending: false })
+      .limit(1),
+    supabase
+      .from("payments")
+      .select(
+        "id, contract_type, phase, expected_amount, received_amount, received_at, agent_commission"
+      )
+      .eq("client_id", id)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("referrals")
+      .select("id, commission_status, associates(full_name)")
+      .eq("client_id", id)
+      .single(),
+    supabase
+      .from("associates")
+      .select("id, full_name, entity_type, company_name")
+      .eq("is_active", true)
+      .order("full_name"),
+  ]);
 
   if (error || !client) notFound();
 
-  const slots = getVaultSlots(client.service_type as "web" | "ecommerce" | "seo" | "factura_electronica");
+  const slots = getVaultSlots(
+    client.service_type as "web" | "ecommerce" | "seo" | "factura_electronica"
+  );
   const suggestedNext = getSuggestedNextState(client.current_state as PipelineState);
 
   return (
@@ -83,6 +97,7 @@ export default async function BackofficeClientPage({
       deviceOrders={deviceOrders ?? []}
       payments={payments ?? []}
       referral={referral ?? null}
+      associates={associates ?? []}
       slots={slots}
       phases={PHASES}
       suggestedNext={suggestedNext}

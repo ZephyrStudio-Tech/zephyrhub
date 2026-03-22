@@ -142,6 +142,86 @@ export async function toggleAssociateActive(associateId: string, isActive: boole
   return { ok: true };
 }
 
+export async function createAndLinkReferral(clientId: string, associateId: string) {
+  const auth = await requireServerAuth(["admin", "consultor"]);
+  if (auth.error) return { ok: false, error: auth.error };
+
+  const { user, supabaseAdmin } = auth;
+
+  // 1. Get client data
+  const { data: client, error: clientErr } = await supabaseAdmin
+    .from("clients")
+    .select("full_name, email, phone, company_name, current_state")
+    .eq("id", clientId)
+    .single();
+
+  if (clientErr || !client) return { ok: false, error: "Cliente no encontrado" };
+
+  // 2. Get associate data
+  const { data: associate, error: assocErr } = await supabaseAdmin
+    .from("associates")
+    .select("default_commission")
+    .eq("id", associateId)
+    .single();
+
+  if (assocErr || !associate) return { ok: false, error: "Asociado no encontrado" };
+
+  // 3. Determine commission status based on client state
+  let commissionStatus = "pendiente";
+  const confirmedStates = [
+    "resolucion_red_es",
+    "pago_i_fase",
+    "ano_mantenimiento",
+    "justificacion_ii_fase",
+    "firma_justificacion_ii",
+    "subsanacion_fase_ii",
+    "resolucion_ii_red_es",
+    "ganada",
+  ];
+  const reclaimableStates = [
+    "ano_mantenimiento",
+    "justificacion_ii_fase",
+    "firma_justificacion_ii",
+    "subsanacion_fase_ii",
+    "resolucion_ii_red_es",
+    "ganada",
+  ];
+
+  if (confirmedStates.includes(client.current_state)) {
+    commissionStatus = "confirmada";
+  }
+  if (reclaimableStates.includes(client.current_state)) {
+    commissionStatus = "reclamable";
+  }
+
+  // 4. Insert referral
+  const { error: insertErr } = await supabaseAdmin.from("referrals").insert({
+    associate_id: associateId,
+    client_id: clientId,
+    contact_name: client.full_name,
+    contact_phone: client.phone,
+    contact_email: client.email,
+    company_name: client.company_name,
+    commission_amount: associate.default_commission,
+    status: "en_proceso",
+    commission_status: commissionStatus,
+  });
+
+  if (insertErr) return { ok: false, error: insertErr.message };
+
+  // 5. Audit log
+  await supabaseAdmin.from("audit_logs").insert({
+    actor_id: user.id,
+    action: "link_referral",
+    entity_type: "client",
+    entity_id: clientId,
+    payload: { associate_id: associateId },
+  });
+
+  revalidatePath("/backoffice/clients/[id]", "layout");
+  return { ok: true };
+}
+
 export async function updateAssociateCommission(associateId: string, amount: number) {
   const auth = await requireServerAuth(["admin"]);
   if (auth.error) return { ok: false, error: auth.error };
