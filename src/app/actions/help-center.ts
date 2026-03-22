@@ -160,6 +160,32 @@ export async function addTicketMessage(data: {
   return { ok: true };
 }
 
+export async function deleteTicket(ticketId: string): Promise<{ ok: boolean; error?: string }> {
+  const auth = await requireServerAuth(["admin", "consultor"]);
+  if (auth.error) return { ok: false, error: auth.error };
+
+  const { supabaseAdmin } = auth;
+
+  // 1. Delete messages first due to FK
+  const { error: msgErr } = await supabaseAdmin
+    .from("ticket_messages")
+    .delete()
+    .eq("ticket_id", ticketId);
+
+  if (msgErr) return { ok: false, error: msgErr.message };
+
+  // 2. Delete the ticket
+  const { error: ticketErr } = await supabaseAdmin
+    .from("support_requests")
+    .delete()
+    .eq("id", ticketId);
+
+  if (ticketErr) return { ok: false, error: ticketErr.message };
+
+  revalidatePath("/backoffice/support");
+  return { ok: true };
+}
+
 /** Actualiza el estado de un ticket (backoffice o automatismos). */
 export async function updateTicketStatus(
   ticketId: string,
