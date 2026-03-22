@@ -13,8 +13,12 @@ import {
   useDraggable,
   useDroppable,
 } from "@dnd-kit/core";
-import { updateTriageLeadState, moveToConsultoria } from "@/app/actions/triage";
-import { registerCallMissed, registerCallSuccess } from "@/app/actions/interactions";
+import {
+  updateTriageLeadState,
+  moveToConsultoria,
+  registerTriageCallMissed,
+  registerTriageCallSuccess
+} from "@/app/actions/triage";
 import { PRECONSULTORIA_STATE_LABELS } from "@/lib/state-machine/constants";
 import type { PipelineState } from "@/lib/state-machine/constants";
 import { cn } from "@/lib/utils";
@@ -334,7 +338,7 @@ export function PreconsultoriaKanban({ leads }: { leads: Lead[] }) {
   const handleCallMissed = useCallback(
     (leadId: string) => {
       startTransition(async () => {
-        const res = await registerCallMissed(leadId);
+        const res = await registerTriageCallMissed(leadId);
         if (res.ok) router.refresh();
         else alert(res.error);
       });
@@ -345,7 +349,7 @@ export function PreconsultoriaKanban({ leads }: { leads: Lead[] }) {
   const handleCallSuccess = useCallback(
     (leadId: string) => {
       startTransition(async () => {
-        const res = await registerCallSuccess(leadId);
+        const res = await registerTriageCallSuccess(leadId);
         if (res.ok) router.refresh();
         else alert(res.error);
       });

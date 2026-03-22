@@ -3,6 +3,16 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { PortalDashboard } from "./portal-dashboard";
 
+const DEVICE_UNLOCKED_STATES = [
+  "pago_i_fase",
+  "ano_mantenimiento",
+  "justificacion_ii_fase",
+  "firma_justificacion_ii",
+  "subsanacion_fase_ii",
+  "resolucion_ii_red_es",
+  "ganada",
+];
+
 export default async function PortalPage() {
   const { user, role } = await getSession();
   if (!user) redirect("/login");
@@ -10,7 +20,7 @@ export default async function PortalPage() {
   const supabase = await createClient();
   const { data: client } = await supabase
     .from("clients")
-    .select("id, company_name, current_state, service_type")
+    .select("id, company_name, current_state, service_type, has_device")
     .eq("user_id", user.id)
     .single();
 
@@ -63,6 +73,10 @@ export default async function PortalPage() {
       ])
     : [{ data: [] }, { data: [] }, { data: [] }];
 
+  const deviceUnlocked =
+    client?.has_device === true &&
+    DEVICE_UNLOCKED_STATES.includes(client.current_state as string);
+
   return (
     <PortalDashboard
       client={client ?? null}
@@ -70,6 +84,7 @@ export default async function PortalPage() {
       interactions={interactions ?? []}
       contracts={contracts ?? []}
       role={role}
+      deviceUnlocked={deviceUnlocked}
     />
   );
 }
