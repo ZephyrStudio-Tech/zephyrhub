@@ -65,7 +65,7 @@ export async function createTriageLead(data: any) {
   const auth = await requireServerAuth(["consultor", "admin"]);
   if (auth.error) return { ok: false, error: auth.error };
 
-  const { supabaseAdmin } = auth;
+  const { user, supabaseAdmin } = auth;
 
   const { error } = await supabaseAdmin.from("triage_leads").insert({
     full_name: data.full_name,
@@ -74,12 +74,32 @@ export async function createTriageLead(data: any) {
     company_name: data.company_name,
     entity_type: data.entity_type,
     service_requested: data.service_requested,
-    complemento: data.notes,
     current_state: "nuevo_lead",
     status: "pending",
   });
 
   if (error) return { ok: false, error: error.message };
+
+  // Si hay notas, guardarlas como interacción
+  if (data.notes?.trim()) {
+    // Obtener el id del lead recién creado
+    const { data: newLead } = await supabaseAdmin
+      .from("triage_leads")
+      .select("id")
+      .eq("email", data.email)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+
+    if (newLead) {
+      await supabaseAdmin.from("triage_interactions").insert({
+        lead_id: newLead.id,
+        actor_id: user.id,
+        type: "note",
+        metadata: { note: data.notes.trim() },
+      });
+    }
+  }
 
   revalidatePath("/backoffice/preconsultoria");
   return { ok: true };
