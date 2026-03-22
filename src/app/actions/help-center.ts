@@ -116,6 +116,61 @@ export async function createTutorial(data: {
   return { ok: true };
 }
 
+/** Actualiza un tutorial/recurso en la academia (solo admin). */
+export async function updateTutorial(
+  id: string,
+  data: {
+    title: string;
+    description?: string;
+    category: string;
+    content_type: "video" | "articulo";
+    video_url?: string;
+    content_body?: string;
+    cover_image?: string;
+    sort_order?: number;
+  }
+): Promise<{ ok: boolean; error?: string }> {
+  const auth = await requireServerAuth(["admin"]);
+  if (auth.error) return { ok: false, error: auth.error };
+
+  const { supabaseAdmin } = auth;
+
+  const { error } = await supabaseAdmin
+    .from("academy_content")
+    .update({
+      title: data.title,
+      category: data.category,
+      description: data.description ?? null,
+      content_type: data.content_type,
+      video_url: data.content_type === "video" ? data.video_url ?? null : null,
+      content_body: data.content_type === "articulo" ? data.content_body ?? null : null,
+      cover_image: data.cover_image ?? null,
+      sort_order: data.sort_order ?? 0,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/backoffice/academy");
+  revalidatePath("/portal/soporte/tutoriales");
+  return { ok: true };
+}
+
+/** Borra un tutorial/recurso en la academia (solo admin). */
+export async function deleteTutorial(id: string): Promise<{ ok: boolean; error?: string }> {
+  const auth = await requireServerAuth(["admin"]);
+  if (auth.error) return { ok: false, error: auth.error };
+
+  const { supabaseAdmin } = auth;
+
+  const { error } = await supabaseAdmin.from("academy_content").delete().eq("id", id);
+
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/backoffice/academy");
+  revalidatePath("/portal/soporte/tutoriales");
+  return { ok: true };
+}
+
 /** Añade un mensaje al hilo de un ticket y actualiza updated_at. */
 export async function addTicketMessage(data: {
   ticketId: string;
