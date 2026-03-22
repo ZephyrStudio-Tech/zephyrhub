@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { requireServerAuth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
 type DeviceInput = {
@@ -62,6 +63,95 @@ export async function createDevice(
   if (error) return { ok: false, error: error.message };
 
   revalidatePath("/backoffice/devices");
+  return { ok: true };
+}
+
+export async function selectDevice(deviceOrderId: string, deviceId: string) {
+  const auth = await requireServerAuth(["beneficiario"]);
+  if (auth.error) return { ok: false, error: auth.error };
+
+  const { supabaseAdmin } = auth;
+
+  // Fetch device details
+  const { data: device } = await supabaseAdmin
+    .from("devices")
+    .select("sale_price, cost_price, bono_coverage")
+    .eq("id", deviceId)
+    .single();
+
+  if (!device) return { ok: false, error: "Dispositivo no encontrado" };
+
+  const surcharge = Math.max(0, device.sale_price - device.bono_coverage);
+
+  const { error } = await supabaseAdmin
+    .from("device_orders")
+    .update({
+      device_id: deviceId,
+      sale_price_snapshot: device.sale_price,
+      cost_price_snapshot: device.cost_price,
+      bono_coverage: device.bono_coverage,
+      surcharge,
+      status: surcharge > 0 ? "pago_pendiente" : "seleccionado",
+      payment_status: surcharge > 0 ? "pendiente" : "no_requerido",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", deviceOrderId);
+
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/portal/equipo");
+  return { ok: true };
+}
+
+export async function confirmOrder(deviceOrderId: string, shippingData: any) {
+  const auth = await requireServerAuth(["beneficiario"]);
+  if (auth.error) return { ok: false, error: auth.error };
+
+  const { supabaseAdmin } = auth;
+
+  const { error } = await supabaseAdmin
+    .from("device_orders")
+    .update({
+      shipping_name: shippingData.name,
+      shipping_address: shippingData.address,
+      shipping_city: shippingData.city,
+      shipping_province: shippingData.province,
+      shipping_zip: shippingData.zip,
+      shipping_phone: shippingData.phone,
+      status: "pago_completado",
+      payment_status: "completado",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", deviceOrderId);
+
+  if (error) return { ok: false, error: error.message };
+
+  // TODO: Add payment gateway integration here if surcharge > 0
+
+  revalidatePath("/portal/equipo");
+  return { ok: true };
+}
+
+export async function resetDeviceSelection(deviceOrderId: string) {
+  const auth = await requireServerAuth(["beneficiario"]);
+  if (auth.error) return { ok: false, error: auth.error };
+
+  const { supabaseAdmin } = auth;
+
+  const { error } = await supabaseAdmin
+    .from("device_orders")
+    .update({
+      device_id: null,
+      status: "pendiente_seleccion",
+      payment_status: "no_requerido",
+      surcharge: 0,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", deviceOrderId);
+
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/portal/equipo");
   return { ok: true };
 }
 

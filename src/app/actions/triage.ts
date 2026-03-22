@@ -91,14 +91,76 @@ export async function addTriageNote(leadId: string, note: string) {
 
   const { user, supabaseAdmin } = auth;
 
-  const { error } = await supabaseAdmin.from("interactions").insert({
-    client_id: leadId,
+  const { error } = await supabaseAdmin.from("triage_interactions").insert({
+    lead_id: leadId,
     actor_id: user.id,
     type: "note",
     metadata: { note },
   });
 
   if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/backoffice/preconsultoria");
+  return { ok: true };
+}
+
+export async function registerTriageCallMissed(
+  leadId: string
+): Promise<{ ok: boolean; error?: string }> {
+  const auth = await requireServerAuth(["consultor", "tecnico", "admin"]);
+  if (auth.error) return { ok: false, error: auth.error };
+
+  const { user, supabaseAdmin } = auth;
+
+  const { error: intError } = await supabaseAdmin.from("triage_interactions").insert({
+    lead_id: leadId,
+    actor_id: user.id,
+    type: "call_missed",
+    metadata: { at: new Date().toISOString() },
+  });
+
+  if (intError) return { ok: false, error: intError.message };
+
+  const { error: leadError } = await supabaseAdmin.rpc("increment_lead_missed_calls", {
+    target_lead_id: leadId
+  });
+
+  // Fallback if RPC fails or isn't defined yet (manual update)
+  if (leadError) {
+    const { data: current } = await supabaseAdmin.from("triage_leads").select("call_missed_count").eq("id", leadId).single();
+    await supabaseAdmin.from("triage_leads").update({
+      last_interaction_at: new Date().toISOString(),
+      call_missed_count: (current?.call_missed_count || 0) + 1
+    }).eq("id", leadId);
+  }
+
+  revalidatePath("/backoffice/preconsultoria");
+  return { ok: true };
+}
+
+export async function registerTriageCallSuccess(
+  leadId: string
+): Promise<{ ok: boolean; error?: string }> {
+  const auth = await requireServerAuth(["consultor", "tecnico", "admin"]);
+  if (auth.error) return { ok: false, error: auth.error };
+
+  const { user, supabaseAdmin } = auth;
+
+  const { error: intError } = await supabaseAdmin.from("triage_interactions").insert({
+    lead_id: leadId,
+    actor_id: user.id,
+    type: "call_success",
+    metadata: { at: new Date().toISOString() },
+  });
+
+  if (intError) return { ok: false, error: intError.message };
+
+  const { error: leadError } = await supabaseAdmin
+    .from("triage_leads")
+    .update({ last_interaction_at: new Date().toISOString() })
+    .eq("id", leadId);
+
+  if (leadError) return { ok: false, error: leadError.message };
 
   revalidatePath("/backoffice/preconsultoria");
   return { ok: true };
@@ -116,7 +178,6 @@ export async function moveToConsultoria(
 
   const { user, supabaseAdmin } = auth;
 
-  const resend = new Resend(process.env.RESEND_API_KEY);
   const { data: lead, error: leadErr } = await supabaseAdmin
     .from("triage_leads")
     .select(
@@ -181,6 +242,8 @@ export async function moveToConsultoria(
   // Enviar Email de Bienvenida con Resend
   if (process.env.RESEND_API_KEY && lead.email) {
     try {
+      console.log("[Email] Enviando email de bienvenida a cliente", lead.email);
+      const resend = new Resend(process.env.RESEND_API_KEY);
       await resend.emails.send({
         from: "ZephyrStudio <hola@kitdigitalzephyrstudio.es>",
         to: lead.email,

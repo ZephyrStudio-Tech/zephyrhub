@@ -224,12 +224,14 @@ export function PortalDashboard({
   interactions: initialInteractions,
   contracts,
   role,
+  deviceUnlocked,
 }: {
   client: Client;
   alerts: Alert;
   interactions: Interaction[];
   contracts: Contract[];
   role: string | null;
+  deviceUnlocked?: boolean;
 }) {
   const [client, setClient] = useState(initialClient);
   const [alerts, setAlerts] = useState(initialAlerts);
@@ -363,6 +365,24 @@ export function PortalDashboard({
               </button>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Device Selection Banner */}
+      {deviceUnlocked && (
+        <div className="flex flex-col md:flex-row items-center gap-4 p-6 rounded-2xl border border-brand-200 bg-brand-50 shadow-sm animate-in fade-in slide-in-from-top-4">
+          <div className="p-3 rounded-full bg-brand-100">
+            <ShoppingCart className="w-6 h-6 text-brand-600" />
+          </div>
+          <div className="flex-1 text-center md:text-left">
+            <p className="text-lg font-bold text-brand-900">¡Ya puedes elegir tu dispositivo!</p>
+            <p className="text-sm text-brand-800">Tu bono ha sido aprobado y puedes seleccionar el equipo que quieres recibir.</p>
+          </div>
+          <Link href="/portal/equipo">
+            <Button size="lg" className="bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-200 transition-all hover:scale-105">
+              Elegir mi equipo
+            </Button>
+          </Link>
         </div>
       )}
 

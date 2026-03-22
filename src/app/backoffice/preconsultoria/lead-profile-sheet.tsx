@@ -39,9 +39,9 @@ export function LeadProfileSheet({
   useEffect(() => {
     async function fetchInteractions() {
       const { data } = await supabase
-        .from("interactions")
+        .from("triage_interactions")
         .select("*")
-        .eq("client_id", lead.id)
+        .eq("lead_id", lead.id)
         .order("created_at", { ascending: false });
 
       setInteractions(data || []);
@@ -58,9 +58,9 @@ export function LeadProfileSheet({
       setNote("");
       // Refresh interactions locally
       const { data } = await supabase
-        .from("interactions")
+        .from("triage_interactions")
         .select("*")
-        .eq("client_id", lead.id)
+        .eq("lead_id", lead.id)
         .order("created_at", { ascending: false });
       setInteractions(data || []);
     }
@@ -172,9 +172,6 @@ export function LeadProfileSheet({
                          </div>
                          {i.type === 'note' && i.metadata?.note && (
                             <p className="text-sm text-slate-600 bg-slate-50 p-2 rounded-lg mt-1 border border-slate-100">{i.metadata.note}</p>
-                         )}
-                         {i.type === 'state_change' && (
-                            <p className="text-xs text-slate-400 mt-1">Cambio de estado: {i.metadata.from} → {i.metadata.to}</p>
                          )}
                       </div>
                    ))}
