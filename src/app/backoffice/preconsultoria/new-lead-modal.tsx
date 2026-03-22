@@ -76,14 +76,24 @@ export function NewLeadModal() {
                 </select>
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="service_requested">Servicio solicitado</Label>
-              <select id="service_requested" name="service_requested" className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
-                <option value="web">Sitio Web</option>
-                <option value="ecommerce">E-commerce</option>
-                <option value="seo">SEO</option>
-                <option value="factura">Factura Electrónica</option>
-              </select>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="service_requested">Servicio solicitado</Label>
+                <select id="service_requested" name="service_requested" className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                  <option value="web">Sitio Web</option>
+                  <option value="ecommerce">E-commerce</option>
+                  <option value="seo">SEO</option>
+                  <option value="factura">Factura Electrónica</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="company_size">Tamaño de empresa</Label>
+                <select id="company_size" name="company_size" defaultValue="0-2" className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                  <option value="0-2">Menos de 3 empleados</option>
+                  <option value="3-9">Entre 3 y 9 empleados</option>
+                  <option value="10+">10 o más empleados</option>
+                </select>
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="notes">Notas adicionales</Label>
