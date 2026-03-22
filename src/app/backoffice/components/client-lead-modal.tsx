@@ -113,6 +113,7 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
     setLoading(true);
     const res = await getClientDetail(clientId!);
     if (res.ok) {
+      if (!res.data) return;
       setData(res.data);
       setEditForm({
         full_name: res.data.client.full_name || "",
