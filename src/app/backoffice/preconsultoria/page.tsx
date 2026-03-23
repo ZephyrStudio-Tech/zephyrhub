@@ -43,44 +43,21 @@ export default async function PreconsultoriaPage() {
     );
   }
 
-  // Bulk fetch data to avoid N+1 queries
-  const [
-    { data: latestInteractions },
-    { data: callMissedCounts },
-    { data: allReferrals }
-  ] = await Promise.all([
-    // Latest interaction for each lead using a more efficient query if possible,
-    // or just fetching all and reducing (safer without custom Postgres functions)
-    supabaseAdmin
-      .from("interactions")
-      .select("client_id, created_at")
-      .in("client_id", leadIds)
-      .order("created_at", { ascending: false }),
-
-    // Count of missed calls per lead
-    supabaseAdmin
-      .from("interactions")
-      .select("client_id")
-      .in("client_id", leadIds)
-      .eq("type", "call_missed"),
-
-    supabaseAdmin
-      .from("referrals")
-      .select("client_id")
-      .in("client_id", leadIds)
-  ]);
+  // Note: triage_leads has last_interaction_at and call_missed_count fields that are auto-updated
+  // by database triggers when interactions are logged. We can fetch these directly from triage_leads
+  // instead of querying interactions table for performance
+  const { data: leadsWithInteractions } = await supabaseAdmin
+    .from("triage_leads")
+    .select("id, last_interaction_at, call_missed_count")
+    .in("id", leadIds);
 
   const leads = (rawLeads ?? []).map((lead) => {
-    const latestInteraction = (latestInteractions ?? []).find(i => i.client_id === lead.id);
-    const referral = (allReferrals ?? []).find(r => r.client_id === lead.id);
-    const missedCount = (callMissedCounts ?? []).filter(i => i.client_id === lead.id).length;
-
+    const interaction = (leadsWithInteractions ?? []).find(l => l.id === lead.id);
     return {
       ...lead,
       current_state: lead.current_state ?? "nuevo_lead",
-      last_interaction_at: latestInteraction?.created_at ?? null,
-      call_missed_count: missedCount,
-      has_referral: !!referral,
+      last_interaction_at: interaction?.last_interaction_at ?? null,
+      call_missed_count: interaction?.call_missed_count ?? 0,
     };
   });
 

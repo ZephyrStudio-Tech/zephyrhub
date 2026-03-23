@@ -29,7 +29,7 @@ export default async function BackofficeDevicesPage() {
 
       {/* Statistics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white border border-gray-200 rounded-xl shadow-card p-6 flex items-start gap-4">
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 flex items-start gap-4">
           <div className="bg-brand-50 p-3 rounded-lg">
             <Package className="w-6 h-6 text-brand-500" />
           </div>
@@ -39,9 +39,9 @@ export default async function BackofficeDevicesPage() {
           </div>
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-xl shadow-card p-6 flex items-start gap-4">
-          <div className="bg-success-50 p-3 rounded-lg">
-            <CheckCircle className="w-6 h-6 text-success-700" />
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 flex items-start gap-4">
+          <div className="bg-green-50 p-3 rounded-lg">
+            <CheckCircle className="w-6 h-6 text-green-600" />
           </div>
           <div className="flex-1">
             <p className="text-sm text-gray-500 mb-1">Disponibles</p>
@@ -49,9 +49,9 @@ export default async function BackofficeDevicesPage() {
           </div>
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-xl shadow-card p-6 flex items-start gap-4">
-          <div className="bg-warning-50 p-3 rounded-lg">
-            <XCircle className="w-6 h-6 text-warning-700" />
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 flex items-start gap-4">
+          <div className="bg-red-50 p-3 rounded-lg">
+            <XCircle className="w-6 h-6 text-red-600" />
           </div>
           <div className="flex-1">
             <p className="text-sm text-gray-500 mb-1">No disponibles</p>
