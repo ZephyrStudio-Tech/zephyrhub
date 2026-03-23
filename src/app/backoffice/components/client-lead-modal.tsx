@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState, useTransition, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
   getClientDetail,
@@ -70,19 +70,33 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
     notes: ""
   });
 
-  useEffect(() => {
-    const supabase = createClient();
-
-    async function fetchClientDetail() {
-      setLoading(true);
-      const res = await getClientDetail(clientId!);
-      if (res.ok) {
-        setData(res.data);
+  const fetchClientDetail = useCallback(async () => {
+    if (!clientId) return;
+    setLoading(true);
+    try {
+      const res = await getClientDetail(clientId);
+      if (res && res.ok && res.data) {
+        const d = res.data;
+        setData(d);
+        setEditForm({
+          full_name: d.client.full_name || "",
+          email: d.client.email || "",
+          phone: d.client.phone || "",
+          cif: d.client.cif || "",
+          notes: d.client.service_description || ""
+        });
       }
+    } catch (error) {
+      console.error("Error fetching client detail:", error);
+    } finally {
       setLoading(false);
     }
+  }, [clientId]);
 
-    async function fetchLeadInteractions() {
+  const fetchLeadInteractions = useCallback(async () => {
+    if (!leadData?.id) return;
+    try {
+      const supabase = createClient();
       const { data: interactions } = await supabase
         .from("triage_interactions")
         .select("*")
@@ -90,11 +104,15 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
         .order("created_at", { ascending: false });
 
       setData((prev: any) => ({
-        ...prev,
+        ...(prev || {}),
         interactions: interactions || []
       }));
+    } catch (error) {
+      console.error("Error fetching lead interactions:", error);
     }
+  }, [leadData?.id]);
 
+  useEffect(() => {
     if (mode === 'client' && clientId) {
       fetchClientDetail();
     } else if (mode === 'lead' && leadData) {
@@ -102,53 +120,20 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
         full_name: leadData.full_name || "",
         email: leadData.email || "",
         phone: leadData.phone || "",
-        cif: leadData.nif || "",
-        notes: leadData.notes || ""
+        cif: leadData.nif || leadData.cif || "",
+        notes: leadData.notes || leadData.service_description || ""
       });
       fetchLeadInteractions();
     }
-  }, [clientId, leadData, mode]);
+  }, [clientId, leadData, mode, fetchClientDetail, fetchLeadInteractions]);
 
-  async function fetchClientDetail() {
-    setLoading(true);
-    const res = await getClientDetail(clientId!);
-    if (res.ok) {
-      if (!res.data) return;
-      setData(res.data);
-      setEditForm({
-        full_name: res.data.client.full_name || "",
-        email: res.data.client.email || "",
-        phone: res.data.client.phone || "",
-        cif: res.data.client.cif || "",
-        notes: res.data.client.service_description || ""
-      });
+  const refreshData = useCallback(async () => {
+    if (mode === 'client') {
+      await fetchClientDetail();
+    } else {
+      await fetchLeadInteractions();
     }
-    setLoading(false);
-  }
-
-  async function refreshData() {
-    const supabase = createClient();
-    if (mode === 'client' && clientId) {
-      const res = await getClientDetail(clientId);
-      if (res.ok) {
-        setData(res.data);
-        setEditForm({
-          full_name: res.data.client.full_name || "",
-          email: res.data.client.email || "",
-          phone: res.data.client.phone || "",
-          cif: res.data.client.cif || "",
-          notes: res.data.client.service_description || ""
-        });
-      }
-    } else if (mode === 'lead' && leadData) {
-      const { data: interactions } = await supabase
-        .from("triage_interactions")
-        .select("*")
-        .eq("lead_id", leadData.id)
-        .order("created_at", { ascending: false });
-      setData((prev: any) => ({ ...prev, interactions: interactions || [] }));
-    }
-  }
+  }, [mode, fetchClientDetail, fetchLeadInteractions]);
 
   const client = data?.client || leadData;
   const interactions = data?.interactions || [];
@@ -160,7 +145,7 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
       ? await addTriageNote(client.id, note)
       : await addClientNote(client.id, note);
 
-    if (res.ok) {
+    if (res && res.ok) {
       setNote("");
       refreshData();
     }
@@ -179,15 +164,12 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
         service_description: editForm.notes
       });
     } else {
-       // We would need updateTriageLead action, but requested to keep existing logic.
-       // For now let's mock or just say OK if we don't have the action.
-       // Actually let's just implement what's possible.
        res = { ok: true };
     }
 
-    if (res.ok) {
+    if (res && res.ok) {
       refreshData();
-    } else {
+    } else if (res && res.error) {
       alert(res.error);
     }
     setSaving(false);
@@ -199,7 +181,7 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
         ? (success ? await registerTriageCallSuccess(client.id) : await registerTriageCallMissed(client.id))
         : (success ? await registerCallSuccess(client.id) : await registerCallMissed(client.id));
 
-      if (res.ok) {
+      if (res && res.ok) {
         refreshData();
       }
     });
@@ -239,13 +221,13 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
             <div className="flex items-center gap-3">
               <select
                 className="bg-brand-50 text-brand-700 text-xs font-bold px-4 py-2 rounded-xl border border-brand-100 focus:outline-none focus:ring-2 focus:ring-brand-500"
-                value={client.current_state}
+                value={client?.current_state || ""}
                 onChange={async (e) => {
                   const toState = e.target.value;
                   const res = mode === 'lead'
                     ? await updateTriageLeadState(client.id, toState)
                     : await transitionClientState(client.id, toState);
-                  if (res.ok) {
+                  if (res && res.ok) {
                       refreshData();
                   }
                 }}
@@ -339,7 +321,7 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
               </CardContent>
             </Card>
 
-            {mode === 'client' && (
+            {mode === 'client' && data && (
               <>
                 {/* Documentation Section */}
                 <Card className="border-slate-100 shadow-sm overflow-hidden">
@@ -351,8 +333,8 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
                    </CardHeader>
                    <CardContent className="p-0">
                       <div className="divide-y divide-slate-50">
-                        {data.slots.map((slot: any) => {
-                          const doc = data.documents.find((d: any) => d.slot_type === slot.key);
+                        {data.slots?.map((slot: any) => {
+                          const doc = data.documents?.find((d: any) => d.slot_type === slot.key);
                           return (
                             <div key={slot.key} className="p-4 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
                                <div>
@@ -389,7 +371,7 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
                    </CardHeader>
                    <CardContent className="p-4">
                       <div className="grid gap-3">
-                        {data.contracts.map((c: any) => (
+                        {data.contracts?.map((c: any) => (
                           <div key={c.id} className="flex items-center justify-between p-3 rounded-2xl bg-white border border-slate-100 shadow-sm">
                             <span className="text-xs font-bold text-slate-700 uppercase">Contrato {c.type}</span>
                             <span className="text-xs bg-brand-50 text-brand-700 px-3 py-1 rounded-full font-bold">{c.current_state}</span>
@@ -417,7 +399,7 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
                              </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-50">
-                             {data.payments.map((p: any) => (
+                             {data.payments?.map((p: any) => (
                                <tr key={p.id}>
                                  <td className="py-3 font-medium text-slate-600">{p.contract_type} - {p.phase}</td>
                                  <td className="py-3 text-right font-bold text-slate-900">€{p.expected_amount}</td>

@@ -4,7 +4,7 @@ import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { transitionClientState } from "@/app/actions/transition-state";
 import { approveDocument, rejectDocument } from "@/app/actions/documents";
-import { registerCallMissed, registerCallSuccess, addClientNote } from "@/app/actions/interactions";
+import { registerCallMissed, registerCallSuccess } from "@/app/actions/interactions";
 import { generateAgreement } from "@/app/actions/agreements";
 import { linkReferralToClient, createAndLinkReferral } from "@/app/actions/referral-actions";
 import {
@@ -14,6 +14,7 @@ import {
   markPaymentReceived,
   updateServiceDescription,
   toggleHasDevice,
+  addClientNote,
 } from "@/app/actions/client-actions";
 import type { PipelineState } from "@/lib/state-machine/constants";
 import { PIPELINE_STATE_LABELS } from "@/lib/state-machine/constants";
