@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -48,12 +49,12 @@ function getInitials(name: string) {
 function statusBadge(status: string | null | undefined) {
   const s = (status ?? "abierto").toLowerCase();
   if (s === "resuelto" || s === "cerrado") {
-    return "bg-success-50 text-success-700 border-success-200";
+    return "bg-green-50 text-green-700 border-green-200";
   }
   if (s === "en_proceso" || s === "en proceso") {
     return "bg-brand-50 text-brand-700 border-brand-200";
   }
-  return "bg-warning-50 text-warning-700 border-warning-200";
+  return "bg-amber-50 text-amber-700 border-amber-200";
 }
 
 export function TicketChatView({
@@ -63,7 +64,9 @@ export function TicketChatView({
   ticket: Ticket;
   messages: TicketMessage[];
 }) {
+  const router = useRouter();
   const [text, setText] = useState("");
+  const [realtimeStatus, setRealtimeStatus] = useState<string>("CONNECTING");
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [messages, setMessages] = useState<TicketMessage[]>(() => {
@@ -123,6 +126,8 @@ export function TicketChatView({
     const supabase = createClient();
     const channelName = `ticket-chat-${ticket.id}`;
 
+    console.log("[v0] Setting up realtime channel:", channelName);
+
     const channel = supabase
       .channel(channelName)
       .on(
@@ -134,6 +139,7 @@ export function TicketChatView({
           filter: `ticket_id=eq.${ticket.id}`,
         },
         (payload) => {
+          console.log("[v0] Realtime message received:", payload.new);
           const newMessage = payload.new as TicketMessage;
           setMessages((prev) => {
             if (prev.some((m) => m.id === newMessage.id)) return prev;
@@ -156,12 +162,38 @@ export function TicketChatView({
           });
         }
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        console.log("[v0] Realtime status:", status, err ? err : "");
+        setRealtimeStatus(status);
+      });
 
     return () => {
+      console.log("[v0] Removing realtime channel:", channelName);
       supabase.removeChannel(channel);
     };
   }, [ticket.id]);
+
+  // Polling Fallback when realtime fails
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    const timeout = setTimeout(() => {
+      if (realtimeStatus !== "SUBSCRIBED") {
+        console.log("[v0] Realtime not connected, starting polling fallback");
+        interval = setInterval(() => {
+          router.refresh();
+        }, 5000);
+      }
+    }, 4000);
+
+    if (realtimeStatus === "SUBSCRIBED" && interval) {
+      clearInterval(interval);
+    }
+
+    return () => {
+      clearTimeout(timeout);
+      if (interval) clearInterval(interval);
+    };
+  }, [realtimeStatus, router]);
 
   // Scroll automático
   useEffect(() => {
@@ -178,13 +210,34 @@ export function TicketChatView({
       {/* Left Column - Chat */}
       <Card className="flex flex-col flex-1 min-h-[600px] lg:min-h-0 lg:h-full overflow-hidden lg:col-span-2">
         {/* Chat Header */}
-        <div className="flex-shrink-0 border-b border-gray-100 p-6">
-          <h2 className="text-lg font-semibold text-gray-900">
-            Ticket #{ticket.id.slice(0, 6)} - {ticket.category}
-          </h2>
-          <p className="text-sm text-gray-500 mt-1">
-            {formatDateTime(ticket.created_at)}
-          </p>
+        <div className="flex-shrink-0 border-b border-gray-100 p-6 flex justify-between items-center">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">
+              Ticket #{ticket.id.slice(0, 6)} - {ticket.category}
+            </h2>
+            <p className="text-sm text-gray-500 mt-1">
+              {formatDateTime(ticket.created_at)}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 text-xs font-medium">
+            <div
+              className={cn(
+                "w-2 h-2 rounded-full",
+                realtimeStatus === "SUBSCRIBED"
+                  ? "bg-emerald-500"
+                  : realtimeStatus === "CONNECTING"
+                  ? "bg-amber-500"
+                  : "bg-red-500"
+              )}
+            />
+            <span className="text-slate-500">
+              {realtimeStatus === "SUBSCRIBED"
+                ? "En directo"
+                : realtimeStatus === "CONNECTING"
+                ? "Conectando..."
+                : "Sin conexión"}
+            </span>
+          </div>
         </div>
 
         {/* Messages Container */}
