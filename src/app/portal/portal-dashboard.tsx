@@ -7,7 +7,7 @@ import { MACRO_PHASES, getMacroPhase, PIPELINE_STATE_LABELS } from "@/lib/state-
 import type { PipelineState } from "@/lib/state-machine/constants";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { X, AlertTriangle, Clock, CheckCircle, Building2, Users, FileText } from "lucide-react";
+import { X, AlertTriangle, Clock, CheckCircle, Building2, Users, FileText, Layout, ShoppingCart } from "lucide-react";
 import { dismissAlert } from "@/app/actions/client-actions";
 import Link from "next/link";
 
@@ -27,6 +27,12 @@ type Interaction = {
   created_at: string;
 };
 
+type Contract = {
+  id: string;
+  type: "web" | "ecommerce";
+  current_state: string;
+};
+
 // State explanations for each pipeline state
 type StateInfo = {
   title: string;
@@ -38,129 +44,129 @@ type StateInfo = {
 const STATE_EXPLANATIONS: Record<string, StateInfo> = {
   nuevo_lead: {
     title: "Registro inicial",
-    description: "Tu solicitud ha sido registrada. Nuestro equipo revisara tu informacion y se pondra en contacto contigo.",
+    description: "Tu solicitud ha sido registrada. Nuestro equipo revisará tu información y se pondrá en contacto contigo.",
     actor: "zephyr",
   },
   no_contesta: {
     title: "Pendiente de contacto",
-    description: "Hemos intentado contactarte pero no hemos podido localizarte. Por favor, revisa tu telefono o correo.",
+    description: "Hemos intentado contactarte pero no hemos podido localizarte. Por favor, revisa tu teléfono o correo.",
     actor: "cliente",
     clientAction: "Contacta con nosotros para continuar con tu solicitud",
   },
   contactar_mas_tarde: {
     title: "Contacto programado",
-    description: "Tenemos agendado contactarte proximamente. Mantente atento a nuestras comunicaciones.",
+    description: "Tenemos agendado contactarte próximamente. Mantente atento a nuestras comunicaciones.",
     actor: "zephyr",
   },
   imposible_contactar: {
     title: "Sin respuesta",
-    description: "No hemos podido establecer contacto. Si deseas continuar, por favor contactanos.",
+    description: "No hemos podido establecer contacto. Si deseas continuar, por favor contáctanos.",
     actor: "cliente",
     clientAction: "Envía un ticket de soporte para retomar el proceso",
   },
   consultoria: {
-    title: "En consultoria",
-    description: "Estamos analizando tu caso y preparando toda la documentacion necesaria para tu solicitud de Kit Digital.",
+    title: "En consultoría",
+    description: "Estamos analizando tu caso y preparando toda la documentación necesaria para tu solicitud de Kit Digital.",
     actor: "zephyr",
   },
   listo_para_tramitar: {
     title: "Listo para tramitar",
-    description: "Tu expediente esta completo y preparado. Procederemos a enviarlo a Red.es para su evaluacion.",
+    description: "Tu expediente está completo y preparado. Procederemos a enviarlo a Red.es para su evaluación.",
     actor: "zephyr",
   },
   esperando_concesion: {
-    title: "Esperando concesion",
+    title: "Esperando concesión",
     description: "Tu solicitud ha sido enviada a Red.es. Estamos a la espera de que resuelvan tu expediente.",
     actor: "redes",
   },
   subsanacion_tramitacion: {
-    title: "Subsanacion requerida",
-    description: "Red.es ha solicitado documentacion adicional o correcciones. Necesitamos tu colaboracion.",
+    title: "Subsanación requerida",
+    description: "Red.es ha solicitado documentación adicional o correcciones. Necesitamos tu colaboración.",
     actor: "cliente",
-    clientAction: "Revisa la documentacion solicitada y enviala cuanto antes",
+    clientAction: "Revisa la documentación solicitada y envíala cuanto antes",
   },
   bono_concedido: {
     title: "Bono concedido",
-    description: "Enhorabuena! Red.es ha aprobado tu solicitud. Ahora confirmaremos los detalles para iniciar el desarrollo.",
+    description: "¡Enhorabuena! Red.es ha aprobado tu solicitud. Ahora confirmaremos los detalles para iniciar el desarrollo.",
     actor: "zephyr",
   },
   consultoria_confirmacion: {
-    title: "Confirmacion de consultoria",
-    description: "Estamos verificando los ultimos detalles de tu expediente antes de emitir los acuerdos.",
+    title: "Confirmación de consultoría",
+    description: "Estamos verificando los últimos detalles de tu expediente antes de emitir los acuerdos.",
     actor: "zephyr",
   },
   emitir_acuerdos: {
-    title: "Emision de acuerdos",
-    description: "Preparando los acuerdos de colaboracion para tu firma.",
+    title: "Emisión de acuerdos",
+    description: "Preparando los acuerdos de colaboración para tu firma.",
     actor: "zephyr",
   },
   empezar_desarrollo: {
     title: "Inicio del desarrollo",
-    description: "Tu proyecto esta en marcha! Nuestro equipo tecnico esta trabajando en tu solucion digital.",
+    description: "¡Tu proyecto está en marcha! Nuestro equipo técnico está trabajando en tu solución digital.",
     actor: "zephyr",
   },
   presentar_justificacion_fase_i: {
-    title: "Preparando justificacion Fase I",
-    description: "Estamos recopilando toda la documentacion para justificar el trabajo realizado ante Red.es.",
+    title: "Preparando justificación Fase I",
+    description: "Estamos recopilando toda la documentación para justificar el trabajo realizado ante Red.es.",
     actor: "zephyr",
   },
   firma_justificacion: {
-    title: "Firma de justificacion",
-    description: "Necesitamos tu firma en los documentos de justificacion para poder presentarlos.",
+    title: "Firma de justificación",
+    description: "Necesitamos tu firma en los documentos de justificación para poder presentarlos.",
     actor: "cliente",
-    clientAction: "Firma los documentos de justificacion pendientes",
+    clientAction: "Firma los documentos de justificación pendientes",
   },
   subsanacion_fase_i: {
-    title: "Subsanacion Fase I",
-    description: "Red.es ha solicitado aclaraciones sobre la justificacion. Estamos preparando la respuesta.",
+    title: "Subsanación Fase I",
+    description: "Red.es ha solicitado aclaraciones sobre la justificación. Estamos preparando la respuesta.",
     actor: "zephyr",
   },
   resolucion_red_es: {
-    title: "Resolucion Red.es",
-    description: "Red.es esta evaluando la justificacion presentada. Esperamos su resolucion.",
+    title: "Resolución Red.es",
+    description: "Red.es está evaluando la justificación presentada. Esperamos su resolución.",
     actor: "redes",
   },
   pago_i_fase: {
     title: "Pago Fase I",
-    description: "La primera fase ha sido aprobada. El pago esta en proceso.",
+    description: "La primera fase ha sido aprobada. El pago está en proceso.",
     actor: "redes",
   },
   ano_mantenimiento: {
     title: "Año de mantenimiento",
-    description: "Tu solucion esta en periodo de mantenimiento. Seguimos dandote soporte.",
+    description: "Tu solución está en periodo de mantenimiento. Seguimos dándote soporte.",
     actor: "zephyr",
   },
   justificacion_ii_fase: {
-    title: "Justificacion Fase II",
-    description: "Preparando la documentacion de la segunda fase de justificacion.",
+    title: "Justificación Fase II",
+    description: "Preparando la documentación de la segunda fase de justificación.",
     actor: "zephyr",
   },
   firma_justificacion_ii: {
     title: "Firma Fase II",
     description: "Necesitamos tu firma para los documentos de la segunda fase.",
     actor: "cliente",
-    clientAction: "Firma los documentos de justificacion de la Fase II",
+    clientAction: "Firma los documentos de justificación de la Fase II",
   },
   subsanacion_fase_ii: {
-    title: "Subsanacion Fase II",
-    description: "Atendiendo requerimientos de Red.es sobre la segunda justificacion.",
+    title: "Subsanación Fase II",
+    description: "Atendiendo requerimientos de Red.es sobre la segunda justificación.",
     actor: "zephyr",
   },
   resolucion_ii_red_es: {
-    title: "Resolucion Final",
-    description: "Red.es esta evaluando la justificacion final de tu proyecto.",
+    title: "Resolución Final",
+    description: "Red.es está evaluando la justificación final de tu proyecto.",
     actor: "redes",
   },
   ganada: {
     title: "Proyecto completado",
-    description: "Enhorabuena! Tu proyecto Kit Digital ha sido completado con exito. Gracias por confiar en nosotros.",
+    description: "¡Enhorabuena! Tu proyecto Kit Digital ha sido completado con éxito. Gracias por confiar en nosotros.",
     actor: "zephyr",
   },
   perdida: {
     title: "Expediente cerrado",
-    description: "Este expediente ha sido cerrado. Contactanos si tienes dudas o quieres iniciar un nuevo proceso.",
+    description: "Este expediente ha sido cerrado. Contáctanos si tienes dudas o quieres iniciar un nuevo proceso.",
     actor: "cliente",
-    clientAction: "Contactanos para mas informacion",
+    clientAction: "Contáctanos para más información",
   },
 };
 
@@ -169,16 +175,63 @@ function getStateLabel(stateId: string): string {
   return found?.label ?? stateId;
 }
 
+function ContractProgress({ contract }: { contract: Contract }) {
+  const macro = getMacroPhase(contract.current_state as PipelineState);
+  const currentIndex = MACRO_PHASES.findIndex((p) => p.key === macro);
+  const Icon = contract.type === "web" ? Layout : ShoppingCart;
+
+  return (
+    <div className="space-y-4 p-4 rounded-xl border border-slate-100 bg-slate-50/50">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="p-2 rounded-lg bg-white shadow-sm border border-slate-100">
+            <Icon className="w-5 h-5 text-brand-600" />
+          </div>
+          <span className="font-semibold text-slate-800">
+            {contract.type === "web" ? "Sitio Web y Presencia" : "Comercio Electrónico"}
+          </span>
+        </div>
+        <span className="text-xs font-medium bg-brand-100 text-brand-700 px-2 py-1 rounded-full border border-brand-200">
+          {getStateLabel(contract.current_state)}
+        </span>
+      </div>
+
+      <div className="flex items-center gap-1">
+        {MACRO_PHASES.map((phase, i) => {
+          const isActive = i <= currentIndex;
+          return (
+            <div
+              key={phase.key}
+              className={cn(
+                "h-1.5 flex-1 rounded-full transition-all",
+                isActive ? "bg-brand-500" : "bg-slate-200"
+              )}
+              title={phase.label}
+            />
+          );
+        })}
+      </div>
+      <p className="text-[10px] text-slate-500 text-center uppercase tracking-wider font-semibold">
+        Fase actual: {MACRO_PHASES[currentIndex]?.label || "Tramitación"}
+      </p>
+    </div>
+  );
+}
+
 export function PortalDashboard({
   client: initialClient,
   alerts: initialAlerts,
   interactions: initialInteractions,
+  contracts,
   role,
+  deviceUnlocked,
 }: {
   client: Client;
   alerts: Alert;
   interactions: Interaction[];
+  contracts: Contract[];
   role: string | null;
+  deviceUnlocked?: boolean;
 }) {
   const [client, setClient] = useState(initialClient);
   const [alerts, setAlerts] = useState(initialAlerts);
@@ -248,12 +301,11 @@ export function PortalDashboard({
   const currentIndex = MACRO_PHASES.findIndex((p) => p.key === currentMacro);
   const stateInfo = STATE_EXPLANATIONS[client.current_state] ?? {
     title: getStateLabel(client.current_state),
-    description: "Tu expediente esta siendo procesado.",
+    description: "Tu expediente está siendo procesado.",
     actor: "zephyr" as const,
   };
 
   const handleDismissAlert = (alertId: string) => {
-    // Optimistic update
     setAlerts((prev) => prev.filter((a) => a.id !== alertId));
     startTransition(async () => {
       await dismissAlert(alertId);
@@ -263,18 +315,27 @@ export function PortalDashboard({
   const actorLabels = {
     zephyr: { label: "ZephyrStudio", icon: Building2, color: "text-brand-600" },
     redes: { label: "Red.es", icon: FileText, color: "text-blue-600" },
-    cliente: { label: "Tu accion requerida", icon: Users, color: "text-amber-600" },
+    cliente: { label: "Tu acción requerida", icon: Users, color: "text-amber-600" },
   };
 
   const actorInfo = actorLabels[stateInfo.actor];
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">
-          {client.company_name || "Mi expediente"}
-        </h1>
-        <p className="text-gray-500">Estado actual: {getStateLabel(client.current_state)}</p>
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
+            {client.company_name || "Mi expediente"}
+          </h1>
+          <p className="text-slate-500 mt-1">
+            Gestionando tu bono Kit Digital · <span className="font-medium text-brand-600">{getStateLabel(client.current_state)}</span>
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Link href="/portal/soporte/tickets/nuevo">
+            <Button variant="outline" size="sm">Ayuda</Button>
+          </Link>
+        </div>
       </div>
 
       {/* Dismissible Alerts */}
@@ -283,12 +344,12 @@ export function PortalDashboard({
           {alerts.map((a) => (
             <div
               key={a.id}
-              className="flex items-start justify-between gap-4 rounded-xl border border-amber-200 bg-amber-50 p-4"
+              className="flex items-start justify-between gap-4 rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm"
             >
               <div className="flex items-start gap-3">
                 <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-medium text-amber-900">{a.message}</p>
+                  <p className="text-sm font-semibold text-amber-900">{a.message}</p>
                   <p className="text-xs text-amber-600 mt-1">
                     {new Date(a.created_at).toLocaleDateString("es")}
                   </p>
@@ -307,152 +368,173 @@ export function PortalDashboard({
         </div>
       )}
 
-      {/* Progress Stepper */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Progreso del expediente</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-2 flex-wrap">
-            {MACRO_PHASES.map((phase, i) => {
-              const isActive = i <= currentIndex;
-              const isCurrent = phase.key === currentMacro;
-              return (
-                <div key={phase.key} className="flex items-center gap-2">
-                  <div
-                    className={cn(
-                      "flex h-10 w-10 items-center justify-center rounded-full text-sm font-medium",
-                      isActive
-                        ? "bg-brand-500 text-white"
-                        : "bg-white text-gray-400 border border-gray-200",
-                      isCurrent && "ring-2 ring-brand-500 ring-offset-2 ring-offset-gray-50"
-                    )}
-                  >
-                    {i + 1}
-                  </div>
-                  <span
-                    className={cn(
-                      "text-sm",
-                      isActive ? "text-gray-900" : "text-gray-500"
-                    )}
-                  >
-                    {phase.label}
-                  </span>
-                  {i < MACRO_PHASES.length - 1 && (
-                    <div
-                      className={cn(
-                        "h-0.5 w-8",
-                        isActive ? "bg-brand-500" : "bg-gray-200"
-                      )}
-                    />
-                  )}
-                </div>
-              );
-            })}
+      {/* Device Selection Banner */}
+      {deviceUnlocked && (
+        <div className="flex flex-col md:flex-row items-center gap-4 p-6 rounded-2xl border border-brand-200 bg-brand-50 shadow-sm animate-in fade-in slide-in-from-top-4">
+          <div className="p-3 rounded-full bg-brand-100">
+            <ShoppingCart className="w-6 h-6 text-brand-600" />
           </div>
-        </CardContent>
-      </Card>
-
-      {/* State Explanation Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="w-5 h-5 text-gray-500" />
-            Estado actual del expediente
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">{stateInfo.title}</h3>
-            <p className="text-gray-600 mt-1">{stateInfo.description}</p>
+          <div className="flex-1 text-center md:text-left">
+            <p className="text-lg font-bold text-brand-900">¡Ya puedes elegir tu dispositivo!</p>
+            <p className="text-sm text-brand-800">Tu bono ha sido aprobado y puedes seleccionar el equipo que quieres recibir.</p>
           </div>
+          <Link href="/portal/equipo">
+            <Button size="lg" className="bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-200 transition-all hover:scale-105">
+              Elegir mi equipo
+            </Button>
+          </Link>
+        </div>
+      )}
 
-          <div className="flex items-center gap-2 text-sm">
-            <actorInfo.icon className={cn("w-4 h-4", actorInfo.color)} />
-            <span className={cn("font-medium", actorInfo.color)}>
-              Actuando: {actorInfo.label}
-            </span>
-          </div>
+      {/* Contracts Parallel Processes */}
+      {contracts.length > 0 && (
+        <div className="grid gap-4 md:grid-cols-2">
+          {contracts.map(c => (
+            <ContractProgress key={c.id} contract={c} />
+          ))}
+        </div>
+      )}
 
-          {/* Client Action Banner */}
-          {stateInfo.actor === "cliente" && stateInfo.clientAction && (
-            <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4">
-              <div className="flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-amber-900">
-                    Accion requerida de tu parte
-                  </p>
-                  <p className="text-sm text-amber-700 mt-1">{stateInfo.clientAction}</p>
-                  <Link href="/portal/soporte/tickets/nuevo">
-                    <Button variant="outline" size="sm" className="mt-3 border-amber-400 text-amber-700 hover:bg-amber-100">
-                      Contactar con soporte
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Timeline of State Changes */}
-      {interactions.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-gray-500" />
-              Historial del expediente
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="relative">
-              {/* Vertical line */}
-              <div className="absolute left-3 top-2 bottom-2 w-0.5 bg-gray-200" />
-
-              <div className="space-y-4">
-                {interactions.map((interaction, idx) => {
-                  const toState = interaction.metadata?.to ?? "";
-                  const label = getStateLabel(toState);
-                  const isLast = idx === interactions.length - 1;
-
+      <div className="grid gap-8 lg:grid-cols-3">
+        <div className="lg:col-span-2 space-y-8">
+          {/* Progress Stepper */}
+          <Card className="border-slate-200 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-lg">Progreso General</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between gap-2 overflow-x-auto pb-2">
+                {MACRO_PHASES.map((phase, i) => {
+                  const isActive = i <= currentIndex;
+                  const isCurrent = phase.key === currentMacro;
                   return (
-                    <div key={interaction.id} className="flex items-start gap-4 relative">
+                    <div key={phase.key} className="flex flex-col items-center gap-2 min-w-[80px]">
                       <div
                         className={cn(
-                          "w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 z-10",
-                          isLast
+                          "flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-all",
+                          isActive
                             ? "bg-brand-500 text-white"
-                            : "bg-gray-200 text-gray-500"
+                            : "bg-slate-100 text-slate-400 border border-slate-200",
+                          isCurrent && "ring-4 ring-brand-100"
                         )}
                       >
-                        <CheckCircle className="w-3.5 h-3.5" />
+                        {i + 1}
                       </div>
-                      <div className="flex-1 pb-4">
-                        <p className={cn(
-                          "text-sm font-medium",
-                          isLast ? "text-gray-900" : "text-gray-700"
-                        )}>
-                          {label}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          {new Date(interaction.created_at).toLocaleDateString("es", {
-                            day: "numeric",
-                            month: "long",
-                            year: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </p>
-                      </div>
+                      <span
+                        className={cn(
+                          "text-[10px] font-bold uppercase tracking-wider text-center",
+                          isActive ? "text-slate-900" : "text-slate-400"
+                        )}
+                      >
+                        {phase.label}
+                      </span>
                     </div>
                   );
                 })}
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            </CardContent>
+          </Card>
+
+          {/* State Explanation Card */}
+          <Card className="border-slate-200 shadow-sm overflow-hidden">
+            <div className={cn("h-1.5 w-full", actorInfo.color.replace("text", "bg"))} />
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Clock className="w-5 h-5 text-slate-400" />
+                ¿En qué punto estamos?
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div>
+                <h3 className="text-xl font-bold text-slate-900">{stateInfo.title}</h3>
+                <p className="text-slate-600 mt-2 leading-relaxed">{stateInfo.description}</p>
+              </div>
+
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 border border-slate-100 w-fit">
+                <actorInfo.icon className={cn("w-5 h-5", actorInfo.color)} />
+                <span className="text-sm font-medium text-slate-700">
+                  Responsable actual: <span className={cn("font-bold", actorInfo.color)}>{actorInfo.label}</span>
+                </span>
+              </div>
+
+              {/* Client Action Banner */}
+              {stateInfo.actor === "cliente" && stateInfo.clientAction && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-5">
+                  <div className="flex items-start gap-4">
+                    <div className="p-2 rounded-full bg-amber-100">
+                      <AlertTriangle className="w-5 h-5 text-amber-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-bold text-amber-900">
+                        Acción requerida por tu parte
+                      </p>
+                      <p className="text-sm text-amber-800 mt-1">{stateInfo.clientAction}</p>
+                      <div className="flex gap-2 mt-4">
+                        <Link href="/portal/soporte/tickets/nuevo">
+                          <Button size="sm" className="bg-amber-600 hover:bg-amber-700 text-white border-none">
+                            Resolver ahora
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="space-y-8">
+          {/* Timeline of State Changes */}
+          {interactions.length > 0 && (
+            <Card className="border-slate-200 shadow-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <CheckCircle className="w-5 h-5 text-slate-400" />
+                  Actividad reciente
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="relative pl-6 space-y-6">
+                  <div className="absolute left-[11px] top-2 bottom-2 w-0.5 bg-slate-100" />
+                  {interactions.slice(-5).reverse().map((interaction, idx) => {
+                    const toState = interaction.metadata?.to ?? "";
+                    const label = getStateLabel(toState);
+                    const isFirst = idx === 0;
+
+                    return (
+                      <div key={interaction.id} className="relative">
+                        <div
+                          className={cn(
+                            "absolute -left-[23px] top-1 w-4 h-4 rounded-full border-2 border-white shadow-sm z-10",
+                            isFirst ? "bg-brand-500 scale-125" : "bg-slate-300"
+                          )}
+                        />
+                        <div>
+                          <p className={cn(
+                            "text-sm font-bold",
+                            isFirst ? "text-slate-900" : "text-slate-500"
+                          )}>
+                            {label}
+                          </p>
+                          <p className="text-[10px] text-slate-400 font-medium uppercase mt-0.5">
+                            {new Date(interaction.created_at).toLocaleDateString("es", {
+                              day: "numeric",
+                              month: "short",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,17 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Menu, X } from "lucide-react";
+import NextLink from "next/link";
 
 type Role = "admin" | "consultor" | "tecnico";
 
 const NAV = {
   admin: [
+    { href: "/backoffice/dashboard", label: "Dashboard" },
     { href: "/backoffice/preconsultoria", label: "Preconsultoría" },
     { href: "/backoffice/consultoria", label: "Consultoría" },
     { href: "/backoffice/support", label: "Soporte" },
@@ -20,11 +21,15 @@ const NAV = {
     { href: "/backoffice/devices", label: "Catálogo" },
     { href: "/backoffice/logs", label: "Logs" },
     { href: "/backoffice/assign", label: "Asignar consultores" },
+    { href: "/backoffice/asociados", label: "Usuarios" },
+    { href: "/backoffice/referidos", label: "Referidos" },
   ],
   consultor: [
     { href: "/backoffice/preconsultoria", label: "Preconsultoría" },
     { href: "/backoffice/consultoria", label: "Consultoría" },
     { href: "/backoffice/support", label: "Soporte" },
+    { href: "/backoffice/asociados", label: "Asociados" },
+    { href: "/backoffice/referidos", label: "Referidos" },
   ],
   tecnico: [
     { href: "/backoffice/preconsultoria", label: "Preconsultoría" },
@@ -55,13 +60,13 @@ export function Sidebar({ role, userLabel }: { role: Role; userLabel: string }) 
             <Menu className="w-6 h-6" />
           )}
         </button>
-        <Link href="/backoffice/preconsultoria" className="flex items-center gap-2">
+        <NextLink href="/backoffice/preconsultoria" className="flex items-center gap-2">
           <img
             src="https://supabase.kitdigitalzephyrstudio.es/storage/v1/object/public/img_web/logozephyrhub.png"
             alt="ZephyrHub"
             className="h-8 w-auto"
           />
-        </Link>
+        </NextLink>
         <div className="w-10" />
       </header>
 
@@ -84,21 +89,21 @@ export function Sidebar({ role, userLabel }: { role: Role; userLabel: string }) 
         <div className="flex h-full flex-col">
           {/* Desktop Header */}
           <div className="hidden lg:flex h-16 items-center border-b border-slate-200 px-6 dark:border-slate-800">
-        <Link href="/backoffice/preconsultoria" className="flex items-center gap-2">
+        <NextLink href="/backoffice/preconsultoria" className="flex items-center gap-2">
           <img
             src="https://supabase.kitdigitalzephyrstudio.es/storage/v1/object/public/img_web/logozephyrhub.png"
             alt="ZephyrHub"
             className="h-8 w-auto"
           />
-        </Link>
+        </NextLink>
           </div>
 
           {/* Navigation */}
           <nav className="flex-1 space-y-0.5 overflow-y-auto p-4">
             {links.map((item) => {
-              const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+              const isActive = pathname === item.href || (item.href !== "/backoffice/dashboard" && pathname.startsWith(item.href + "/"));
               return (
-                <Link
+                <NextLink
                   key={item.href}
                   href={item.href}
                   onClick={() => setMobileOpen(false)}
@@ -110,7 +115,7 @@ export function Sidebar({ role, userLabel }: { role: Role; userLabel: string }) 
                   )}
                 >
                   {item.label}
-                </Link>
+                </NextLink>
               );
             })}
           </nav>

@@ -7,11 +7,12 @@ import { signOut } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-export function PortalSidebar() {
+export function PortalSidebar({ hasDevice }: { hasDevice?: boolean }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const navItems = [
     { href: "/portal", label: "Inicio" },
+    ...(hasDevice ? [{ href: "/portal/equipo", label: "Mi equipo" }] : []),
     { href: "/portal/soporte", label: "Centro de Ayuda" },
   ];
 

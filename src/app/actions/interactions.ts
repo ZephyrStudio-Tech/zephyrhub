@@ -6,10 +6,23 @@ import { revalidatePath } from "next/cache";
 export async function registerCallMissed(
   clientId: string
 ): Promise<{ ok: boolean; error?: string }> {
-  const auth = await requireServerAuth();
+  const auth = await requireServerAuth(["admin", "consultor", "tecnico"]);
   if (auth.error) return { ok: false, error: auth.error };
 
-  const { user, supabaseAdmin } = auth;
+  const { user, role, supabaseAdmin } = auth;
+
+  // Ownership check for consultores
+  if (role === "consultor") {
+    const { data: client } = await supabaseAdmin
+      .from("clients")
+      .select("consultant_id")
+      .eq("id", clientId)
+      .single();
+    if (client?.consultant_id !== user.id) {
+      return { ok: false, error: "Sin permiso para este cliente" };
+    }
+  }
+
   const now = new Date();
   const { error: interactionErr } = await supabaseAdmin.from("interactions").insert({
     client_id: clientId,
@@ -54,10 +67,23 @@ export async function registerCallMissed(
 export async function registerCallSuccess(
   clientId: string
 ): Promise<{ ok: boolean; error?: string }> {
-  const auth = await requireServerAuth();
+  const auth = await requireServerAuth(["admin", "consultor", "tecnico"]);
   if (auth.error) return { ok: false, error: auth.error };
 
-  const { user, supabaseAdmin } = auth;
+  const { user, role, supabaseAdmin } = auth;
+
+  // Ownership check for consultores
+  if (role === "consultor") {
+    const { data: client } = await supabaseAdmin
+      .from("clients")
+      .select("consultant_id")
+      .eq("id", clientId)
+      .single();
+    if (client?.consultant_id !== user.id) {
+      return { ok: false, error: "Sin permiso para este cliente" };
+    }
+  }
+
   const { error } = await supabaseAdmin.from("interactions").insert({
     client_id: clientId,
     actor_id: user.id,

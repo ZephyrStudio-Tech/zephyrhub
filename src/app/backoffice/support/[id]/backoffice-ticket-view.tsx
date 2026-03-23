@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -66,8 +67,10 @@ export function BackofficeTicketView({
   ticket: Ticket;
   messages: TicketMessage[];
 }) {
+  const router = useRouter();
   const [text, setText] = useState("");
   const [status, setStatus] = useState(ticket.status ?? "abierto");
+  const [realtimeStatus, setRealtimeStatus] = useState<string>("CONNECTING");
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [messages, setMessages] = useState<TicketMessage[]>(() => {
@@ -180,6 +183,7 @@ export function BackofficeTicketView({
         }
       )
       .subscribe((status, err) => {
+        setRealtimeStatus(status);
         console.log(`📡 [Realtime Status Backoffice] ${status}`, err ? err : "");
       });
 
@@ -187,6 +191,27 @@ export function BackofficeTicketView({
       supabase.removeChannel(channel);
     };
   }, [ticket.id]);
+
+  // Polling Fallback
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    let timeout = setTimeout(() => {
+      if (realtimeStatus !== "SUBSCRIBED") {
+        interval = setInterval(() => {
+          router.refresh();
+        }, 5000);
+      }
+    }, 4000);
+
+    if (realtimeStatus === "SUBSCRIBED") {
+      if (interval) clearInterval(interval);
+    }
+
+    return () => {
+      clearTimeout(timeout);
+      if (interval) clearInterval(interval);
+    };
+  }, [realtimeStatus, router]);
 
   // Scroll automático al último mensaje.
   useEffect(() => {
@@ -201,13 +226,34 @@ export function BackofficeTicketView({
   return (
     <div className="flex flex-col lg:grid lg:grid-cols-3 gap-6 lg:h-[calc(100vh-10rem)]">
       <Card className="flex flex-col flex-1 min-h-[600px] lg:min-h-0 lg:h-full overflow-hidden lg:col-span-2">
-        <div className="flex-shrink-0 border-b border-gray-100 p-6">
-          <h2 className="text-lg font-semibold text-gray-900">
-            Ticket #{ticket.id.slice(0, 6)} - {ticket.category}
-          </h2>
-          <p className="text-sm text-gray-500 mt-1">
-            {formatDateTime(ticket.created_at)}
-          </p>
+        <div className="flex-shrink-0 border-b border-gray-100 p-6 flex justify-between items-center">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">
+              Ticket #{ticket.id.slice(0, 6)} - {ticket.category}
+            </h2>
+            <p className="text-sm text-gray-500 mt-1">
+              {formatDateTime(ticket.created_at)}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 text-xs font-medium">
+            <div
+              className={cn(
+                "w-2 h-2 rounded-full",
+                realtimeStatus === "SUBSCRIBED"
+                  ? "bg-emerald-500"
+                  : realtimeStatus === "CONNECTING"
+                  ? "bg-amber-500"
+                  : "bg-red-500"
+              )}
+            />
+            <span className="text-slate-500">
+              {realtimeStatus === "SUBSCRIBED"
+                ? "En directo"
+                : realtimeStatus === "CONNECTING"
+                ? "Conectando..."
+                : "Sin conexión"}
+            </span>
+          </div>
         </div>
 
         {/* Messages Container - Scrollable Only Here */}

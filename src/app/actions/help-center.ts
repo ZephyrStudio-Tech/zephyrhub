@@ -18,6 +18,7 @@ function slugify(text: string): string {
 export async function createTicket(data: {
   category: string;
   message: string;
+  clientId?: string | null;
 }): Promise<{ ok: boolean; error?: string }> {
   const supabase = await createClient();
   const {
@@ -25,14 +26,17 @@ export async function createTicket(data: {
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "No autenticado" };
 
-  // Try to find the client associated with this user (may not exist for internal users)
-  const { data: clients } = await supabase
-    .from("clients")
-    .select("id")
-    .eq("user_id", user.id)
-    .limit(1);
+  let clientId = data.clientId ?? null;
 
-  const clientId = clients?.[0]?.id ?? null;
+  if (!clientId) {
+    // Try to find the client associated with this user (for beneficiaries)
+    const { data: clients } = await supabase
+      .from("clients")
+      .select("id")
+      .eq("user_id", user.id)
+      .limit(1);
+    clientId = clients?.[0]?.id ?? null;
+  }
 
   const supabaseAdmin = createAdminClient();
   const { error } = await supabaseAdmin.from("support_requests").insert({
@@ -112,6 +116,61 @@ export async function createTutorial(data: {
   return { ok: true };
 }
 
+/** Actualiza un tutorial/recurso en la academia (solo admin). */
+export async function updateTutorial(
+  id: string,
+  data: {
+    title: string;
+    description?: string;
+    category: string;
+    content_type: "video" | "articulo";
+    video_url?: string;
+    content_body?: string;
+    cover_image?: string;
+    sort_order?: number;
+  }
+): Promise<{ ok: boolean; error?: string }> {
+  const auth = await requireServerAuth(["admin"]);
+  if (auth.error) return { ok: false, error: auth.error };
+
+  const { supabaseAdmin } = auth;
+
+  const { error } = await supabaseAdmin
+    .from("academy_content")
+    .update({
+      title: data.title,
+      category: data.category,
+      description: data.description ?? null,
+      content_type: data.content_type,
+      video_url: data.content_type === "video" ? data.video_url ?? null : null,
+      content_body: data.content_type === "articulo" ? data.content_body ?? null : null,
+      cover_image: data.cover_image ?? null,
+      sort_order: data.sort_order ?? 0,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/backoffice/academy");
+  revalidatePath("/portal/soporte/tutoriales");
+  return { ok: true };
+}
+
+/** Borra un tutorial/recurso en la academia (solo admin). */
+export async function deleteTutorial(id: string): Promise<{ ok: boolean; error?: string }> {
+  const auth = await requireServerAuth(["admin"]);
+  if (auth.error) return { ok: false, error: auth.error };
+
+  const { supabaseAdmin } = auth;
+
+  const { error } = await supabaseAdmin.from("academy_content").delete().eq("id", id);
+
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/backoffice/academy");
+  revalidatePath("/portal/soporte/tutoriales");
+  return { ok: true };
+}
+
 /** Añade un mensaje al hilo de un ticket y actualiza updated_at. */
 export async function addTicketMessage(data: {
   ticketId: string;
@@ -153,6 +212,32 @@ export async function addTicketMessage(data: {
   revalidatePath("/backoffice/support");
   revalidatePath(`/backoffice/support/${data.ticketId}`);
 
+  return { ok: true };
+}
+
+export async function deleteTicket(ticketId: string): Promise<{ ok: boolean; error?: string }> {
+  const auth = await requireServerAuth(["admin", "consultor"]);
+  if (auth.error) return { ok: false, error: auth.error };
+
+  const { supabaseAdmin } = auth;
+
+  // 1. Delete messages first due to FK
+  const { error: msgErr } = await supabaseAdmin
+    .from("ticket_messages")
+    .delete()
+    .eq("ticket_id", ticketId);
+
+  if (msgErr) return { ok: false, error: msgErr.message };
+
+  // 2. Delete the ticket
+  const { error: ticketErr } = await supabaseAdmin
+    .from("support_requests")
+    .delete()
+    .eq("id", ticketId);
+
+  if (ticketErr) return { ok: false, error: ticketErr.message };
+
+  revalidatePath("/backoffice/support");
   return { ok: true };
 }
 

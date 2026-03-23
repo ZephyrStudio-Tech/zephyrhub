@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Search, Filter, MoreVertical } from "lucide-react";
+import { deleteTicket } from "@/app/actions/help-center";
 
 type Ticket = {
   id: string;
@@ -18,12 +19,17 @@ type Ticket = {
   profiles?: { full_name?: string; email?: string; } | any;
 };
 
-export function SupportInbox({ tickets }: { tickets: Ticket[] }) {
+export function SupportInbox({ tickets: initialTickets }: { tickets: Ticket[] }) {
   const router = useRouter();
+  const [tickets, setTickets] = useState(initialTickets);
   const [filter, setFilter] = useState<"all" | "abierto" | "resuelto" | "pending">("all");
   const [search, setSearch] = useState("");
   const [selectedTickets, setSelectedTickets] = useState<Set<string>>(new Set());
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+
+  useEffect(() => {
+    setTickets(initialTickets);
+  }, [initialTickets]);
 
   const filtered = tickets.filter((t) => {
     // Apply status filter
@@ -61,6 +67,22 @@ export function SupportInbox({ tickets }: { tickets: Ticket[] }) {
     }
     setSelectedTickets(newSet);
   };
+
+  async function onDeleteTicket(id: string) {
+    if (!window.confirm("¿Seguro que quieres eliminar este ticket?")) return;
+
+    const originalTickets = [...tickets];
+    setTickets((prev) => prev.filter((t) => t.id !== id));
+    setOpenDropdown(null);
+
+    const res = await deleteTicket(id);
+    if (!res.ok) {
+      setTickets(originalTickets);
+      alert(res.error);
+    } else {
+      router.refresh();
+    }
+  }
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl shadow-card overflow-hidden">
@@ -210,11 +232,14 @@ export function SupportInbox({ tickets }: { tickets: Ticket[] }) {
                         >
                           View More
                         </button>
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); alert('Funcionalidad pendiente'); }}
-                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteTicket(t.id);
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
                         >
-                          Delete
+                          Eliminar
                         </button>
                       </div>
                     )}

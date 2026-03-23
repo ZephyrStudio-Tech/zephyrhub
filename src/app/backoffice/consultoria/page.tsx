@@ -42,25 +42,30 @@ export default async function ConsultoriaPage() {
   const clientCount = clients.length ?? 0;
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">
-          Consultoría
-        </h1>
-        <p className="text-slate-500 text-sm mt-1">
-          Expedientes en tramitación. Arrastra las tarjetas para cambiar el estado.
-        </p>
+    <div className="space-y-8 h-full flex flex-col overflow-hidden">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-1">
+        <div>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+            Consultoría
+          </h1>
+          <p className="text-slate-500 text-sm mt-1 font-medium">
+            Gestión de expedientes en fase de tramitación oficial.
+          </p>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="hidden md:flex items-center gap-2 bg-white border border-slate-200 px-4 py-2 rounded-2xl shadow-sm">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Total Expedientes</span>
+            <span className="text-lg font-black text-brand-600">{clientCount}</span>
+          </div>
+        </div>
       </div>
-      <div className="flex items-center gap-2 text-sm text-slate-500 bg-slate-100 dark:bg-slate-800 px-4 py-2 rounded-xl w-fit">
-        <span className="font-semibold text-slate-700 dark:text-slate-200">
-          {clientCount}
-        </span>
-        expediente{clientCount !== 1 ? "s" : ""}
+
+      <div className="flex-1 min-h-0">
+        <PipelineView
+          clients={clients}
+          stateLabels={CONSULTORIA_STATE_LABELS}
+        />
       </div>
-      <PipelineView
-        clients={clients}
-        stateLabels={CONSULTORIA_STATE_LABELS}
-      />
     </div>
   );
 }

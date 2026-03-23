@@ -2,6 +2,7 @@ import { getSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { PreconsultoriaKanban } from "./preconsultoria-kanban";
+import { NewLeadModal } from "./new-lead-modal";
 
 export default async function PreconsultoriaPage() {
   const { user } = await getSession();
@@ -19,49 +20,93 @@ export default async function PreconsultoriaPage() {
     .in("status", ["pending", "in_progress"])
     .order("created_at", { ascending: false });
 
-  // For each lead, calculate last_interaction_at and call_missed_count
-  const leads = await Promise.all(
-    (rawLeads ?? []).map(async (lead) => {
-      const [{ data: interactions }, { count: missedCount }] = await Promise.all([
-        supabaseAdmin
-          .from("interactions")
-          .select("created_at")
-          .eq("client_id", lead.id)
-          .order("created_at", { ascending: false })
-          .limit(1),
-        supabaseAdmin
-          .from("interactions")
-          .select("id", { count: "exact", head: true })
-          .eq("client_id", lead.id)
-          .eq("type", "call_missed"),
-      ]);
+  const leadIds = (rawLeads ?? []).map(l => l.id);
 
-      return {
-        ...lead,
-        current_state: lead.current_state ?? "nuevo_lead",
-        last_interaction_at: interactions?.[0]?.created_at ?? null,
-        call_missed_count: missedCount ?? 0,
-      };
-    })
-  );
-
-  return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">
-          Preconsultoría
-        </h1>
-        <p className="text-slate-500 text-sm mt-1">
-          Leads en captación. Arrastra para cambiar estado. En &quot;Listo para tramitar&quot; usa &quot;Pasar a Consultoría&quot;.
-        </p>
-      </div>
-      {leads.length === 0 ? (
+  if (leadIds.length === 0) {
+    return (
+      <div className="space-y-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">
+              Preconsultoría
+            </h1>
+            <p className="text-slate-500 text-sm mt-1">
+              Leads en captación. Arrastra para cambiar estado. En &quot;Listo para tramitar&quot; usa &quot;Pasar a Consultoría&quot;.
+            </p>
+          </div>
+          <NewLeadModal />
+        </div>
         <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 p-8 text-center text-slate-500">
           No hay leads activos en preconsultoría.
         </div>
-      ) : (
+      </div>
+    );
+  }
+
+  // Bulk fetch data to avoid N+1 queries
+  const [
+    { data: latestInteractions },
+    { data: callMissedCounts },
+    { data: allReferrals }
+  ] = await Promise.all([
+    // Latest interaction for each lead using a more efficient query if possible,
+    // or just fetching all and reducing (safer without custom Postgres functions)
+    supabaseAdmin
+      .from("interactions")
+      .select("client_id, created_at")
+      .in("client_id", leadIds)
+      .order("created_at", { ascending: false }),
+
+    // Count of missed calls per lead
+    supabaseAdmin
+      .from("interactions")
+      .select("client_id")
+      .in("client_id", leadIds)
+      .eq("type", "call_missed"),
+
+    supabaseAdmin
+      .from("referrals")
+      .select("client_id")
+      .in("client_id", leadIds)
+  ]);
+
+  const leads = (rawLeads ?? []).map((lead) => {
+    const latestInteraction = (latestInteractions ?? []).find(i => i.client_id === lead.id);
+    const referral = (allReferrals ?? []).find(r => r.client_id === lead.id);
+    const missedCount = (callMissedCounts ?? []).filter(i => i.client_id === lead.id).length;
+
+    return {
+      ...lead,
+      current_state: lead.current_state ?? "nuevo_lead",
+      last_interaction_at: latestInteraction?.created_at ?? null,
+      call_missed_count: missedCount,
+      has_referral: !!referral,
+    };
+  });
+
+  return (
+    <div className="space-y-8 h-full flex flex-col overflow-hidden">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-1">
+        <div>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+            Preconsultoría
+          </h1>
+          <p className="text-slate-500 text-sm mt-1 font-medium">
+            Gestión de captación y triage de nuevos leads.
+          </p>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="hidden md:flex items-center gap-2 bg-white border border-slate-200 px-4 py-2 rounded-2xl shadow-sm">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Total Leads</span>
+            <span className="text-lg font-black text-brand-600">{leads.length}</span>
+          </div>
+          <NewLeadModal />
+        </div>
+      </div>
+
+      <div className="flex-1 min-h-0">
         <PreconsultoriaKanban leads={leads} />
-      )}
+      </div>
     </div>
   );
 }
