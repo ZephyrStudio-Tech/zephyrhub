@@ -14,7 +14,11 @@ import {
   ChevronRight,
   MessageSquare,
   ChevronDown,
-  ArrowRight
+  ArrowRight,
+  Globe,
+  ShoppingCart,
+  Receipt,
+  type LucideIcon
 } from "lucide-react";
 
 type Article = {
@@ -29,10 +33,15 @@ type Article = {
   content_body: string | null;
 };
 
+type CategoryCount = {
+  id: string;
+  count: number;
+};
+
 type Category = {
   id: string;
   label: string;
-  icon: any;
+  icon: LucideIcon;
   color: string;
   gradient: string;
   count: number;
@@ -44,6 +53,14 @@ type Ticket = {
   message: string | null;
   status: string;
   created_at: string;
+};
+
+const CATEGORY_CONFIG: Record<string, { label: string; icon: LucideIcon; color: string; gradient: string }> = {
+  web: { label: "Web", icon: Globe, color: "text-blue-600 bg-blue-50 border-blue-100", gradient: "from-blue-500/20 to-blue-600/20" },
+  ecommerce: { label: "E-commerce", icon: ShoppingCart, color: "text-amber-600 bg-amber-50 border-amber-100", gradient: "from-amber-500/20 to-amber-600/20" },
+  seo: { label: "SEO", icon: Search, color: "text-emerald-600 bg-emerald-50 border-emerald-100", gradient: "from-emerald-500/20 to-emerald-600/20" },
+  factura: { label: "Factura", icon: Receipt, color: "text-purple-600 bg-purple-50 border-purple-100", gradient: "from-purple-500/20 to-purple-600/20" },
+  general: { label: "General", icon: BookOpen, color: "text-slate-600 bg-slate-50 border-slate-100", gradient: "from-slate-500/20 to-slate-600/20" },
 };
 
 const FAQS = [
@@ -65,11 +82,11 @@ function toEmbedVideoUrl(url: string): string {
 
 export function HelpCenterView({
   initialArticles,
-  categories,
+  categoryCounts,
   recentTickets
 }: {
   initialArticles: Article[];
-  categories: Category[];
+  categoryCounts: CategoryCount[];
   recentTickets: Ticket[];
 }) {
   const [search, setSearch] = useState("");
@@ -78,6 +95,15 @@ export function HelpCenterView({
 
   const [videoOpen, setVideoOpen] = useState<Article | null>(null);
   const [guiaOpen, setGuiaOpen] = useState<Article | null>(null);
+
+  // Build categories with icons on client side
+  const categories: Category[] = useMemo(() => {
+    return Object.entries(CATEGORY_CONFIG).map(([id, config]) => ({
+      id,
+      ...config,
+      count: categoryCounts.find(c => c.id === id)?.count ?? 0,
+    }));
+  }, [categoryCounts]);
 
   const filteredArticles = useMemo(() => {
     return initialArticles.filter(a => {
@@ -125,7 +151,7 @@ export function HelpCenterView({
             )}
           >
             <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110", cat.color)}>
-              <cat.icon className="w-6 h-6" />
+              {<cat.icon className="w-6 h-6" />}
             </div>
             <h3 className="font-bold text-slate-900">{cat.label}</h3>
             <p className="text-xs text-slate-500 mt-1">{cat.count} artículos</p>

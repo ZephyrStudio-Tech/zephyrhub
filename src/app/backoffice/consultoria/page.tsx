@@ -21,25 +21,27 @@ export default async function ConsultoriaPage() {
   }
 
   const { data: rawClients } = await query;
+  const clientIds = (rawClients ?? []).map(c => c.id);
 
-  // For each client, calculate last_interaction_at
-  const clients = await Promise.all(
-    (rawClients ?? []).map(async (client) => {
-      const { data: interactions } = await supabaseAdmin
+  // Bulk fetch last interactions to avoid N+1 queries
+  const { data: allInteractions } = clientIds.length > 0
+    ? await supabaseAdmin
         .from("interactions")
-        .select("created_at")
-        .eq("client_id", client.id)
+        .select("client_id, created_at")
+        .in("client_id", clientIds)
         .order("created_at", { ascending: false })
-        .limit(1);
+    : { data: [] };
 
-      return {
-        ...client,
-        last_interaction_at: interactions?.[0]?.created_at ?? null,
-      };
-    })
-  );
+  // Map interactions to clients efficiently
+  const clients = (rawClients ?? []).map((client) => {
+    const latestInteraction = (allInteractions ?? []).find(i => i.client_id === client.id);
+    return {
+      ...client,
+      last_interaction_at: latestInteraction?.created_at ?? null,
+    };
+  });
 
-  const clientCount = clients.length ?? 0;
+  const clientCount = clients.length;
 
   return (
     <div className="space-y-8 h-full flex flex-col overflow-hidden">
