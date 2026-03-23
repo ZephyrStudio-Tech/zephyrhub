@@ -52,12 +52,12 @@ function getInitials(name: string) {
 function statusBadge(status: string | null | undefined) {
   const s = (status ?? "abierto").toLowerCase();
   if (s === "resuelto" || s === "cerrado") {
-    return "bg-success-50 text-success-700 border-success-200";
+    return "bg-green-50 text-green-700 border-green-200";
   }
   if (s === "en_proceso" || s === "en proceso") {
     return "bg-brand-50 text-brand-700 border-brand-200";
   }
-  return "bg-warning-50 text-warning-700 border-warning-200";
+  return "bg-amber-50 text-amber-700 border-amber-200";
 }
 
 export function BackofficeTicketView({
@@ -131,6 +131,8 @@ export function BackofficeTicketView({
   useEffect(() => {
     const supabase = createClient();
     const channelName = `ticket-chat-${ticket.id}`;
+
+    console.log("[v0] Backoffice: Setting up realtime channel:", channelName);
 
     const channel = supabase
       .channel(channelName)
