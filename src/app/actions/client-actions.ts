@@ -375,6 +375,143 @@ export async function createInternalUser(data: any) {
   return { ok: true };
 }
 
+export async function addClientNote(
+  clientId: string,
+  content: string
+): Promise<{ ok: boolean; error?: string }> {
+  const auth = await requireServerAuth(["admin", "consultor", "tecnico"]);
+  if (auth.error) return { ok: false, error: auth.error };
+
+  const { user, supabaseAdmin } = auth;
+
+  const { error } = await supabaseAdmin.from("interactions").insert({
+    client_id: clientId,
+    actor_id: user.id,
+    type: "note",
+    metadata: { content },
+  });
+
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/backoffice/clients/[id]", "layout");
+  return { ok: true };
+}
+
+export async function updateClientContactInfo(
+  clientId: string,
+  data: {
+    full_name?: string;
+    email?: string;
+    phone?: string;
+    cif?: string;
+    service_description?: string;
+  }
+): Promise<{ ok: boolean; error?: string }> {
+  const auth = await requireServerAuth(["admin", "consultor", "tecnico"]);
+  if (auth.error) return { ok: false, error: auth.error };
+
+  const { user, role, supabaseAdmin } = auth;
+
+  // Ownership check
+  if (role === "consultor") {
+    const { data: client } = await supabaseAdmin
+      .from("clients")
+      .select("consultant_id")
+      .eq("id", clientId)
+      .single();
+    if (client?.consultant_id !== user.id) {
+      return { ok: false, error: "Sin permiso para este cliente" };
+    }
+  }
+
+  const { error } = await supabaseAdmin
+    .from("clients")
+    .update({
+      ...data,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", clientId);
+
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/backoffice/clients/[id]", "layout");
+  return { ok: true };
+}
+
+export async function getClientDetail(clientId: string) {
+  const auth = await requireServerAuth(["admin", "consultor", "tecnico"]);
+  if (auth.error) return { ok: false, error: auth.error };
+
+  const { user, role, supabaseAdmin } = auth;
+
+  const { data: client, error: clientErr } = await supabaseAdmin
+    .from("clients")
+    .select("*")
+    .eq("id", clientId)
+    .single();
+
+  if (clientErr || !client) return { ok: false, error: "Cliente no encontrado" };
+
+  if (role === "consultor" && client.consultant_id !== user.id) {
+    return { ok: false, error: "Sin permiso para este cliente" };
+  }
+
+  const [
+    { data: interactions },
+    { data: documents },
+    { data: contracts },
+    { data: deviceOrders },
+    { data: payments },
+    { data: referral },
+  ] = await Promise.all([
+    supabaseAdmin
+      .from("interactions")
+      .select("*")
+      .eq("client_id", clientId)
+      .order("created_at", { ascending: false }),
+    supabaseAdmin
+      .from("documents")
+      .select("*")
+      .eq("client_id", clientId)
+      .order("slot_type")
+      .order("version", { ascending: false }),
+    supabaseAdmin.from("contracts").select("*").eq("client_id", clientId),
+    supabaseAdmin
+      .from("device_orders")
+      .select("*")
+      .eq("client_id", clientId)
+      .order("created_at", { ascending: false })
+      .limit(1),
+    supabaseAdmin
+      .from("payments")
+      .select("*")
+      .eq("client_id", clientId)
+      .order("created_at", { ascending: true }),
+    supabaseAdmin
+      .from("referrals")
+      .select("id, commission_status, associates(full_name)")
+      .eq("client_id", clientId)
+      .single(),
+  ]);
+
+  const { getVaultSlots } = await import("@/lib/service-config");
+  const slots = getVaultSlots(client.service_type);
+
+  return {
+    ok: true,
+    data: {
+      client,
+      interactions: interactions ?? [],
+      documents: documents ?? [],
+      contracts: contracts ?? [],
+      deviceOrders: deviceOrders ?? [],
+      payments: payments ?? [],
+      referral: referral ?? null,
+      slots,
+    },
+  };
+}
+
 export async function updateInternalUserRole(userId: string, newRole: string) {
   const auth = await requireServerAuth(["admin"]);
   if (auth.error) return { ok: false, error: auth.error };

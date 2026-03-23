@@ -2,10 +2,16 @@ import { getSession } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import {
+  Globe,
+  ShoppingCart,
+  Search as SearchIcon,
+  Receipt,
+  BookOpen,
+  ArrowRight,
+  MessageSquare
+} from "lucide-react";
+import { HelpCenterView } from "./help-center-view";
 
 export default async function PortalSoportePage() {
   const { user } = await getSession();
@@ -13,153 +19,39 @@ export default async function PortalSoportePage() {
 
   const supabase = await createClient();
 
-  // Execute both queries in parallel
-  const [{ data: recentTickets }, { data: latestArticles }] = await Promise.all([
+  // Execute queries in parallel
+  const [{ data: recentTickets }, { data: articles }, { data: counts }] = await Promise.all([
     supabase
       .from("support_requests")
-      .select("id, category, message, status, admin_reply, created_at")
+      .select("id, category, message, status, created_at")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
-      .limit(2),
+      .limit(3),
     supabase
       .from("academy_content")
-      .select("id, title, slug, description, cover_image, content_type")
-      .order("created_at", { ascending: false })
-      .limit(3),
+      .select("id, title, slug, description, cover_image, content_type, category, video_url, content_body")
+      .order("sort_order")
+      .order("created_at", { ascending: false }),
+    supabase.rpc('get_academy_category_counts') // We might need to implement this or just count manually
   ]);
 
+  // Fallback for counts if RPC doesn't exist
+  const categories = [
+    { id: "web", label: "Web", icon: Globe, color: "text-blue-600 bg-blue-50 border-blue-100", gradient: "from-blue-500/20 to-blue-600/20" },
+    { id: "ecommerce", label: "E-commerce", icon: ShoppingCart, color: "text-amber-600 bg-amber-50 border-amber-100", gradient: "from-amber-500/20 to-amber-600/20" },
+    { id: "seo", label: "SEO", icon: SearchIcon, color: "text-emerald-600 bg-emerald-50 border-emerald-100", gradient: "from-emerald-500/20 to-emerald-600/20" },
+    { id: "factura", label: "Factura", icon: Receipt, color: "text-purple-600 bg-purple-50 border-purple-100", gradient: "from-purple-500/20 to-purple-600/20" },
+    { id: "general", label: "General", icon: BookOpen, color: "text-slate-600 bg-slate-50 border-slate-100", gradient: "from-slate-500/20 to-slate-600/20" },
+  ].map(cat => ({
+    ...cat,
+    count: articles?.filter(a => a.category === cat.id).length || 0
+  }));
+
   return (
-    <div className="space-y-12">
-      {/* Hero */}
-      <div className="max-w-2xl mx-auto text-center space-y-6">
-        <h1 className="text-4xl md:text-5xl font-bold text-gray-900">
-          Hola, ¿cómo podemos ayudarte?
-        </h1>
-        <form
-          action="/portal/soporte/tutoriales"
-          method="get"
-          className="flex gap-2 w-full max-w-xl mx-auto"
-        >
-          <Input
-            type="search"
-            name="q"
-            placeholder="Buscar en base de conocimientos..."
-            className="flex-1 h-12 text-base"
-          />
-          <Button type="submit" variant="secondary" size="lg" className="rounded-xl">
-            Buscar
-          </Button>
-        </form>
-      </div>
-
-      {/* Cards de acceso */}
-      <div className="grid gap-4 sm:grid-cols-2 max-w-4xl mx-auto">
-        <Link href="/portal/soporte/tutoriales">
-          <Card className="transition-colors h-full hover:shadow-md">
-            <CardHeader>
-              <CardTitle className="text-lg">
-                Base de conocimientos
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-gray-500">
-                Videotutoriales y guías para resolver dudas frecuentes.
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
-        <Link href="/portal/soporte/tickets">
-          <Card className="transition-colors h-full hover:shadow-md">
-            <CardHeader>
-              <CardTitle className="text-lg">
-                Mis Tickets de Soporte
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-gray-500">
-                Revisa el estado de tus consultas y abre nuevos tickets.
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
-      </div>
-
-      {/* Últimos artículos (Blogs) */}
-      {latestArticles && latestArticles.length > 0 && (
-        <div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            Últimos artículos
-          </h2>
-          <div className="grid gap-4 sm:grid-cols-3">
-            {latestArticles.map((article) => (
-              <Link
-                key={article.id}
-                href={`/portal/soporte/tutoriales?q=${encodeURIComponent(article.title ?? "")}`}
-              >
-                <Card className="transition-colors h-full overflow-hidden hover:shadow-md">
-                  <div className="relative h-32 w-full overflow-hidden">
-                    {article.cover_image ? (
-                      <Image
-                        src={article.cover_image}
-                        alt=""
-                        fill
-                        className="object-cover"
-                        unoptimized
-                      />
-                    ) : (
-                      <div
-                        className="h-full w-full bg-gradient-to-br from-gray-100 to-gray-200"
-                        aria-hidden
-                      />
-                    )}
-                  </div>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base line-clamp-2">
-                      {article.title ?? "Sin título"}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-gray-500 line-clamp-2">
-                      {article.description ?? "—"}
-                    </p>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Mis tickets recientes - lista simple */}
-      {recentTickets && recentTickets.length > 0 && (
-        <div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            Mis tickets recientes
-          </h2>
-          <ul className="divide-y divide-gray-100 border-y border-gray-100">
-            {recentTickets.map((t) => (
-              <li
-                key={t.id}
-                className="flex items-center justify-between py-4 first:pt-0"
-              >
-                <span className="text-sm text-gray-700 truncate flex-1 mr-4">
-                  {t.category} · {t.message?.slice(0, 60) ?? "—"}
-                  {t.message && t.message.length > 60 ? "…" : ""}
-                </span>
-                <span
-                  className={
-                    (t.status?.toLowerCase() ?? "") === "resuelto"
-                      ? "text-xs px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0"
-                      : "text-xs px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 shrink-0"
-                  }
-                >
-                  {t.status ?? "abierto"}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </div>
+    <HelpCenterView
+      initialArticles={articles ?? []}
+      categories={categories}
+      recentTickets={recentTickets ?? []}
+    />
   );
 }

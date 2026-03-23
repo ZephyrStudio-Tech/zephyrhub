@@ -85,19 +85,28 @@ export default async function PreconsultoriaPage() {
   });
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-8 h-full flex flex-col overflow-hidden">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-1">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight">
             Preconsultoría
           </h1>
-          <p className="text-slate-500 text-sm mt-1">
-            Leads en captación. Arrastra para cambiar estado. En &quot;Listo para tramitar&quot; usa &quot;Pasar a Consultoría&quot;.
+          <p className="text-slate-500 text-sm mt-1 font-medium">
+            Gestión de captación y triage de nuevos leads.
           </p>
         </div>
-        <NewLeadModal />
+        <div className="flex items-center gap-4">
+          <div className="hidden md:flex items-center gap-2 bg-white border border-slate-200 px-4 py-2 rounded-2xl shadow-sm">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Total Leads</span>
+            <span className="text-lg font-black text-brand-600">{leads.length}</span>
+          </div>
+          <NewLeadModal />
+        </div>
       </div>
-      <PreconsultoriaKanban leads={leads} />
+
+      <div className="flex-1 min-h-0">
+        <PreconsultoriaKanban leads={leads} />
+      </div>
     </div>
   );
 }

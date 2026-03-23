@@ -11,7 +11,7 @@ export default async function BackofficeAcademyPage() {
   const supabase = createAdminClient();
   const { data: tutorials } = await supabase
     .from("academy_content")
-    .select("id, title, slug, category, content_type, video_url, description, created_at")
+    .select("id, title, slug, category, content_type, video_url, description, cover_image, content_body, sort_order, created_at")
     .order("sort_order")
     .order("created_at", { ascending: false });
 

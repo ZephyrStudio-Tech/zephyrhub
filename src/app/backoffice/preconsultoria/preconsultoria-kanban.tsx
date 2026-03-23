@@ -23,8 +23,17 @@ import { PRECONSULTORIA_STATE_LABELS } from "@/lib/state-machine/constants";
 import type { PipelineState } from "@/lib/state-machine/constants";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Phone, PhoneMissed, Users } from "lucide-react";
-import { LeadProfileSheet } from "./lead-profile-sheet";
+import {
+  Phone,
+  PhoneMissed,
+  Users,
+  Mail,
+  ExternalLink,
+  CheckCircle2,
+  MoreHorizontal,
+  Plus
+} from "lucide-react";
+import { ClientLeadModal } from "../components/client-lead-modal";
 
 type Lead = {
   id: string;
@@ -45,12 +54,12 @@ const PRECONSULTORIA_IDS = new Set(
 );
 
 function getServiceColor(service: string | null): string {
-  if (!service) return "bg-gray-100 text-gray-700 border-gray-200";
-  if (service === "web") return "bg-blue-100 text-blue-700 border-blue-200";
-  if (service === "ecommerce") return "bg-amber-100 text-amber-700 border-amber-200";
-  if (service === "seo") return "bg-green-100 text-green-700 border-green-200";
-  if (service === "factura" || service === "factura_electronica") return "bg-purple-100 text-purple-700 border-purple-200";
-  return "bg-gray-100 text-gray-700 border-gray-200";
+  if (!service) return "bg-slate-100 text-slate-700 border-slate-200";
+  if (service === "web") return "bg-blue-50 text-blue-600 border-blue-100";
+  if (service === "ecommerce") return "bg-amber-50 text-amber-600 border-amber-100";
+  if (service === "seo") return "bg-emerald-50 text-emerald-600 border-emerald-100";
+  if (service === "factura" || service === "factura_electronica") return "bg-purple-50 text-purple-600 border-purple-100";
+  return "bg-slate-100 text-slate-700 border-slate-200";
 }
 
 function getDaysSinceLastInteraction(
@@ -108,51 +117,63 @@ function LeadCard({
     dragStartPos.current = null;
   };
 
+  const isInactive = daysSince.days > 3;
+
   return (
     <div
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
       className={cn(
-        "rounded-xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 shadow-sm hover:shadow-md transition-all text-left"
+        "group rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:shadow-xl hover:border-brand-500 transition-all duration-300 text-left relative",
+        isInactive && "border-red-200 ring-1 ring-red-100"
       )}
     >
-      <div className="flex items-start justify-between gap-2 mb-1">
-        <p className="font-medium text-slate-800 dark:text-slate-200 text-sm truncate flex-1">
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <h4 className="font-bold text-slate-900 text-sm leading-tight flex-1 line-clamp-2">
           {title}
-        </p>
-        <span className={cn("text-xs font-medium px-2 py-0.5 rounded border", getServiceColor(lead.service_requested))}>
-          {lead.service_requested ? lead.service_requested.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()) : "—"}
+        </h4>
+        <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full border shadow-sm uppercase shrink-0", getServiceColor(lead.service_requested))}>
+          {lead.service_requested ? lead.service_requested.replace(/_/g, " ") : "—"}
         </span>
       </div>
 
-      {lead.has_referral && (
-        <div className="flex items-center gap-1 mb-2">
-          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-brand-50 text-brand-600 border border-brand-100 text-[10px] font-bold uppercase tracking-wider">
-            <Users className="w-2.5 h-2.5" /> Referido
-          </span>
+      <div className="space-y-1.5 mb-4">
+        <div className="flex items-center gap-2 text-slate-500">
+           <Mail className="w-3 h-3" />
+           <span className="text-[11px] truncate">{lead.email || "—"}</span>
         </div>
-      )}
-      <p className="text-xs text-slate-500 mt-0.5">
-        {lead.email ?? lead.phone ?? "—"}
-      </p>
-
-      {/* Days since last interaction indicator */}
-      <div className={cn("text-xs mt-1.5 font-medium", daysSince.color)}>
-        {daysSince.label}
+        <div className="flex items-center gap-2 text-slate-500">
+           <Phone className="w-3 h-3" />
+           <span className="text-[11px]">{lead.phone || "—"}</span>
+        </div>
       </div>
 
-      {/* Failed calls indicator */}
-      {lead.call_missed_count > 0 && (
-        <p className="text-xs text-red-600 mt-0.5">
-          {lead.call_missed_count} intento{lead.call_missed_count > 1 ? "s" : ""} fallido{lead.call_missed_count > 1 ? "s" : ""}
-        </p>
-      )}
+      <div className="flex flex-wrap gap-1.5 mt-auto">
+        <span className={cn(
+          "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border",
+          daysSince.color.replace("text-", "bg-").replace("600", "50") + " " + daysSince.color + " " + daysSince.color.replace("text-", "border-").replace("600", "100")
+        )}>
+          {daysSince.label === "Hoy" ? "Entró hoy" : (daysSince.days > 0 ? `Hace ${daysSince.days}d` : daysSince.label)}
+        </span>
+
+        {lead.has_referral && (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-brand-50 text-brand-600 border border-brand-100 text-[10px] font-bold uppercase">
+            Referido
+          </span>
+        )}
+
+        {lead.call_missed_count > 0 && (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-50 text-red-600 border border-red-100 text-[10px] font-bold">
+            {lead.call_missed_count} intentos
+          </span>
+        )}
+      </div>
 
       {isListo && (
         <Button
           type="button"
           size="sm"
-          className="mt-3 w-full bg-primary hover:bg-primary-dark text-white"
+          className="mt-4 w-full bg-brand-600 hover:bg-brand-700 text-white font-bold h-9 rounded-lg shadow-lg shadow-brand-100"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -163,31 +184,33 @@ function LeadCard({
         </Button>
       )}
 
-      {/* Call action buttons */}
-      {!isListo && (
-        <div className="flex gap-2 mt-2">
+      {/* Hover Action Footer */}
+      <div className="absolute inset-x-0 -bottom-3 flex justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 translate-y-1 group-hover:translate-y-0 z-10 pointer-events-none">
+        <div className="bg-white border border-slate-200 shadow-xl rounded-full p-1.5 flex items-center gap-1 pointer-events-auto">
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onCallMissed(lead.id);
-            }}
-            className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors p-1.5 text-xs font-medium"
-            title="Intento fallido"
+            onClick={(e) => { e.stopPropagation(); onCallMissed(lead.id); }}
+            className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+            title="Llamada fallida"
           >
-            <PhoneMissed className="w-3.5 h-3.5" />
+            <PhoneMissed className="w-4 h-4" />
           </button>
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onCallSuccess(lead.id);
-            }}
-            className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors p-1.5 text-xs font-medium"
+            onClick={(e) => { e.stopPropagation(); onCallSuccess(lead.id); }}
+            className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
             title="Llamada exitosa"
           >
-            <Phone className="w-3.5 h-3.5" />
+            <CheckCircle2 className="w-4 h-4" />
+          </button>
+          <div className="w-[1px] h-4 bg-slate-100 mx-1" />
+          <button
+            onClick={(e) => { e.stopPropagation(); onSelect(lead); }}
+            className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:text-brand-600 hover:bg-brand-50 transition-colors"
+            title="Ver ficha"
+          >
+            <MoreHorizontal className="w-4 h-4" />
           </button>
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -250,21 +273,27 @@ function DroppableColumn({
     data: { stateId },
   });
 
+  const isListo = stateId === "listo_para_tramitar";
+
   return (
-    <div ref={setNodeRef} className="flex-shrink-0 w-[220px]">
+    <div ref={setNodeRef} className="flex-shrink-0 w-[310px] h-full pb-6">
       <div
         className={cn(
-          "rounded-2xl border bg-white/80 dark:bg-slate-800/80 dark:border-slate-700 shadow-card transition-all h-full flex flex-col min-h-[140px]",
-          isOver && "ring-2 ring-primary/40 bg-primary/5 dark:bg-primary/10"
+          "rounded-[24px] border border-slate-200 bg-[#f9fafb] shadow-sm transition-all h-full flex flex-col overflow-hidden",
+          isOver && "ring-2 ring-brand-500/20 bg-brand-50/10",
+          isListo && "ring-2 ring-brand-500 shadow-lg shadow-brand-100"
         )}
       >
-        <div className="p-3 border-b border-slate-100 dark:border-slate-700">
-          <h3 className="font-semibold text-slate-800 dark:text-white text-sm leading-tight">
+        <div className="p-4 flex items-center justify-between">
+          <h3 className="font-extrabold text-slate-900 text-sm uppercase tracking-tight">
             {label}
           </h3>
-          <p className="text-xs text-slate-500 mt-0.5">{leads.length}</p>
+          <span className="bg-white border border-slate-200 text-slate-500 text-[10px] font-bold px-2 py-0.5 rounded-full">
+            {leads.length}
+          </span>
         </div>
-        <div className="p-2 flex-1 space-y-2 overflow-y-auto max-h-[calc(100vh-280px)]">
+
+        <div className="px-3 pb-4 flex-1 space-y-3 overflow-y-auto custom-scrollbar">
           {leads.map((lead) => (
             <DraggableLeadCard
               key={lead.id}
@@ -277,6 +306,22 @@ function DroppableColumn({
           ))}
         </div>
       </div>
+
+      <style jsx>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: transparent;
+          border-radius: 10px;
+        }
+        .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+          background: #e2e8f0;
+        }
+      `}</style>
     </div>
   );
 }
@@ -366,7 +411,7 @@ export function PreconsultoriaKanban({ leads }: { leads: Lead[] }) {
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="flex gap-3 overflow-x-auto pb-4">
+        <div className="flex gap-4 overflow-x-auto h-[calc(100vh-220px)] pb-4 custom-scrollbar">
           {PRECONSULTORIA_STATE_LABELS.map(({ id, label }) => (
             <DroppableColumn
               key={id}
@@ -383,8 +428,8 @@ export function PreconsultoriaKanban({ leads }: { leads: Lead[] }) {
 
         <DragOverlay dropAnimation={null}>
           {activeLead ? (
-            <div className="w-[220px] rounded-xl border-2 border-primary/40 bg-white dark:bg-slate-800 p-3 shadow-xl cursor-grabbing">
-              <p className="font-medium text-slate-800 dark:text-slate-200 text-sm truncate">
+            <div className="w-[310px] rounded-xl border-2 border-brand-500 bg-white p-4 shadow-2xl cursor-grabbing scale-105 rotate-1">
+              <p className="font-bold text-slate-900 text-sm truncate">
                 {activeLead.company_name?.trim() ||
                   activeLead.full_name ||
                   activeLead.email ||
@@ -399,12 +444,10 @@ export function PreconsultoriaKanban({ leads }: { leads: Lead[] }) {
       </DndContext>
 
       {selectedLead && (
-        <LeadProfileSheet
-          lead={selectedLead}
+        <ClientLeadModal
+          mode="lead"
+          leadData={selectedLead}
           onClose={() => setSelectedLead(null)}
-          onCallMissed={handleCallMissed}
-          onCallSuccess={handleCallSuccess}
-          onMoveToConsultoria={handleMoveToConsultoria}
         />
       )}
 

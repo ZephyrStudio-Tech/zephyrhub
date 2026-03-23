@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/navigation";
 import { usePathname } from "next/navigation";
 import { signOut } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
