@@ -1,10 +1,3 @@
-/**
- * Supabase Database Types
- *
- * Generated manually from schema analysis.
- * Replace with: pnpm supabase gen types typescript --linked > src/types/supabase.ts
- */
-
 export type Json =
   | string
   | number
