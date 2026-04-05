@@ -3,6 +3,7 @@
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { requireServerAuth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import type { Database } from "@/types/supabase";
 
 type DeviceInput = {
   name: string;
@@ -23,6 +24,9 @@ type DeviceInput = {
   is_available: boolean;
   images: string[];
 };
+
+type DeviceInsert = Database["public"]["Tables"]["devices"]["Insert"];
+type DeviceUpdate = Database["public"]["Tables"]["devices"]["Update"];
 
 export async function createDevice(
   data: DeviceInput
@@ -46,21 +50,22 @@ export async function createDevice(
 
   const supabaseAdmin = createAdminClient();
 
-  // SOLUCIÓN AQUÍ: as any a todo el objeto de inserción
-  const { error } = await supabaseAdmin.from("devices").insert({
+  const insertData: DeviceInsert = {
     name: data.name,
     brand: data.brand,
     model: data.model,
     category: data.category,
     description: data.description,
-    specs: data.specs,
+    specs: data.specs as any, // Cast solo aquí para evitar choques con el Json de Supabase
     cost_price: data.cost_price,
     sale_price: data.sale_price,
     bono_coverage: data.bono_coverage,
     stock: data.stock,
     is_available: data.is_available,
     images: data.images,
-  } as any);
+  };
+
+  const { error } = await supabaseAdmin.from("devices").insert(insertData);
 
   if (error) return { ok: false, error: error.message };
 
@@ -85,6 +90,7 @@ export async function selectDevice(deviceOrderId: string, deviceId: string) {
 
   const surcharge = Math.max(0, device.sale_price - device.bono_coverage);
 
+  // @ts-ignore: Ignoramos propiedades que no están en los tipos estrictos pero sí en la BD
   const { error } = await supabaseAdmin
     .from("device_orders")
     .update({
@@ -111,6 +117,7 @@ export async function confirmOrder(deviceOrderId: string, shippingData: any) {
 
   const { supabaseAdmin } = auth;
 
+  // @ts-ignore: Ignoramos propiedades que no están en los tipos estrictos pero sí en la BD
   const { error } = await supabaseAdmin
     .from("device_orders")
     .update({
@@ -140,6 +147,7 @@ export async function resetDeviceSelection(deviceOrderId: string) {
 
   const { supabaseAdmin } = auth;
 
+  // @ts-ignore
   const { error } = await supabaseAdmin
     .from("device_orders")
     .update({
@@ -180,23 +188,31 @@ export async function updateDevice(
 
   const supabaseAdmin = createAdminClient();
 
-  // SOLUCIÓN AQUÍ: as any a todo el objeto de actualización
+  const updateData: DeviceUpdate = {
+    name: data.name,
+    brand: data.brand,
+    model: data.model,
+    category: data.category,
+    description: data.description,
+    specs: data.specs as any, // Cast solo aquí
+    cost_price: data.cost_price,
+    sale_price: data.sale_price,
+    bono_coverage: data.bono_coverage,
+    stock: data.stock,
+    is_available: data.is_available,
+    images: data.images,
+  };
+
+  // Limpiamos 'undefined' por si data vino incompleto (es Partial)
+  Object.keys(updateData).forEach(key => {
+    if (updateData[key as keyof DeviceUpdate] === undefined) {
+      delete updateData[key as keyof DeviceUpdate];
+    }
+  });
+
   const { error } = await supabaseAdmin
     .from("devices")
-    .update({
-      name: data.name,
-      brand: data.brand,
-      model: data.model,
-      category: data.category,
-      description: data.description,
-      specs: data.specs,
-      cost_price: data.cost_price,
-      sale_price: data.sale_price,
-      bono_coverage: data.bono_coverage,
-      stock: data.stock,
-      is_available: data.is_available,
-      images: data.images,
-    } as any)
+    .update(updateData)
     .eq("id", deviceId);
 
   if (error) return { ok: false, error: error.message };
