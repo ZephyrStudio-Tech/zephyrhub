@@ -1,7 +1,7 @@
 "use server";
 
-import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { requireServerAuth } from "@/lib/auth";
+import { createUserWithProfile } from "@/lib/create-user";
 import { Resend } from "resend";
 import { getSuggestedNextState } from "@/lib/state-machine/constants";
 import type { PipelineState } from "@/lib/state-machine/constants";
@@ -28,156 +28,6 @@ export async function dismissAlert(
   if (error) return { ok: false, error: error.message };
 
   revalidatePath("/portal");
-  return { ok: true };
-}
-
-export async function updateContractState(
-  contractId: string,
-  newState: string
-): Promise<{ ok: boolean; error?: string }> {
-  const auth = await requireServerAuth(["admin", "tecnico", "consultor"]);
-  if (auth.error) return { ok: false, error: auth.error };
-
-  const { user, role, supabaseAdmin } = auth;
-
-  // Get the contract to find the client_id for audit log and ownership check
-  const { data: contract } = await supabaseAdmin
-    .from("contracts")
-    .select("id, client_id")
-    .eq("id", contractId)
-    .single();
-
-  if (!contract) return { ok: false, error: "Contrato no encontrado" };
-
-  // Ownership check for consultores
-  if (role === "consultor") {
-    const { data: client } = await supabaseAdmin
-      .from("clients")
-      .select("consultant_id")
-      .eq("id", contract.client_id)
-      .single();
-    if (client?.consultant_id !== user.id) {
-      return { ok: false, error: "Sin permiso para este cliente" };
-    }
-  }
-
-  // Update contract state
-  const { error: updateError } = await supabaseAdmin
-    .from("contracts")
-    .update({ current_state: newState })
-    .eq("id", contractId);
-
-  if (updateError) return { ok: false, error: updateError.message };
-
-  // Register in audit logs
-  await supabaseAdmin.from("audit_logs").insert({
-    actor_id: user.id,
-    action: "update_contract_state",
-    entity_type: "contract",
-    entity_id: contractId,
-    payload: { client_id: contract.client_id, new_state: newState },
-  });
-
-  revalidatePath("/backoffice/clients/[id]", "layout");
-  return { ok: true };
-}
-
-export async function updateDeviceOrderStatus(
-  deviceOrderId: string,
-  status: string
-): Promise<{ ok: boolean; error?: string }> {
-  const auth = await requireServerAuth(["admin", "tecnico", "consultor"]);
-  if (auth.error) return { ok: false, error: auth.error };
-
-  const { user, role, supabaseAdmin } = auth;
-
-  const { data: order } = await supabaseAdmin
-    .from("device_orders")
-    .select("client_id")
-    .eq("id", deviceOrderId)
-    .single();
-
-  if (!order) return { ok: false, error: "Pedido no encontrado" };
-
-  if (role === "consultor") {
-    const { data: client } = await supabaseAdmin
-      .from("clients")
-      .select("consultant_id")
-      .eq("id", order.client_id)
-      .single();
-    if (client?.consultant_id !== user.id) {
-      return { ok: false, error: "Sin permiso para este cliente" };
-    }
-  }
-
-  const { error } = await supabaseAdmin
-    .from("device_orders")
-    .update({ status })
-    .eq("id", deviceOrderId);
-
-  if (error) return { ok: false, error: error.message };
-
-  revalidatePath("/backoffice/clients/[id]", "layout");
-  return { ok: true };
-}
-
-export async function updateDeviceOrderTracking(
-  deviceOrderId: string,
-  trackingNumber: string,
-  trackingUrl: string
-): Promise<{ ok: boolean; error?: string }> {
-  const auth = await requireServerAuth(["admin", "tecnico", "consultor"]);
-  if (auth.error) return { ok: false, error: auth.error };
-
-  const { user, role, supabaseAdmin } = auth;
-
-  const { data: order } = await supabaseAdmin
-    .from("device_orders")
-    .select("client_id")
-    .eq("id", deviceOrderId)
-    .single();
-
-  if (!order) return { ok: false, error: "Pedido no encontrado" };
-
-  if (role === "consultor") {
-    const { data: client } = await supabaseAdmin
-      .from("clients")
-      .select("consultant_id")
-      .eq("id", order.client_id)
-      .single();
-    if (client?.consultant_id !== user.id) {
-      return { ok: false, error: "Sin permiso para este cliente" };
-    }
-  }
-
-  const { error } = await supabaseAdmin
-    .from("device_orders")
-    .update({ tracking_number: trackingNumber, tracking_url: trackingUrl })
-    .eq("id", deviceOrderId);
-
-  if (error) return { ok: false, error: error.message };
-
-  revalidatePath("/backoffice/clients/[id]", "layout");
-  return { ok: true };
-}
-
-export async function markPaymentReceived(
-  paymentId: string,
-  receivedAmount: number,
-  receivedDate: string
-): Promise<{ ok: boolean; error?: string }> {
-  const auth = await requireServerAuth(["admin", "tecnico"]);
-  if (auth.error) return { ok: false, error: auth.error };
-
-  const { user, supabaseAdmin } = auth;
-  const { error } = await supabaseAdmin
-    .from("payments")
-    .update({ received_amount: receivedAmount, received_at: receivedDate })
-    .eq("id", paymentId);
-
-  if (error) return { ok: false, error: error.message };
-
-  revalidatePath("/backoffice/clients/[id]", "layout");
   return { ok: true };
 }
 
@@ -241,7 +91,6 @@ export async function toggleHasDevice(
 
   if (error) return { ok: false, error: error.message };
 
-  // If enabling has_device, the trigger will create the device_order automatically
   revalidatePath("/backoffice/clients/[id]", "layout");
   return { ok: true };
 }
@@ -274,45 +123,37 @@ export async function assignConsultant(
   return { ok: true };
 }
 
-export async function createInternalUser(data: any) {
+export async function createInternalUser(data: {
+  email: string;
+  password: string;
+  full_name: string;
+  role: "consultor" | "tecnico" | "admin";
+}) {
   const auth = await requireServerAuth(["admin"]);
   if (auth.error) return { ok: false, error: auth.error };
 
   const { supabaseAdmin } = auth;
 
-  // 1. Create user in Auth
-  const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
+  // Use shared user creation logic
+  const result = await createUserWithProfile(supabaseAdmin, {
     email: data.email,
     password: data.password,
-    email_confirm: true,
-    user_metadata: { full_name: data.full_name },
+    full_name: data.full_name,
+    role: data.role,
   });
 
-  if (authError || !authUser.user) {
-    return { ok: false, error: authError?.message || "Error al crear usuario" };
-  }
+  if (!result.ok) return result;
 
-  // 2. Create profile (upsert to handle existing profile created by trigger)
-  const { error: profileError } = await supabaseAdmin.from("profiles").upsert({
-    id: authUser.user.id,
-    role: data.role,
-    email: data.email,
-    full_name: data.full_name,
-  }, { onConflict: "id" });
-
-  if (profileError) return { ok: false, error: profileError.message };
-
-  // 3. Send welcome email
+  // Send welcome email
   if (process.env.RESEND_API_KEY) {
     try {
-      console.log("[Email] Enviando email de bienvenida a", data.email, "con rol", data.role);
       const resend = new Resend(process.env.RESEND_API_KEY);
       const roleColors = {
         admin: { primary: "#f87171", bg: "#1a0a0a", border: "#3f1f1f", label: "Administrador" },
         consultor: { primary: "#60a5fa", bg: "#0a1628", border: "#1a2f4a", label: "Consultor" },
         tecnico: { primary: "#4ade80", bg: "#0a1f14", border: "#1a3a2a", label: "Técnico" },
       };
-      const theme = roleColors[data.role as keyof typeof roleColors] || roleColors.consultor;
+      const theme = roleColors[data.role] || roleColors.consultor;
 
       await resend.emails.send({
         from: "ZephyrStudio <hola@kitdigitalzephyrstudio.es>",
@@ -372,28 +213,6 @@ export async function createInternalUser(data: any) {
   }
 
   revalidatePath("/backoffice/asociados");
-  return { ok: true };
-}
-
-export async function addClientNote(
-  clientId: string,
-  content: string
-): Promise<{ ok: boolean; error?: string }> {
-  const auth = await requireServerAuth(["admin", "consultor", "tecnico"]);
-  if (auth.error) return { ok: false, error: auth.error };
-
-  const { user, supabaseAdmin } = auth;
-
-  const { error } = await supabaseAdmin.from("interactions").insert({
-    client_id: clientId,
-    actor_id: user.id,
-    type: "note",
-    metadata: { content },
-  });
-
-  if (error) return { ok: false, error: error.message };
-
-  revalidatePath("/backoffice/clients/[id]", "layout");
   return { ok: true };
 }
 

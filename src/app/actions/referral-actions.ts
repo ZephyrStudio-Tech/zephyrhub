@@ -1,9 +1,9 @@
 "use server";
 
 import { requireServerAuth } from "@/lib/auth";
+import { createUserWithProfile } from "@/lib/create-user";
 import { Resend } from "resend";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 
 export async function createReferral(data: any) {
   const auth = await requireServerAuth(["asociado"]);
@@ -245,33 +245,21 @@ export async function createAssociateAction(data: any) {
 
   const { supabaseAdmin } = auth;
 
-  // 1. Create user in Auth
-  const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
+  // Use shared user creation logic
+  const userResult = await createUserWithProfile(supabaseAdmin, {
     email: data.email,
     password: data.password,
-    email_confirm: true,
-    user_metadata: { full_name: data.full_name },
+    full_name: data.full_name,
+    role: "asociado",
   });
 
-  if (authError || !authUser.user) {
-    return { ok: false, error: authError?.message || "Error al crear usuario" };
+  if (!userResult.ok || !userResult.userId) {
+    return { ok: false, error: userResult.error || "Error al crear usuario" };
   }
 
-  // 2. Create profile
-  const { error: profileError } = await supabaseAdmin.from("profiles").upsert({
-    id: authUser.user.id,
-    role: "asociado",
-    email: data.email,
-    full_name: data.full_name,
-  }, { onConflict: "id" });
-
-  if (profileError) {
-    return { ok: false, error: profileError.message };
-  }
-
-  // 3. Create associate record
+  // Create associate record
   const { error: assocError } = await supabaseAdmin.from("associates").insert({
-    id: authUser.user.id,
+    id: userResult.userId,
     full_name: data.full_name,
     email: data.email,
     phone: data.phone,

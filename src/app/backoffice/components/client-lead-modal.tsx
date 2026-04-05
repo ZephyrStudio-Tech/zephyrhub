@@ -6,12 +6,11 @@ import {
   getClientDetail,
   updateClientContactInfo,
   toggleHasDevice,
-  updateContractState,
-  updateDeviceOrderStatus,
-  updateDeviceOrderTracking,
-  markPaymentReceived,
-  addClientNote
 } from "@/app/actions/client-actions";
+import { updateContractState } from "@/app/actions/contract-actions";
+import { updateDeviceOrderStatus, updateDeviceOrderTracking } from "@/app/actions/device-order-actions";
+import { markPaymentReceived } from "@/app/actions/payment-actions";
+import { addClientNote } from "@/app/actions/note-actions";
 import {
   addTriageNote,
   registerTriageCallMissed,

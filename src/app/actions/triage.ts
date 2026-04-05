@@ -1,8 +1,8 @@
 "use server";
 
 import { Resend } from "resend";
-import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { requireServerAuth } from "@/lib/auth";
+import { createUserWithProfile } from "@/lib/create-user";
 import { revalidatePath } from "next/cache";
 
 const PRECONSULTORIA_STATES = [
@@ -218,31 +218,24 @@ export async function moveToConsultoria(
   }
 
   const password = generatePassword();
-  const { data: newUser, error: createUserErr } = await supabaseAdmin.auth.admin.createUser({
+  
+  // Use shared user creation logic
+  const userResult = await createUserWithProfile(supabaseAdmin, {
     email: lead.email,
     password,
-    email_confirm: true,
-    user_metadata: { full_name: lead.full_name ?? undefined },
+    full_name: lead.full_name ?? "",
+    role: "beneficiario",
   });
 
-  if (createUserErr || !newUser.user) {
-    return { ok: false, error: createUserErr?.message ?? "Error creando usuario" };
+  if (!userResult.ok || !userResult.userId) {
+    return { ok: false, error: userResult.error ?? "Error creando usuario" };
   }
 
   const serviceType = mapServiceType(lead.service_requested);
   const companyName = (lead.company_name?.trim() || lead.full_name) || "Sin nombre";
 
-  const { error: profileError } = await supabaseAdmin.from("profiles").upsert({
-    id: newUser.user.id,
-    role: "beneficiario",
-    email: lead.email,
-    full_name: lead.full_name,
-  }, { onConflict: "id" });
-
-  if (profileError) return { ok: false, error: profileError.message };
-
   const { error: insertClientErr } = await supabaseAdmin.from("clients").insert({
-    user_id: newUser.user.id,
+    user_id: userResult.userId,
     company_name: companyName,
     cif: lead.nif ?? null,
     service_type: serviceType,

@@ -8,14 +8,13 @@ import { registerCallMissed, registerCallSuccess } from "@/app/actions/interacti
 import { generateAgreement } from "@/app/actions/agreements";
 import { linkReferralToClient, createAndLinkReferral } from "@/app/actions/referral-actions";
 import {
-  updateContractState,
-  updateDeviceOrderStatus,
-  updateDeviceOrderTracking,
-  markPaymentReceived,
   updateServiceDescription,
   toggleHasDevice,
-  addClientNote,
 } from "@/app/actions/client-actions";
+import { updateContractState } from "@/app/actions/contract-actions";
+import { updateDeviceOrderStatus, updateDeviceOrderTracking } from "@/app/actions/device-order-actions";
+import { markPaymentReceived } from "@/app/actions/payment-actions";
+import { addClientNote } from "@/app/actions/note-actions";
 import type { PipelineState } from "@/lib/state-machine/constants";
 import { PIPELINE_STATE_LABELS } from "@/lib/state-machine/constants";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
