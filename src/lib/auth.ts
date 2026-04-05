@@ -1,7 +1,9 @@
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { cache } from "react";
+import type { Database } from "@/types/supabase";
 
-export type AppRole = "beneficiario" | "consultor" | "tecnico" | "admin" | "asociado";
+// Extract role type directly from Database types
+export type AppRole = Database["public"]["Tables"]["profiles"]["Row"]["role"];
 
 export const getSession = cache(async () => {
   const supabase = await createClient();
@@ -17,7 +19,7 @@ export const getSession = cache(async () => {
 
   return {
     user,
-    role: (profile?.role as AppRole) ?? null,
+    role: profile?.role ?? null,
   };
 });
 
