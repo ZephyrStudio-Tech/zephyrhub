@@ -5,7 +5,6 @@ import { createClient } from "@/lib/supabase/server";
 import { requireServerAuth } from "@/lib/auth";
 import { getAgreementTemplate } from "@/lib/service-config";
 import type { ServiceType } from "@/lib/service-config";
-import type { Database } from "@/types/supabase";
 import { revalidatePath } from "next/cache";
 
 export async function generateAgreement(
@@ -21,32 +20,33 @@ export async function generateAgreement(
     .from("clients")
     .select("id, company_name, service_type, consultant_id")
     .eq("id", clientId)
-    .single<Database["public"]["Tables"]["clients"]["Row"]>();
+    .single();
 
   if (clientErr || !client)
     return { ok: false, error: "Cliente no encontrado" };
 
-  // Business logic: consultores can only access their own clients
   if (role === "consultor" && client.consultant_id !== user.id) {
     return { ok: false, error: "Sin permiso" };
   }
 
-  const companyName = client.company_name || "Cliente";
+  const companyName = (client.company_name as string) || "Cliente";
   const serviceType = (client.service_type as ServiceType) ?? "web";
   const date = new Date().toLocaleDateString("es");
 
   let buffer: Buffer;
   try {
     const { renderToBuffer } = await import("@react-pdf/renderer");
-    const ReactModule = await import("react");
+    const { createElement } = await import("react");
     const { AgreementDocument } = await import("@/lib/agreement-pdf");
-    const props: { companyName: string; serviceType: ServiceType; date: string } = {
-      companyName,
-      serviceType,
-      date,
-    };
-    const doc = ReactModule.createElement(AgreementDocument, props);
-    buffer = (await renderToBuffer(doc as React.ReactElement)) as Buffer;
+    const doc = createElement(
+      AgreementDocument as React.ComponentType<{
+        companyName: string;
+        serviceType: ServiceType;
+        date: string;
+      }>,
+      { companyName, serviceType, date }
+    );
+    buffer = (await renderToBuffer(doc as Parameters<typeof renderToBuffer>[0])) as Buffer;
   } catch (e) {
     return {
       ok: false,
