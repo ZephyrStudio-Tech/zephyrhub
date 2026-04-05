@@ -11,11 +11,12 @@ export const getSession = cache(async () => {
 
   if (!user) return { user: null, role: null as AppRole | null };
 
+  type ProfileRow = { role: AppRole };
   const { data: profile } = await supabase
     .from("profiles")
     .select("role")
     .eq("id", user.id)
-    .single();
+    .single() as { data: ProfileRow | null; error: unknown };
 
   return {
     user,

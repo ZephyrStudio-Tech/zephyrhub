@@ -218,11 +218,12 @@ export async function moveToConsultoria(
   let password: string | undefined;
 
   // Check if user already exists with this email
+  type ProfileIdRow = { id: string };
   const { data: existingProfile } = await supabaseAdmin
     .from("profiles")
     .select("id")
     .eq("email", lead.email)
-    .maybeSingle();
+    .maybeSingle() as { data: ProfileIdRow | null; error: unknown };
 
   if (existingProfile) {
     // User exists - check if they already have a client record
