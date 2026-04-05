@@ -34,6 +34,7 @@ import {
   Plus
 } from "lucide-react";
 import { ClientLeadModal } from "../components/client-lead-modal";
+import { toastError, toastSuccess } from "@/lib/toast";
 
 type Lead = {
   id: string;
@@ -357,8 +358,11 @@ export function PreconsultoriaKanban({ leads }: { leads: Lead[] }) {
       setChanging(true);
       const res = await updateTriageLeadState(lead.id, toState);
       setChanging(false);
-      if (res.ok) router.refresh();
-      else alert(res.error);
+      if (res.ok) {
+        router.refresh();
+      } else {
+        toastError(res.error || "Error al cambiar estado");
+      }
     },
     [leads, changing, router]
   );
@@ -370,11 +374,12 @@ export function PreconsultoriaKanban({ leads }: { leads: Lead[] }) {
       const res = await moveToConsultoria(leadId);
       setChanging(false);
       if (res.ok) {
+        toastSuccess("Cliente transferido a Consultoría");
         if (res.password) setPasswordModal(res.password);
         setSelectedLead(null);
         router.refresh();
       } else {
-        alert(res.error);
+        toastError(res.error || "Error al transferir cliente");
       }
     },
     [changing, router]
@@ -384,8 +389,11 @@ export function PreconsultoriaKanban({ leads }: { leads: Lead[] }) {
     (leadId: string) => {
       startTransition(async () => {
         const res = await registerTriageCallMissed(leadId);
-        if (res.ok) router.refresh();
-        else alert(res.error);
+        if (res.ok) {
+          router.refresh();
+        } else {
+          toastError(res.error || "Error al registrar llamada");
+        }
       });
     },
     [router]
@@ -395,8 +403,11 @@ export function PreconsultoriaKanban({ leads }: { leads: Lead[] }) {
     (leadId: string) => {
       startTransition(async () => {
         const res = await registerTriageCallSuccess(leadId);
-        if (res.ok) router.refresh();
-        else alert(res.error);
+        if (res.ok) {
+          router.refresh();
+        } else {
+          toastError(res.error || "Error al registrar llamada");
+        }
       });
     },
     [router]

@@ -20,6 +20,7 @@ import type { PipelineState } from "@/lib/state-machine/constants";
 import { cn } from "@/lib/utils";
 import { Mail, Phone, MoreHorizontal } from "lucide-react";
 import { ClientLeadModal } from "./components/client-lead-modal";
+import { toastError } from "@/lib/toast";
 
 type Client = {
   id: string;
@@ -270,15 +271,18 @@ export function PipelineView({
 
       const fromState = client.current_state as PipelineState;
       if (!canTransition(fromState, toState)) {
-        alert("Transición no permitida desde el estado actual.");
+        toastError("Transición no permitida desde el estado actual");
         return;
       }
 
       setChanging(true);
       const res = await transitionClientState(client.id, toState);
       setChanging(false);
-      if (res.ok) router.refresh();
-      else alert(res.error);
+      if (res.ok) {
+        router.refresh();
+      } else {
+        toastError(res.error || "Error al cambiar estado");
+      }
     },
     [clients, stateLabels, changing, router]
   );

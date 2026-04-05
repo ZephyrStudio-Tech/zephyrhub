@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, X, Loader2, ShieldCheck } from "lucide-react";
+import { toastError, toastSuccess } from "@/lib/toast";
 
 export function NewInternalUserModal() {
   const [isOpen, setIsOpen] = useState(false);
@@ -31,10 +32,11 @@ export function NewInternalUserModal() {
     const res = await createInternalUser(data);
     setLoading(false);
     if (res.ok) {
+      toastSuccess("Usuario creado correctamente");
       setIsOpen(false);
       router.refresh();
     } else {
-      alert(res.error);
+      toastError(res.error || "Error al crear usuario");
     }
   }
 

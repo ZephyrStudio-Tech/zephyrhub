@@ -22,6 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Trash2 } from "lucide-react";
+import { toastError, toastSuccess } from "@/lib/toast";
 
 type Client = {
   id: string;
@@ -143,8 +144,12 @@ export function ClientDetailView({
     setLinking(true);
     const res = await linkReferralToClient(referralId, client.id);
     setLinking(false);
-    if (res.ok) router.refresh();
-    else alert(res.error);
+    if (res.ok) {
+      toastSuccess("Referido vinculado correctamente");
+      router.refresh();
+    } else {
+      toastError(res.error || "Error al vincular referido");
+    }
   }
 
   async function onCreateAndLinkReferral() {
@@ -152,72 +157,104 @@ export function ClientDetailView({
     setLinking(true);
     const res = await createAndLinkReferral(client.id, associateId);
     setLinking(false);
-    if (res.ok) router.refresh();
-    else alert(res.error);
+    if (res.ok) {
+      toastSuccess("Referido creado y vinculado");
+      router.refresh();
+    } else {
+      toastError(res.error || "Error al crear referido");
+    }
   }
 
   async function onStateChange(toState: string) {
     setChanging(true);
     const res = await transitionClientState(client.id, toState);
     setChanging(false);
-    if (res.ok) router.refresh();
-    else alert(res.error);
+    if (res.ok) {
+      toastSuccess("Estado actualizado");
+      router.refresh();
+    } else {
+      toastError(res.error || "Error al cambiar estado");
+    }
   }
 
   async function onContractStateChange(contractId: string, newState: string) {
     const res = await updateContractState(contractId, newState);
-    if (res.ok) router.refresh();
-    else alert(res.error);
+    if (res.ok) {
+      toastSuccess("Estado del contrato actualizado");
+      router.refresh();
+    } else {
+      toastError(res.error || "Error al actualizar contrato");
+    }
   }
 
   async function onDeviceOrderStatusChange(deviceOrderId: string, status: string) {
     const res = await updateDeviceOrderStatus(deviceOrderId, status);
-    if (res.ok) router.refresh();
-    else alert(res.error);
+    if (res.ok) {
+      toastSuccess("Estado del pedido actualizado");
+      router.refresh();
+    } else {
+      toastError(res.error || "Error al actualizar pedido");
+    }
   }
 
   async function onSaveTracking(deviceOrderId: string) {
     if (!trackingNumber.trim()) return;
     const res = await updateDeviceOrderTracking(deviceOrderId, trackingNumber, trackingUrl);
     if (res.ok) {
+      toastSuccess("Tracking guardado");
       setEditingTracking(false);
       setTrackingNumber("");
       setTrackingUrl("");
       router.refresh();
-    } else alert(res.error);
+    } else {
+      toastError(res.error || "Error al guardar tracking");
+    }
   }
 
   async function onMarkPaymentReceived(paymentId: string) {
     if (!paymentAmount.trim()) return;
     const res = await markPaymentReceived(paymentId, parseFloat(paymentAmount), paymentDate);
     if (res.ok) {
+      toastSuccess("Pago registrado correctamente");
       setReceivingPayment(null);
       setPaymentAmount("");
       setPaymentDate(new Date().toISOString().split("T")[0]);
       router.refresh();
-    } else alert(res.error);
+    } else {
+      toastError(res.error || "Error al registrar pago");
+    }
   }
 
   async function onSaveDescription() {
     startTransition(async () => {
       const res = await updateServiceDescription(client.id, descriptionValue);
       if (res.ok) {
+        toastSuccess("Descripción guardada");
         setEditingDescription(false);
         router.refresh();
-      } else alert(res.error);
+      } else {
+        toastError(res.error || "Error al guardar descripción");
+      }
     });
   }
 
   async function onToggleHasDevice(enabled: boolean) {
     const res = await toggleHasDevice(client.id, enabled);
-    if (res.ok) router.refresh();
-    else alert(res.error);
+    if (res.ok) {
+      router.refresh();
+    } else {
+      toastError(res.error || "Error al actualizar dispositivo");
+    }
   }
 
   async function onApprove(docId: string) {
     const res = await approveDocument(docId);
-    if (res.ok) router.refresh();
-    else alert(res.error);
+    if (res.ok) {
+      toastSuccess("Documento aprobado");
+      router.refresh();
+    } else {
+      toastError(res.error || "Error al aprobar documento");
+    }
   }
 
   async function onReject(docId: string) {
@@ -226,8 +263,12 @@ export function ClientDetailView({
     const res = await rejectDocument(docId, rejectReason);
     setRejecting(null);
     setRejectReason("");
-    if (res.ok) router.refresh();
-    else alert(res.error);
+    if (res.ok) {
+      toastSuccess("Documento rechazado");
+      router.refresh();
+    } else {
+      toastError(res.error || "Error al rechazar documento");
+    }
   }
 
   async function onCallMissed() {
@@ -246,7 +287,7 @@ export function ClientDetailView({
       router.refresh();
     } else {
       setLocalInteractions((prev) => prev.filter((i) => i.id !== tempId));
-      alert(res.error);
+      toastError(res.error || "Error al registrar llamada");
     }
   }
 
@@ -266,7 +307,7 @@ export function ClientDetailView({
       router.refresh();
     } else {
       setLocalInteractions((prev) => prev.filter((i) => i.id !== tempId));
-      alert(res.error);
+      toastError(res.error || "Error al registrar llamada");
     }
   }
 
@@ -289,7 +330,7 @@ export function ClientDetailView({
       router.refresh();
     } else {
       setLocalInteractions((prev) => prev.filter((i) => i.id !== tempId));
-      alert(res.error);
+      toastError(res.error || "Error al añadir nota");
     }
   }
 
@@ -297,8 +338,12 @@ export function ClientDetailView({
     setGenerating(true);
     const res = await generateAgreement(client.id);
     setGenerating(false);
-    if (res.ok) router.refresh();
-    else alert(res.error);
+    if (res.ok) {
+      toastSuccess("Acuerdo generado correctamente");
+      router.refresh();
+    } else {
+      toastError(res.error || "Error al generar acuerdo");
+    }
   }
 
   const docsBySlot = slots.map((slot) => {

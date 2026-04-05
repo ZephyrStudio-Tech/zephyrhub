@@ -46,6 +46,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PIPELINE_STATE_LABELS, PRECONSULTORIA_STATE_LABELS } from "@/lib/state-machine/constants";
+import { toastError, toastSuccess } from "@/lib/toast";
 
 type Props = {
   mode: 'lead' | 'client';
@@ -168,9 +169,10 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
     }
 
     if (res && res.ok) {
+      toastSuccess("Cambios guardados");
       refreshData();
     } else if (res && res.error) {
-      alert(res.error);
+      toastError(res.error);
     }
     setSaving(false);
   }

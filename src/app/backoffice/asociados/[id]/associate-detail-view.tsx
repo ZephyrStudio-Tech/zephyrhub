@@ -23,6 +23,7 @@ import {
   ArrowRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toastError, toastSuccess } from "@/lib/toast";
 
 export function AssociateDetailView({
   associate,
@@ -42,9 +43,10 @@ export function AssociateDetailView({
     const res = await markCommissionPaid(referralId, notes[referralId] || "");
     setLoading(null);
     if (res.ok) {
+      toastSuccess("Comisión marcada como pagada");
       router.refresh();
     } else {
-      alert(res.error);
+      toastError(res.error || "Error al marcar comisión");
     }
   }
 
