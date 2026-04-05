@@ -5,36 +5,17 @@ import { requireServerAuth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
 function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, "-")
-    .replace(/[^a-z0-9-]/g, "")
-    .replace(/-+/g, "-")
-    .slice(0, 80);
+  return text.toLowerCase().trim().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-").slice(0, 80);
 }
 
-/** Crea un ticket de soporte (portal). Vincula user_id y client_id del usuario actual. */
-export async function createTicket(data: {
-  category: string;
-  message: string;
-  clientId?: string | null;
-}): Promise<{ ok: boolean; error?: string }> {
+export async function createTicket(data: { category: string; message: string; clientId?: string | null; }): Promise<{ ok: boolean; error?: string }> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "No autenticado" };
 
   let clientId = data.clientId ?? null;
-
   if (!clientId) {
-    // Try to find the client associated with this user (for beneficiaries)
-    const { data: clients } = await supabase
-      .from("clients")
-      .select("id")
-      .eq("user_id", user.id)
-      .limit(1);
+    const { data: clients } = await supabase.from("clients").select("id").eq("user_id", user.id).limit(1);
     clientId = clients?.[0]?.id ?? null;
   }
 
@@ -54,24 +35,16 @@ export async function createTicket(data: {
   return { ok: true };
 }
 
-/** Responde a un ticket y lo marca como resuelto (backoffice). */
-export async function replyTicket(
-  ticketId: string,
-  reply: string
-): Promise<{ ok: boolean; error?: string }> {
+export async function replyTicket(ticketId: string, reply: string): Promise<{ ok: boolean; error?: string }> {
   const auth = await requireServerAuth(["consultor", "admin"]);
   if (auth.error) return { ok: false, error: auth.error };
 
   const { supabaseAdmin } = auth;
-
-  const { error } = await supabaseAdmin
-    .from("support_requests")
-    .update({
-      admin_reply: reply,
-      status: "resuelto",
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", ticketId);
+  const { error } = await supabaseAdmin.from("support_requests").update({
+    admin_reply: reply,
+    status: "resuelto",
+    updated_at: new Date().toISOString(),
+  }).eq("id", ticketId);
 
   if (error) return { ok: false, error: error.message };
   revalidatePath("/backoffice/support");
@@ -80,23 +53,12 @@ export async function replyTicket(
   return { ok: true };
 }
 
-/** Crea un tutorial/recurso en la academia (solo admin). */
-export async function createTutorial(data: {
-  title: string;
-  description?: string;
-  category: string;
-  content_type: "video" | "articulo";
-  video_url?: string;
-  content_body?: string;
-  cover_image?: string;
-}): Promise<{ ok: boolean; error?: string }> {
+export async function createTutorial(data: { title: string; description?: string; category: string; content_type: "video" | "articulo"; video_url?: string; content_body?: string; cover_image?: string; }): Promise<{ ok: boolean; error?: string }> {
   const auth = await requireServerAuth(["admin"]);
   if (auth.error) return { ok: false, error: auth.error };
 
   const { supabaseAdmin } = auth;
-
-  const slug =
-    slugify(data.title) + "-" + Date.now().toString(36);
+  const slug = slugify(data.title) + "-" + Date.now().toString(36);
 
   const { error } = await supabaseAdmin.from("academy_content").insert({
     title: data.title,
@@ -116,39 +78,22 @@ export async function createTutorial(data: {
   return { ok: true };
 }
 
-/** Actualiza un tutorial/recurso en la academia (solo admin). */
-export async function updateTutorial(
-  id: string,
-  data: {
-    title: string;
-    description?: string;
-    category: string;
-    content_type: "video" | "articulo";
-    video_url?: string;
-    content_body?: string;
-    cover_image?: string;
-    sort_order?: number;
-  }
-): Promise<{ ok: boolean; error?: string }> {
+export async function updateTutorial(id: string, data: { title: string; description?: string; category: string; content_type: "video" | "articulo"; video_url?: string; content_body?: string; cover_image?: string; sort_order?: number; }): Promise<{ ok: boolean; error?: string }> {
   const auth = await requireServerAuth(["admin"]);
   if (auth.error) return { ok: false, error: auth.error };
 
   const { supabaseAdmin } = auth;
-
-  const { error } = await supabaseAdmin
-    .from("academy_content")
-    .update({
-      title: data.title,
-      category: data.category,
-      description: data.description ?? null,
-      content_type: data.content_type,
-      video_url: data.content_type === "video" ? data.video_url ?? null : null,
-      content_body: data.content_type === "articulo" ? data.content_body ?? null : null,
-      cover_image: data.cover_image ?? null,
-      sort_order: data.sort_order ?? 0,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", id);
+  const { error } = await supabaseAdmin.from("academy_content").update({
+    title: data.title,
+    category: data.category,
+    description: data.description ?? null,
+    content_type: data.content_type,
+    video_url: data.content_type === "video" ? data.video_url ?? null : null,
+    content_body: data.content_type === "articulo" ? data.content_body ?? null : null,
+    cover_image: data.cover_image ?? null,
+    sort_order: data.sort_order ?? 0,
+    updated_at: new Date().toISOString(),
+  }).eq("id", id);
 
   if (error) return { ok: false, error: error.message };
   revalidatePath("/backoffice/academy");
@@ -156,13 +101,11 @@ export async function updateTutorial(
   return { ok: true };
 }
 
-/** Borra un tutorial/recurso en la academia (solo admin). */
 export async function deleteTutorial(id: string): Promise<{ ok: boolean; error?: string }> {
   const auth = await requireServerAuth(["admin"]);
   if (auth.error) return { ok: false, error: auth.error };
 
   const { supabaseAdmin } = auth;
-
   const { error } = await supabaseAdmin.from("academy_content").delete().eq("id", id);
 
   if (error) return { ok: false, error: error.message };
@@ -171,24 +114,12 @@ export async function deleteTutorial(id: string): Promise<{ ok: boolean; error?:
   return { ok: true };
 }
 
-/** Añade un mensaje al hilo de un ticket y actualiza updated_at. */
-export async function addTicketMessage(data: {
-  ticketId: string;
-  message: string;
-  attachmentUrl?: string;
-  isClient: boolean;
-}): Promise<{ ok: boolean; error?: string }> {
+export async function addTicketMessage(data: { ticketId: string; message: string; attachmentUrl?: string; isClient: boolean; }): Promise<{ ok: boolean; error?: string }> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "No autenticado" };
 
-  // Opcional: podríamos validar que el usuario tiene acceso al ticket,
-  // pero la RLS de lectura ya se encarga en las vistas de portal/backoffice.
-
   const supabaseAdmin = createAdminClient();
-
   const { error } = await supabaseAdmin.from("ticket_messages").insert({
     ticket_id: data.ticketId,
     message: data.message,
@@ -198,12 +129,9 @@ export async function addTicketMessage(data: {
 
   if (error) return { ok: false, error: error.message };
 
-  const { error: ticketErr } = await supabaseAdmin
-    .from("support_requests")
-    .update({
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", data.ticketId);
+  const { error: ticketErr } = await supabaseAdmin.from("support_requests").update({
+    updated_at: new Date().toISOString(),
+  }).eq("id", data.ticketId);
 
   if (ticketErr) return { ok: false, error: ticketErr.message };
 
@@ -220,41 +148,22 @@ export async function deleteTicket(ticketId: string): Promise<{ ok: boolean; err
   if (auth.error) return { ok: false, error: auth.error };
 
   const { supabaseAdmin } = auth;
-
-  // 1. Delete messages first due to FK
-  const { error: msgErr } = await supabaseAdmin
-    .from("ticket_messages")
-    .delete()
-    .eq("ticket_id", ticketId);
-
+  const { error: msgErr } = await supabaseAdmin.from("ticket_messages").delete().eq("ticket_id", ticketId);
   if (msgErr) return { ok: false, error: msgErr.message };
 
-  // 2. Delete the ticket
-  const { error: ticketErr } = await supabaseAdmin
-    .from("support_requests")
-    .delete()
-    .eq("id", ticketId);
-
+  const { error: ticketErr } = await supabaseAdmin.from("support_requests").delete().eq("id", ticketId);
   if (ticketErr) return { ok: false, error: ticketErr.message };
 
   revalidatePath("/backoffice/support");
   return { ok: true };
 }
 
-/** Actualiza el estado de un ticket (backoffice o automatismos). */
-export async function updateTicketStatus(
-  ticketId: string,
-  status: string
-): Promise<{ ok: boolean; error?: string }> {
+export async function updateTicketStatus(ticketId: string, status: string): Promise<{ ok: boolean; error?: string }> {
   const auth = await requireServerAuth(["consultor", "admin"]);
   if (auth.error) return { ok: false, error: auth.error };
 
   const { supabaseAdmin } = auth;
-
-  const { error } = await supabaseAdmin
-    .from("support_requests")
-    .update({ status })
-    .eq("id", ticketId);
+  const { error } = await supabaseAdmin.from("support_requests").update({ status }).eq("id", ticketId);
 
   if (error) return { ok: false, error: error.message };
 

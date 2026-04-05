@@ -4,15 +4,9 @@ import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { requireServerAuth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
-export async function approveDocument(
-  documentId: string
-): Promise<{ ok: boolean; error?: string }> {
+export async function approveDocument(documentId: string): Promise<{ ok: boolean; error?: string }> {
   const supabase = await createClient();
-  const { data: doc, error: fetchErr } = await supabase
-    .from("documents")
-    .select("id, client_id")
-    .eq("id", documentId)
-    .single();
+  const { data: doc, error: fetchErr } = await supabase.from("documents").select("id, client_id").eq("id", documentId).single();
 
   if (fetchErr || !doc) return { ok: false, error: "Documento no encontrado" };
 
@@ -20,16 +14,12 @@ export async function approveDocument(
   if (auth.error) return { ok: false, error: auth.error };
 
   const { user, supabaseAdmin } = auth;
-
-  const { error: updateErr } = await supabaseAdmin
-    .from("documents")
-    .update({
-      status: "approved",
-      reviewed_at: new Date().toISOString(),
-      reviewed_by: user.id,
-      rejection_reason: null,
-    })
-    .eq("id", documentId);
+  const { error: updateErr } = await supabaseAdmin.from("documents").update({
+    status: "approved",
+    reviewed_at: new Date().toISOString(),
+    reviewed_by: user.id,
+    rejection_reason: null,
+  }).eq("id", documentId);
 
   if (updateErr) return { ok: false, error: updateErr.message };
 
@@ -53,16 +43,9 @@ export async function approveDocument(
   return { ok: true };
 }
 
-export async function rejectDocument(
-  documentId: string,
-  reason: string
-): Promise<{ ok: boolean; error?: string }> {
+export async function rejectDocument(documentId: string, reason: string): Promise<{ ok: boolean; error?: string }> {
   const supabase = await createClient();
-  const { data: doc, error: fetchErr } = await supabase
-    .from("documents")
-    .select("id, client_id")
-    .eq("id", documentId)
-    .single();
+  const { data: doc, error: fetchErr } = await supabase.from("documents").select("id, client_id").eq("id", documentId).single();
 
   if (fetchErr || !doc) return { ok: false, error: "Documento no encontrado" };
 
@@ -70,16 +53,12 @@ export async function rejectDocument(
   if (auth.error) return { ok: false, error: auth.error };
 
   const { user, supabaseAdmin } = auth;
-
-  const { error: updateErr } = await supabaseAdmin
-    .from("documents")
-    .update({
-      status: "rejected",
-      reviewed_at: new Date().toISOString(),
-      reviewed_by: user.id,
-      rejection_reason: reason,
-    })
-    .eq("id", documentId);
+  const { error: updateErr } = await supabaseAdmin.from("documents").update({
+    status: "rejected",
+    reviewed_at: new Date().toISOString(),
+    reviewed_by: user.id,
+    rejection_reason: reason,
+  }).eq("id", documentId);
 
   if (updateErr) return { ok: false, error: updateErr.message };
 
