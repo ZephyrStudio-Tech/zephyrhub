@@ -13,6 +13,7 @@ import {
   useDraggable,
   useDroppable,
 } from "@dnd-kit/core";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { transitionClientState } from "@/app/actions/transition-state";
 import { canTransition } from "@/lib/state-machine/machine";
 import { PIPELINE_STATE_LABELS } from "@/lib/state-machine/constants";
@@ -20,6 +21,7 @@ import type { PipelineState } from "@/lib/state-machine/constants";
 import { cn } from "@/lib/utils";
 import { Mail, Phone, MoreHorizontal } from "lucide-react";
 import { ClientLeadModal } from "./components/client-lead-modal";
+import { toastError } from "@/lib/toast";
 
 type Client = {
   id: string;
@@ -149,6 +151,16 @@ function DroppableStateColumn({
     data: { stateId },
   });
 
+  const parentRef = useRef<HTMLDivElement>(null);
+
+  const virtualizer = useVirtualizer({
+    count: clients.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 160,
+    overscan: 3,
+    gap: 12,
+  });
+
   return (
     <div ref={setNodeRef} className="flex-shrink-0 w-[310px] h-full pb-6">
       <div
@@ -166,14 +178,39 @@ function DroppableStateColumn({
           </span>
         </div>
 
-        <div className="px-3 pb-4 flex-1 space-y-3 overflow-y-auto custom-scrollbar">
-          {clients.map((client) => (
-            <DraggableClientCard
-              key={client.id}
-              client={client}
-              onSelect={() => onSelectClient(client.id)}
-            />
-          ))}
+        <div
+          ref={parentRef}
+          className="px-3 pb-4 flex-1 overflow-y-auto custom-scrollbar"
+        >
+          <div
+            style={{
+              height: `${virtualizer.getTotalSize()}px`,
+              width: "100%",
+              position: "relative",
+            }}
+          >
+            {virtualizer.getVirtualItems().map((virtualRow) => {
+              const client = clients[virtualRow.index];
+              return (
+                <div
+                  key={client.id}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: `${virtualRow.size}px`,
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }}
+                >
+                  <DraggableClientCard
+                    client={client}
+                    onSelect={() => onSelectClient(client.id)}
+                  />
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -270,15 +307,18 @@ export function PipelineView({
 
       const fromState = client.current_state as PipelineState;
       if (!canTransition(fromState, toState)) {
-        alert("Transición no permitida desde el estado actual.");
+        toastError("Transición no permitida desde el estado actual");
         return;
       }
 
       setChanging(true);
       const res = await transitionClientState(client.id, toState);
       setChanging(false);
-      if (res.ok) router.refresh();
-      else alert(res.error);
+      if (res.ok) {
+        router.refresh();
+      } else {
+        toastError(res.error || "Error al cambiar estado");
+      }
     },
     [clients, stateLabels, changing, router]
   );

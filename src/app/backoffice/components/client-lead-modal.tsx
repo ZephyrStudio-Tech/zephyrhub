@@ -1,17 +1,17 @@
 "use client";
 
 import { useEffect, useState, useTransition, useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import {
   getClientDetail,
   updateClientContactInfo,
   toggleHasDevice,
-  updateContractState,
-  updateDeviceOrderStatus,
-  updateDeviceOrderTracking,
-  markPaymentReceived,
-  addClientNote
 } from "@/app/actions/client-actions";
+import { updateContractState } from "@/app/actions/contract-actions";
+import { updateDeviceOrderStatus, updateDeviceOrderTracking } from "@/app/actions/device-order-actions";
+import { markPaymentReceived } from "@/app/actions/payment-actions";
+import { addClientNote } from "@/app/actions/note-actions";
 import {
   addTriageNote,
   registerTriageCallMissed,
@@ -46,6 +46,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PIPELINE_STATE_LABELS, PRECONSULTORIA_STATE_LABELS } from "@/lib/state-machine/constants";
+import { toastError, toastSuccess } from "@/lib/toast";
 
 type Props = {
   mode: 'lead' | 'client';
@@ -55,12 +56,12 @@ type Props = {
 };
 
 export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
-  const [data, setData] = useState<any>(mode === 'lead' ? { client: leadData } : null);
-  const [loading, setLoading] = useState(mode === 'client');
+  const queryClient = useQueryClient();
   const [note, setNote] = useState("");
   const [sendingNote, setSendingNote] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [saving, setSaving] = useState(false);
+  const [leadInteractions, setLeadInteractions] = useState<any[]>([]);
 
   const [editForm, setEditForm] = useState({
     full_name: "",
@@ -70,28 +71,24 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
     notes: ""
   });
 
-  const fetchClientDetail = useCallback(async () => {
-    if (!clientId) return;
-    setLoading(true);
-    try {
+  // Use TanStack Query for client detail with 30s stale time
+  const { data: clientData, isLoading: clientLoading, refetch: refetchClient } = useQuery({
+    queryKey: ['client-detail', clientId],
+    queryFn: async () => {
+      if (!clientId) return null;
       const res = await getClientDetail(clientId);
       if (res && res.ok && res.data) {
-        const d = res.data;
-        setData(d);
-        setEditForm({
-          full_name: d.client.full_name || "",
-          email: d.client.email || "",
-          phone: d.client.phone || "",
-          cif: d.client.cif || "",
-          notes: d.client.service_description || ""
-        });
+        return res.data;
       }
-    } catch (error) {
-      console.error("Error fetching client detail:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [clientId]);
+      return null;
+    },
+    enabled: mode === 'client' && !!clientId,
+    staleTime: 30000,
+  });
+
+  // Combine data from query or leadData
+  const data = mode === 'client' ? clientData : { client: leadData };
+  const loading = mode === 'client' && clientLoading;
 
   const fetchLeadInteractions = useCallback(async () => {
     if (!leadData?.id) return;
@@ -103,18 +100,23 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
         .eq("lead_id", leadData.id)
         .order("created_at", { ascending: false });
 
-      setData((prev: any) => ({
-        ...(prev || {}),
-        interactions: interactions || []
-      }));
+      setLeadInteractions(interactions || []);
     } catch (error) {
       console.error("Error fetching lead interactions:", error);
     }
   }, [leadData?.id]);
 
+  // Set edit form when client data loads from query
   useEffect(() => {
-    if (mode === 'client' && clientId) {
-      fetchClientDetail();
+    if (mode === 'client' && clientData?.client) {
+      const d = clientData.client;
+      setEditForm({
+        full_name: d.full_name || "",
+        email: d.email || "",
+        phone: d.phone || "",
+        cif: d.cif || "",
+        notes: d.service_description || ""
+      });
     } else if (mode === 'lead' && leadData) {
       setEditForm({
         full_name: leadData.full_name || "",
@@ -125,18 +127,18 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
       });
       fetchLeadInteractions();
     }
-  }, [clientId, leadData, mode, fetchClientDetail, fetchLeadInteractions]);
+  }, [clientData, leadData, mode, fetchLeadInteractions]);
 
   const refreshData = useCallback(async () => {
     if (mode === 'client') {
-      await fetchClientDetail();
+      await refetchClient();
     } else {
       await fetchLeadInteractions();
     }
-  }, [mode, fetchClientDetail, fetchLeadInteractions]);
+  }, [mode, refetchClient, fetchLeadInteractions]);
 
   const client = data?.client || leadData;
-  const interactions = data?.interactions || [];
+  const interactions = mode === 'client' ? (clientData?.interactions || []) : leadInteractions;
 
   async function handleAddNote() {
     if (!note.trim()) return;
@@ -168,9 +170,10 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
     }
 
     if (res && res.ok) {
+      toastSuccess("Cambios guardados");
       refreshData();
     } else if (res && res.error) {
-      alert(res.error);
+      toastError(res.error);
     }
     setSaving(false);
   }

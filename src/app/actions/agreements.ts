@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireServerAuth } from "@/lib/auth";
 import { getAgreementTemplate } from "@/lib/service-config";
 import type { ServiceType } from "@/lib/service-config";
+import type { Database } from "@/types/supabase";
 import { revalidatePath } from "next/cache";
 
 export async function generateAgreement(
@@ -20,7 +21,7 @@ export async function generateAgreement(
     .from("clients")
     .select("id, company_name, service_type, consultant_id")
     .eq("id", clientId)
-    .single();
+    .single<Database["public"]["Tables"]["clients"]["Row"]>();
 
   if (clientErr || !client)
     return { ok: false, error: "Cliente no encontrado" };
@@ -37,13 +38,14 @@ export async function generateAgreement(
   let buffer: Buffer;
   try {
     const { renderToBuffer } = await import("@react-pdf/renderer");
-    const React = await import("react");
+    const ReactModule = await import("react");
     const { AgreementDocument } = await import("@/lib/agreement-pdf");
-    const doc = React.createElement(AgreementDocument, {
+    const props: { companyName: string; serviceType: ServiceType; date: string } = {
       companyName,
       serviceType,
       date,
-    });
+    };
+    const doc = ReactModule.createElement(AgreementDocument, props);
     buffer = (await renderToBuffer(doc as React.ReactElement)) as Buffer;
   } catch (e) {
     return {

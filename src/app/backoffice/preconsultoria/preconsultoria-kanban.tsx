@@ -13,6 +13,7 @@ import {
   useDraggable,
   useDroppable,
 } from "@dnd-kit/core";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   updateTriageLeadState,
   moveToConsultoria,
@@ -34,6 +35,7 @@ import {
   Plus
 } from "lucide-react";
 import { ClientLeadModal } from "../components/client-lead-modal";
+import { toastError, toastSuccess } from "@/lib/toast";
 
 type Lead = {
   id: string;
@@ -273,7 +275,16 @@ function DroppableColumn({
     data: { stateId },
   });
 
+  const parentRef = useRef<HTMLDivElement>(null);
   const isListo = stateId === "listo_para_tramitar";
+
+  const virtualizer = useVirtualizer({
+    count: leads.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => isListo ? 200 : 160,
+    overscan: 3,
+    gap: 12,
+  });
 
   return (
     <div ref={setNodeRef} className="flex-shrink-0 w-[310px] h-full pb-6">
@@ -293,17 +304,42 @@ function DroppableColumn({
           </span>
         </div>
 
-        <div className="px-3 pb-4 flex-1 space-y-3 overflow-y-auto custom-scrollbar">
-          {leads.map((lead) => (
-            <DraggableLeadCard
-              key={lead.id}
-              lead={lead}
-              onMoveToConsultoria={onMoveToConsultoria}
-              onCallMissed={onCallMissed}
-              onCallSuccess={onCallSuccess}
-              onSelect={onSelect}
-            />
-          ))}
+        <div
+          ref={parentRef}
+          className="px-3 pb-4 flex-1 overflow-y-auto custom-scrollbar"
+        >
+          <div
+            style={{
+              height: `${virtualizer.getTotalSize()}px`,
+              width: "100%",
+              position: "relative",
+            }}
+          >
+            {virtualizer.getVirtualItems().map((virtualRow) => {
+              const lead = leads[virtualRow.index];
+              return (
+                <div
+                  key={lead.id}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: `${virtualRow.size}px`,
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }}
+                >
+                  <DraggableLeadCard
+                    lead={lead}
+                    onMoveToConsultoria={onMoveToConsultoria}
+                    onCallMissed={onCallMissed}
+                    onCallSuccess={onCallSuccess}
+                    onSelect={onSelect}
+                  />
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -357,8 +393,11 @@ export function PreconsultoriaKanban({ leads }: { leads: Lead[] }) {
       setChanging(true);
       const res = await updateTriageLeadState(lead.id, toState);
       setChanging(false);
-      if (res.ok) router.refresh();
-      else alert(res.error);
+      if (res.ok) {
+        router.refresh();
+      } else {
+        toastError(res.error || "Error al cambiar estado");
+      }
     },
     [leads, changing, router]
   );
@@ -370,11 +409,12 @@ export function PreconsultoriaKanban({ leads }: { leads: Lead[] }) {
       const res = await moveToConsultoria(leadId);
       setChanging(false);
       if (res.ok) {
+        toastSuccess("Cliente transferido a Consultoría");
         if (res.password) setPasswordModal(res.password);
         setSelectedLead(null);
         router.refresh();
       } else {
-        alert(res.error);
+        toastError(res.error || "Error al transferir cliente");
       }
     },
     [changing, router]
@@ -384,8 +424,11 @@ export function PreconsultoriaKanban({ leads }: { leads: Lead[] }) {
     (leadId: string) => {
       startTransition(async () => {
         const res = await registerTriageCallMissed(leadId);
-        if (res.ok) router.refresh();
-        else alert(res.error);
+        if (res.ok) {
+          router.refresh();
+        } else {
+          toastError(res.error || "Error al registrar llamada");
+        }
       });
     },
     [router]
@@ -395,8 +438,11 @@ export function PreconsultoriaKanban({ leads }: { leads: Lead[] }) {
     (leadId: string) => {
       startTransition(async () => {
         const res = await registerTriageCallSuccess(leadId);
-        if (res.ok) router.refresh();
-        else alert(res.error);
+        if (res.ok) {
+          router.refresh();
+        } else {
+          toastError(res.error || "Error al registrar llamada");
+        }
       });
     },
     [router]

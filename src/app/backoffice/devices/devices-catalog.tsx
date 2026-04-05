@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Pencil, Trash2, Check, X } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { toastError, toastSuccess } from "@/lib/toast";
 
 export type Device = {
   id: string;
@@ -372,10 +373,11 @@ export function DevicesCatalog({ devices: initialDevices }: { devices: Device[] 
     startTransition(async () => {
       const res = await createDevice(data);
       if (res.ok) {
+        toastSuccess("Dispositivo creado");
         setShowForm(false);
         router.refresh();
       } else {
-        alert(res.error);
+        toastError(res.error || "Error al crear dispositivo");
       }
     });
   };
@@ -385,10 +387,11 @@ export function DevicesCatalog({ devices: initialDevices }: { devices: Device[] 
     startTransition(async () => {
       const res = await updateDevice(editingId, data);
       if (res.ok) {
+        toastSuccess("Dispositivo actualizado");
         setEditingId(null);
         router.refresh();
       } else {
-        alert(res.error);
+        toastError(res.error || "Error al actualizar dispositivo");
       }
     });
   };
@@ -399,7 +402,7 @@ export function DevicesCatalog({ devices: initialDevices }: { devices: Device[] 
       if (res.ok) {
         router.refresh();
       } else {
-        alert(res.error);
+        toastError(res.error || "Error al cambiar disponibilidad");
       }
     });
   };

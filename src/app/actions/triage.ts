@@ -1,8 +1,8 @@
 "use server";
 
 import { Resend } from "resend";
-import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { requireServerAuth } from "@/lib/auth";
+import { createUserWithProfile } from "@/lib/create-user";
 import { revalidatePath } from "next/cache";
 
 const PRECONSULTORIA_STATES = [
@@ -75,10 +75,7 @@ export async function createTriageLead(data: any) {
     entity_type: data.entity_type || "autonomo",
     company_size: data.company_size || "0-2",
     province: data.province || "",
-    service_requested:
-      data.service_requested === "factura_electronica"
-        ? "factura"
-        : data.service_requested || "web",
+    service_requested: data.service_requested || "web",
     rgpd_accepted: true,
     current_state: "nuevo_lead",
     status: "pending",
@@ -217,32 +214,54 @@ export async function moveToConsultoria(
     return { ok: false, error: "Lead no encontrado o ya procesado" };
   }
 
-  const password = generatePassword();
-  const { data: newUser, error: createUserErr } = await supabaseAdmin.auth.admin.createUser({
-    email: lead.email,
-    password,
-    email_confirm: true,
-    user_metadata: { full_name: lead.full_name ?? undefined },
-  });
+  let userId: string;
+  let password: string | undefined;
 
-  if (createUserErr || !newUser.user) {
-    return { ok: false, error: createUserErr?.message ?? "Error creando usuario" };
+  // Check if user already exists with this email
+  const { data: existingProfile } = await supabaseAdmin
+    .from("profiles")
+    .select("id")
+    .eq("email", lead.email)
+    .maybeSingle();
+
+  if (existingProfile) {
+    // User exists - check if they already have a client record
+    const { data: existingClient } = await supabaseAdmin
+      .from("clients")
+      .select("id")
+      .eq("user_id", existingProfile.id)
+      .maybeSingle();
+
+    if (existingClient) {
+      return { ok: false, error: "Este email ya tiene un expediente activo" };
+    }
+
+    // User exists but no client - reuse this user
+    userId = existingProfile.id;
+    password = undefined; // No new password since user already exists
+  } else {
+    // User doesn't exist - create new one
+    password = generatePassword();
+    
+    const userResult = await createUserWithProfile(supabaseAdmin, {
+      email: lead.email,
+      password,
+      full_name: lead.full_name ?? "",
+      role: "beneficiario",
+    });
+
+    if (!userResult.ok || !userResult.userId) {
+      return { ok: false, error: userResult.error ?? "Error creando usuario" };
+    }
+
+    userId = userResult.userId;
   }
 
   const serviceType = mapServiceType(lead.service_requested);
   const companyName = (lead.company_name?.trim() || lead.full_name) || "Sin nombre";
 
-  const { error: profileError } = await supabaseAdmin.from("profiles").upsert({
-    id: newUser.user.id,
-    role: "beneficiario",
-    email: lead.email,
-    full_name: lead.full_name,
-  }, { onConflict: "id" });
-
-  if (profileError) return { ok: false, error: profileError.message };
-
   const { error: insertClientErr } = await supabaseAdmin.from("clients").insert({
-    user_id: newUser.user.id,
+    user_id: userId,
     company_name: companyName,
     cif: lead.nif ?? null,
     service_type: serviceType,
@@ -265,8 +284,8 @@ export async function moveToConsultoria(
     return { ok: false, error: insertClientErr.message };
   }
 
-  // Enviar Email de Bienvenida con Resend
-  if (process.env.RESEND_API_KEY && lead.email) {
+  // Enviar Email de Bienvenida con Resend (solo si se creo nuevo usuario con password)
+  if (process.env.RESEND_API_KEY && lead.email && password) {
     try {
       console.log("[Email] Enviando email de bienvenida a cliente", lead.email);
       const resend = new Resend(process.env.RESEND_API_KEY);
