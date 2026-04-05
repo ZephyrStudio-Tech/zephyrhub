@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition, useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import {
   getClientDetail,
@@ -55,8 +56,7 @@ type Props = {
 };
 
 export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
-  const [data, setData] = useState<any>(mode === 'lead' ? { client: leadData } : null);
-  const [loading, setLoading] = useState(mode === 'client');
+  const queryClient = useQueryClient();
   const [note, setNote] = useState("");
   const [sendingNote, setSendingNote] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -70,28 +70,24 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
     notes: ""
   });
 
-  const fetchClientDetail = useCallback(async () => {
-    if (!clientId) return;
-    setLoading(true);
-    try {
+  // Use TanStack Query for client detail with 30s stale time
+  const { data: clientData, isLoading: clientLoading, refetch: refetchClient } = useQuery({
+    queryKey: ['client-detail', clientId],
+    queryFn: async () => {
+      if (!clientId) return null;
       const res = await getClientDetail(clientId);
       if (res && res.ok && res.data) {
-        const d = res.data;
-        setData(d);
-        setEditForm({
-          full_name: d.client.full_name || "",
-          email: d.client.email || "",
-          phone: d.client.phone || "",
-          cif: d.client.cif || "",
-          notes: d.client.service_description || ""
-        });
+        return res.data;
       }
-    } catch (error) {
-      console.error("Error fetching client detail:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [clientId]);
+      return null;
+    },
+    enabled: mode === 'client' && !!clientId,
+    staleTime: 30000,
+  });
+
+  // Combine data from query or leadData
+  const data = mode === 'client' ? clientData : { client: leadData };
+  const loading = mode === 'client' && clientLoading;
 
   const fetchLeadInteractions = useCallback(async () => {
     if (!leadData?.id) return;
@@ -112,9 +108,17 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
     }
   }, [leadData?.id]);
 
+  // Set edit form when client data loads from query
   useEffect(() => {
-    if (mode === 'client' && clientId) {
-      fetchClientDetail();
+    if (mode === 'client' && clientData?.client) {
+      const d = clientData.client;
+      setEditForm({
+        full_name: d.full_name || "",
+        email: d.email || "",
+        phone: d.phone || "",
+        cif: d.cif || "",
+        notes: d.service_description || ""
+      });
     } else if (mode === 'lead' && leadData) {
       setEditForm({
         full_name: leadData.full_name || "",
@@ -125,7 +129,7 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
       });
       fetchLeadInteractions();
     }
-  }, [clientId, leadData, mode, fetchClientDetail, fetchLeadInteractions]);
+  }, [clientData, leadData, mode, fetchLeadInteractions]);
 
   const refreshData = useCallback(async () => {
     if (mode === 'client') {
