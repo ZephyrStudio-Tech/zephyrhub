@@ -38,7 +38,7 @@ export async function generateAgreement(
   let buffer: Buffer;
   try {
     const { renderToBuffer } = await import("@react-pdf/renderer");
-    const React = await import("react");
+    const React = (await import("react")) as typeof import("react");
     const { AgreementDocument } = await import("@/lib/agreement-pdf");
     const doc = React.createElement(AgreementDocument, {
       companyName,
