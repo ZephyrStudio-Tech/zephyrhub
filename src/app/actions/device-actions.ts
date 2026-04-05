@@ -15,7 +15,7 @@ type DeviceInput = {
     storage?: string;
     screen?: string;
     processor?: string;
-  };
+  } | null;
   cost_price: number;
   sale_price: number;
   bono_coverage: number;
@@ -51,7 +51,7 @@ export async function createDevice(
     model: data.model,
     category: data.category,
     description: data.description,
-    specs: data.specs,
+    specs: data.specs as any, // <-- FIX AQUÍ
     cost_price: data.cost_price,
     sale_price: data.sale_price,
     bono_coverage: data.bono_coverage,
@@ -185,7 +185,7 @@ export async function updateDevice(
       model: data.model,
       category: data.category,
       description: data.description,
-      specs: data.specs,
+      specs: data.specs as any, // <-- FIX AQUÍ
       cost_price: data.cost_price,
       sale_price: data.sale_price,
       bono_coverage: data.bono_coverage,
