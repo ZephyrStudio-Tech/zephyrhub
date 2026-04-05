@@ -40,7 +40,7 @@ export async function createDevice(
     .eq("id", user.id)
     .single();
 
-  if (profile?.role !== "admin") {
+  if ((profile as any)?.role !== "admin") {
     return { ok: false, error: "Solo los administradores pueden crear dispositivos" };
   }
 
@@ -172,7 +172,7 @@ export async function updateDevice(
     .eq("id", user.id)
     .single();
 
-  if (profile?.role !== "admin") {
+  if ((profile as any)?.role !== "admin") {
     return { ok: false, error: "Solo los administradores pueden editar dispositivos" };
   }
 
@@ -218,7 +218,7 @@ export async function toggleDeviceAvailability(
     .eq("id", user.id)
     .single();
 
-  if (profile?.role !== "admin") {
+  if ((profile as any)?.role !== "admin") {
     return { ok: false, error: "Solo los administradores pueden modificar dispositivos" };
   }
 
