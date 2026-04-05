@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireServerAuth } from "@/lib/auth";
 import { getAgreementTemplate } from "@/lib/service-config";
 import type { ServiceType } from "@/lib/service-config";
+import type { Database } from "@/types/supabase";
 import { revalidatePath } from "next/cache";
 
 export async function generateAgreement(
@@ -20,7 +21,7 @@ export async function generateAgreement(
     .from("clients")
     .select("id, company_name, service_type, consultant_id")
     .eq("id", clientId)
-    .single();
+    .single<Database["public"]["Tables"]["clients"]["Row"]>();
 
   if (clientErr || !client)
     return { ok: false, error: "Cliente no encontrado" };
