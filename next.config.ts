@@ -7,11 +7,15 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "**",
+        hostname: "supabase.kitdigitalzephyrstudio.es",
       },
       {
-        protocol: "http",
-        hostname: "**",
+        protocol: "https",
+        hostname: "img.youtube.com",
+      },
+      {
+        protocol: "https",
+        hostname: "i.ytimg.com",
       },
     ],
     dangerouslyAllowSVG: true,
