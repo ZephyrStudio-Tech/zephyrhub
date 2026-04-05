@@ -15,12 +15,19 @@ export async function generateAgreement(
 
   const { user, role, supabaseAdmin } = auth;
 
+  type ClientRow = {
+    id: string;
+    company_name: string | null;
+    service_type: string | null;
+    consultant_id: string | null;
+  };
+
   const supabase = await createClient();
   const { data: client, error: clientErr } = await supabase
     .from("clients")
     .select("id, company_name, service_type, consultant_id")
     .eq("id", clientId)
-    .single();
+    .single() as { data: ClientRow | null; error: unknown };
 
   if (clientErr || !client)
     return { ok: false, error: "Cliente no encontrado" };
