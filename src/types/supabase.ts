@@ -15,6 +15,24 @@ export type Json =
 
 export type AppRole = "beneficiario" | "consultor" | "tecnico" | "admin" | "asociado";
 export type ServiceType = "web" | "ecommerce" | "seo" | "device";
+export type PipelineState =
+  | "nuevo_lead" | "contactado" | "primera_consulta" | "documentacion_pendiente"
+  | "documentacion_completa" | "solicitud_enviada" | "solicitud_aprobada"
+  | "contrato_firmado" | "implementacion" | "formacion" | "justificacion_1"
+  | "justificacion_2" | "completado" | "cancelado" | "rechazado"
+  | "baja" | "perdido" | "en_espera" | "revision" | "incidencia"
+  | "pre_consultoria" | "consultoria" | "en_desarrollo" | "cerrado";
+export type StatusEnum = "pending" | "in_progress" | "completed" | "cancelled";
+export type DocumentStatus = "pending" | "approved" | "rejected";
+export type DeviceOrderStatus = "pendiente" | "enviado" | "entregado" | "cancelado";
+export type PaymentPhase = "anticipo" | "intermedio" | "final";
+export type PaymentContract = "web" | "ecommerce";
+export type InteractionType =
+  | "call" | "email" | "meeting" | "note" | "document_approved"
+  | "document_rejected" | "state_change";
+export type CommissionStatus = "pendiente" | "pagado" | "cancelado";
+export type ReferralStatus =
+  | "recibido" | "contactado" | "en_proceso" | "convertido" | "descartado";
 
 export type Database = {
   public: {
@@ -749,9 +767,18 @@ export type Database = {
         Relationships: [];
       };
       schema_migrations: {
-        Row: { version: string; inserted_at: string | null };
-        Insert: { version: string; inserted_at?: string | null };
-        Update: { version?: string; inserted_at?: string | null };
+        Row: {
+          version: string;
+          inserted_at: string | null;
+        };
+        Insert: {
+          version: string;
+          inserted_at?: string | null;
+        };
+        Update: {
+          version?: string;
+          inserted_at?: string | null;
+        };
         Relationships: [];
       };
     };
@@ -773,6 +800,9 @@ export type Database = {
     };
     Enums: {
       app_role: AppRole;
+      service_type: ServiceType;
+      pipeline_state: PipelineState;
+      interaction_type: InteractionType;
       [key: string]: string;
     };
     CompositeTypes: {
