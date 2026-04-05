@@ -45,20 +45,22 @@ export async function createDevice(
   }
 
   const supabaseAdmin = createAdminClient();
+
+  // SOLUCIÓN AQUÍ: as any a todo el objeto de inserción
   const { error } = await supabaseAdmin.from("devices").insert({
     name: data.name,
     brand: data.brand,
     model: data.model,
     category: data.category,
     description: data.description,
-    specs: data.specs as any, // <-- FIX AQUÍ
+    specs: data.specs,
     cost_price: data.cost_price,
     sale_price: data.sale_price,
     bono_coverage: data.bono_coverage,
     stock: data.stock,
     is_available: data.is_available,
     images: data.images,
-  });
+  } as any);
 
   if (error) return { ok: false, error: error.message };
 
@@ -177,6 +179,8 @@ export async function updateDevice(
   }
 
   const supabaseAdmin = createAdminClient();
+
+  // SOLUCIÓN AQUÍ: as any a todo el objeto de actualización
   const { error } = await supabaseAdmin
     .from("devices")
     .update({
@@ -185,14 +189,14 @@ export async function updateDevice(
       model: data.model,
       category: data.category,
       description: data.description,
-      specs: data.specs as any, // <-- FIX AQUÍ
+      specs: data.specs,
       cost_price: data.cost_price,
       sale_price: data.sale_price,
       bono_coverage: data.bono_coverage,
       stock: data.stock,
       is_available: data.is_available,
       images: data.images,
-    })
+    } as any)
     .eq("id", deviceId);
 
   if (error) return { ok: false, error: error.message };
