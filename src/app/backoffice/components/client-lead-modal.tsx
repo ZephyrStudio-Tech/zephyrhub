@@ -61,6 +61,7 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
   const [sendingNote, setSendingNote] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [saving, setSaving] = useState(false);
+  const [leadInteractions, setLeadInteractions] = useState<any[]>([]);
 
   const [editForm, setEditForm] = useState({
     full_name: "",
@@ -99,10 +100,7 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
         .eq("lead_id", leadData.id)
         .order("created_at", { ascending: false });
 
-      setData((prev: any) => ({
-        ...(prev || {}),
-        interactions: interactions || []
-      }));
+      setLeadInteractions(interactions || []);
     } catch (error) {
       console.error("Error fetching lead interactions:", error);
     }
@@ -133,14 +131,14 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
 
   const refreshData = useCallback(async () => {
     if (mode === 'client') {
-      await fetchClientDetail();
+      await refetchClient();
     } else {
       await fetchLeadInteractions();
     }
-  }, [mode, fetchClientDetail, fetchLeadInteractions]);
+  }, [mode, refetchClient, fetchLeadInteractions]);
 
   const client = data?.client || leadData;
-  const interactions = data?.interactions || [];
+  const interactions = mode === 'client' ? (clientData?.interactions || []) : leadInteractions;
 
   async function handleAddNote() {
     if (!note.trim()) return;
