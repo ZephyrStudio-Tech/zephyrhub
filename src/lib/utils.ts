@@ -1,7 +1,8 @@
 import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
-  return clsx(inputs);
+  return twMerge(clsx(inputs));
 }
 
 /** Genera contraseña robusta: 2 MAYUS + 4 DIGITS + 2 SPECIAL (!@#$%) */
