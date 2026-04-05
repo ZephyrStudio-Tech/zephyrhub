@@ -1,4 +1,3 @@
-// src/types/supabase.ts
 export type Json =
   | string
   | number
@@ -852,3 +851,10 @@ export type Database = {
     };
   };
 };
+
+// Helper types
+export type Tables<T extends keyof Database["public"]["Tables"]> =
+  Database["public"]["Tables"][T]["Row"];
+export type Enums<T extends keyof Database["public"]["Enums"]> =
+  Database["public"]["Enums"][T];
+export type ProfileRole = Database["public"]["Tables"]["profiles"]["Row"]["role"];
