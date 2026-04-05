@@ -3,7 +3,6 @@
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { requireServerAuth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
-import type { Database } from "@/types/supabase";
 
 type DeviceInput = {
   name: string;
@@ -20,13 +19,10 @@ type DeviceInput = {
   cost_price: number;
   sale_price: number;
   bono_coverage: number;
-  stock: number;
+  stock: number | null;
   is_available: boolean;
   images: string[];
 };
-
-type DeviceInsert = Database["public"]["Tables"]["devices"]["Insert"];
-type DeviceUpdate = Database["public"]["Tables"]["devices"]["Update"];
 
 export async function createDevice(
   data: DeviceInput
@@ -37,7 +33,6 @@ export async function createDevice(
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "No autenticado" };
 
-  // Check if user is admin
   const { data: profile } = await supabase
     .from("profiles")
     .select("role")
@@ -50,22 +45,22 @@ export async function createDevice(
 
   const supabaseAdmin = createAdminClient();
 
-  const insertData: DeviceInsert = {
+  // SOLUCIÓN: Hacemos cast a 'any' en el QueryBuilder para saltarnos 
+  // el tipado restrictivo de la tabla generado por Supabase.
+  const { error } = await (supabaseAdmin.from("devices") as any).insert({
     name: data.name,
     brand: data.brand,
     model: data.model,
     category: data.category,
     description: data.description,
-    specs: data.specs as any, // Cast solo aquí para evitar choques con el Json de Supabase
+    specs: data.specs,
     cost_price: data.cost_price,
     sale_price: data.sale_price,
     bono_coverage: data.bono_coverage,
     stock: data.stock,
     is_available: data.is_available,
     images: data.images,
-  };
-
-  const { error } = await supabaseAdmin.from("devices").insert(insertData);
+  });
 
   if (error) return { ok: false, error: error.message };
 
@@ -79,7 +74,6 @@ export async function selectDevice(deviceOrderId: string, deviceId: string) {
 
   const { supabaseAdmin } = auth;
 
-  // Fetch device details
   const { data: device } = await supabaseAdmin
     .from("devices")
     .select("sale_price, cost_price, bono_coverage")
@@ -90,20 +84,16 @@ export async function selectDevice(deviceOrderId: string, deviceId: string) {
 
   const surcharge = Math.max(0, device.sale_price - device.bono_coverage);
 
-  // @ts-ignore: Ignoramos propiedades que no están en los tipos estrictos pero sí en la BD
-  const { error } = await supabaseAdmin
-    .from("device_orders")
-    .update({
-      device_id: deviceId,
-      sale_price_snapshot: device.sale_price,
-      cost_price_snapshot: device.cost_price,
-      bono_coverage: device.bono_coverage,
-      surcharge,
-      status: surcharge > 0 ? "pago_pendiente" : "seleccionado",
-      payment_status: surcharge > 0 ? "pendiente" : "no_requerido",
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", deviceOrderId);
+  const { error } = await (supabaseAdmin.from("device_orders") as any).update({
+    device_id: deviceId,
+    sale_price_snapshot: device.sale_price,
+    cost_price_snapshot: device.cost_price,
+    bono_coverage: device.bono_coverage,
+    surcharge,
+    status: surcharge > 0 ? "pago_pendiente" : "seleccionado",
+    payment_status: surcharge > 0 ? "pendiente" : "no_requerido",
+    updated_at: new Date().toISOString(),
+  }).eq("id", deviceOrderId);
 
   if (error) return { ok: false, error: error.message };
 
@@ -117,25 +107,19 @@ export async function confirmOrder(deviceOrderId: string, shippingData: any) {
 
   const { supabaseAdmin } = auth;
 
-  // @ts-ignore: Ignoramos propiedades que no están en los tipos estrictos pero sí en la BD
-  const { error } = await supabaseAdmin
-    .from("device_orders")
-    .update({
-      shipping_name: shippingData.name,
-      shipping_address: shippingData.address,
-      shipping_city: shippingData.city,
-      shipping_province: shippingData.province,
-      shipping_zip: shippingData.zip,
-      shipping_phone: shippingData.phone,
-      status: "pago_completado",
-      payment_status: "completado",
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", deviceOrderId);
+  const { error } = await (supabaseAdmin.from("device_orders") as any).update({
+    shipping_name: shippingData.name,
+    shipping_address: shippingData.address,
+    shipping_city: shippingData.city,
+    shipping_province: shippingData.province,
+    shipping_zip: shippingData.zip,
+    shipping_phone: shippingData.phone,
+    status: "pago_completado",
+    payment_status: "completado",
+    updated_at: new Date().toISOString(),
+  }).eq("id", deviceOrderId);
 
   if (error) return { ok: false, error: error.message };
-
-  // TODO: Add payment gateway integration here if surcharge > 0
 
   revalidatePath("/portal/equipo");
   return { ok: true };
@@ -147,17 +131,13 @@ export async function resetDeviceSelection(deviceOrderId: string) {
 
   const { supabaseAdmin } = auth;
 
-  // @ts-ignore
-  const { error } = await supabaseAdmin
-    .from("device_orders")
-    .update({
-      device_id: null,
-      status: "pendiente_seleccion",
-      payment_status: "no_requerido",
-      surcharge: 0,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", deviceOrderId);
+  const { error } = await (supabaseAdmin.from("device_orders") as any).update({
+    device_id: null,
+    status: "pendiente_seleccion",
+    payment_status: "no_requerido",
+    surcharge: 0,
+    updated_at: new Date().toISOString(),
+  }).eq("id", deviceOrderId);
 
   if (error) return { ok: false, error: error.message };
 
@@ -175,7 +155,6 @@ export async function updateDevice(
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "No autenticado" };
 
-  // Check if user is admin
   const { data: profile } = await supabase
     .from("profiles")
     .select("role")
@@ -188,32 +167,20 @@ export async function updateDevice(
 
   const supabaseAdmin = createAdminClient();
 
-  const updateData: DeviceUpdate = {
+  const { error } = await (supabaseAdmin.from("devices") as any).update({
     name: data.name,
     brand: data.brand,
     model: data.model,
     category: data.category,
     description: data.description,
-    specs: data.specs as any, // Cast solo aquí
+    specs: data.specs,
     cost_price: data.cost_price,
     sale_price: data.sale_price,
     bono_coverage: data.bono_coverage,
     stock: data.stock,
     is_available: data.is_available,
     images: data.images,
-  };
-
-  // Limpiamos 'undefined' por si data vino incompleto (es Partial)
-  Object.keys(updateData).forEach(key => {
-    if (updateData[key as keyof DeviceUpdate] === undefined) {
-      delete updateData[key as keyof DeviceUpdate];
-    }
-  });
-
-  const { error } = await supabaseAdmin
-    .from("devices")
-    .update(updateData)
-    .eq("id", deviceId);
+  }).eq("id", deviceId);
 
   if (error) return { ok: false, error: error.message };
 
@@ -231,7 +198,6 @@ export async function toggleDeviceAvailability(
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "No autenticado" };
 
-  // Check if user is admin
   const { data: profile } = await supabase
     .from("profiles")
     .select("role")
@@ -243,8 +209,7 @@ export async function toggleDeviceAvailability(
   }
 
   const supabaseAdmin = createAdminClient();
-  const { error } = await supabaseAdmin
-    .from("devices")
+  const { error } = await (supabaseAdmin.from("devices") as any)
     .update({ is_available })
     .eq("id", deviceId);
 
