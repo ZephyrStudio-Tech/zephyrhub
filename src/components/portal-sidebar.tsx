@@ -14,6 +14,7 @@ export function PortalSidebar({ hasDevice }: { hasDevice?: boolean }) {
     { href: "/portal", label: "Inicio" },
     ...(hasDevice ? [{ href: "/portal/equipo", label: "Mi equipo" }] : []),
     { href: "/portal/soporte", label: "Centro de Ayuda" },
+    { href: "/portal/cuenta", label: "Mi cuenta" },
   ];
 
   const sidebarContent = (
