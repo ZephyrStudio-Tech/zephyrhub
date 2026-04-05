@@ -19,7 +19,7 @@ type DeviceInput = {
   cost_price: number;
   sale_price: number;
   bono_coverage: number;
-  stock: number | null;
+  stock: number;
   is_available: boolean;
   images: string[];
 };
