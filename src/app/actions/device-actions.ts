@@ -3,11 +3,7 @@
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { requireServerAuth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
-import type { Database } from "@/types/supabase";
-
-type DeviceInsert = Database["public"]["Tables"]["devices"]["Insert"];
-type DeviceUpdate = Database["public"]["Tables"]["devices"]["Update"];
-type DeviceOrderUpdate = Database["public"]["Tables"]["device_orders"]["Update"];
+import type { Json } from "@/types/supabase";
 
 type DeviceInput = {
   name: string;
@@ -15,7 +11,7 @@ type DeviceInput = {
   model: string | null;
   category: string;
   description: string | null;
-  specs: any;
+  specs: Json | null;
   cost_price: number;
   sale_price: number;
   bono_coverage: number;
@@ -33,24 +29,20 @@ export async function createDevice(data: DeviceInput): Promise<{ ok: boolean; er
   if ((profile as any)?.role !== "admin") return { ok: false, error: "Solo los administradores pueden crear dispositivos" };
 
   const supabaseAdmin = createAdminClient();
-
-  // Tipado estricto para evitar que colapse a 'never'
-  const insertData: DeviceInsert = {
+  const { error } = await supabaseAdmin.from("devices").insert({
     name: data.name,
     brand: data.brand,
     model: data.model,
     category: data.category,
     description: data.description,
-    specs: data.specs as Database["public"]["Tables"]["devices"]["Insert"]["specs"],
+    specs: data.specs,
     cost_price: data.cost_price,
     sale_price: data.sale_price,
     bono_coverage: data.bono_coverage,
     stock: data.stock,
     is_available: data.is_available,
     images: data.images,
-  };
-
-  const { error } = await supabaseAdmin.from("devices").insert(insertData);
+  });
 
   if (error) return { ok: false, error: error.message };
   revalidatePath("/backoffice/devices");
@@ -67,7 +59,7 @@ export async function selectDevice(deviceOrderId: string, deviceId: string) {
 
   const surcharge = Math.max(0, device.sale_price - device.bono_coverage);
 
-  const updateData: DeviceOrderUpdate = {
+  const { error } = await supabaseAdmin.from("device_orders").update({
     device_id: deviceId,
     sale_price_snapshot: device.sale_price,
     cost_price_snapshot: device.cost_price,
@@ -76,9 +68,7 @@ export async function selectDevice(deviceOrderId: string, deviceId: string) {
     status: surcharge > 0 ? "pago_pendiente" : "seleccionado",
     payment_status: surcharge > 0 ? "pendiente" : "no_requerido",
     updated_at: new Date().toISOString(),
-  };
-
-  const { error } = await supabaseAdmin.from("device_orders").update(updateData).eq("id", deviceOrderId);
+  }).eq("id", deviceOrderId);
 
   if (error) return { ok: false, error: error.message };
   revalidatePath("/portal/equipo");
@@ -90,8 +80,7 @@ export async function confirmOrder(deviceOrderId: string, shippingData: any) {
   if (auth.error) return { ok: false, error: auth.error };
 
   const { supabaseAdmin } = auth;
-
-  const updateData: DeviceOrderUpdate = {
+  const { error } = await supabaseAdmin.from("device_orders").update({
     shipping_name: shippingData.name,
     shipping_address: shippingData.address,
     shipping_city: shippingData.city,
@@ -101,9 +90,7 @@ export async function confirmOrder(deviceOrderId: string, shippingData: any) {
     status: "pago_completado",
     payment_status: "completado",
     updated_at: new Date().toISOString(),
-  };
-
-  const { error } = await supabaseAdmin.from("device_orders").update(updateData).eq("id", deviceOrderId);
+  }).eq("id", deviceOrderId);
 
   if (error) return { ok: false, error: error.message };
   revalidatePath("/portal/equipo");
@@ -115,16 +102,13 @@ export async function resetDeviceSelection(deviceOrderId: string) {
   if (auth.error) return { ok: false, error: auth.error };
 
   const { supabaseAdmin } = auth;
-
-  const updateData: DeviceOrderUpdate = {
+  const { error } = await supabaseAdmin.from("device_orders").update({
     device_id: null,
     status: "pendiente_seleccion",
     payment_status: "no_requerido",
     surcharge: 0,
     updated_at: new Date().toISOString(),
-  };
-
-  const { error } = await supabaseAdmin.from("device_orders").update(updateData).eq("id", deviceOrderId);
+  }).eq("id", deviceOrderId);
 
   if (error) return { ok: false, error: error.message };
   revalidatePath("/portal/equipo");
@@ -141,27 +125,9 @@ export async function updateDevice(deviceId: string, data: Partial<DeviceInput>)
 
   const supabaseAdmin = createAdminClient();
 
-  const updateData: DeviceUpdate = {
-    name: data.name,
-    brand: data.brand,
-    model: data.model,
-    category: data.category,
-    description: data.description,
-    specs: data.specs as Database["public"]["Tables"]["devices"]["Update"]["specs"],
-    cost_price: data.cost_price,
-    sale_price: data.sale_price,
-    bono_coverage: data.bono_coverage,
-    stock: data.stock,
-    is_available: data.is_available,
-    images: data.images,
-  };
-
-  // Limpiamos 'undefined' por ser actualización parcial
-  Object.keys(updateData).forEach(key => {
-    if (updateData[key as keyof DeviceUpdate] === undefined) {
-      delete updateData[key as keyof DeviceUpdate];
-    }
-  });
+  // Limpiamos undefined para actualización parcial
+  const updateData = { ...data };
+  Object.keys(updateData).forEach(key => updateData[key as keyof DeviceInput] === undefined && delete updateData[key as keyof DeviceInput]);
 
   const { error } = await supabaseAdmin.from("devices").update(updateData).eq("id", deviceId);
 
@@ -179,9 +145,7 @@ export async function toggleDeviceAvailability(deviceId: string, is_available: b
   if ((profile as any)?.role !== "admin") return { ok: false, error: "Solo los administradores pueden modificar dispositivos" };
 
   const supabaseAdmin = createAdminClient();
-
-  const updateData: DeviceUpdate = { is_available };
-  const { error } = await supabaseAdmin.from("devices").update(updateData).eq("id", deviceId);
+  const { error } = await supabaseAdmin.from("devices").update({ is_available }).eq("id", deviceId);
 
   if (error) return { ok: false, error: error.message };
   revalidatePath("/backoffice/devices");
