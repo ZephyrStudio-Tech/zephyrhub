@@ -34,14 +34,13 @@ export async function createDevice(
   if (!user) return { ok: false, error: "No autenticado" };
 
   // Check if user is admin
-  type ProfileRow = { role: string };
   const { data: profile } = await supabase
     .from("profiles")
     .select("role")
     .eq("id", user.id)
-    .single() as { data: ProfileRow | null; error: unknown };
+    .single();
 
-  if (profile?.role !== "admin") {
+  if ((profile as any)?.role !== "admin") {
     return { ok: false, error: "Solo los administradores pueden crear dispositivos" };
   }
 
@@ -167,14 +166,13 @@ export async function updateDevice(
   if (!user) return { ok: false, error: "No autenticado" };
 
   // Check if user is admin
-  type ProfileRow = { role: string };
   const { data: profile } = await supabase
     .from("profiles")
     .select("role")
     .eq("id", user.id)
-    .single() as { data: ProfileRow | null; error: unknown };
+    .single();
 
-  if (profile?.role !== "admin") {
+  if ((profile as any)?.role !== "admin") {
     return { ok: false, error: "Solo los administradores pueden editar dispositivos" };
   }
 
@@ -214,14 +212,13 @@ export async function toggleDeviceAvailability(
   if (!user) return { ok: false, error: "No autenticado" };
 
   // Check if user is admin
-  type ProfileRow = { role: string };
   const { data: profile } = await supabase
     .from("profiles")
     .select("role")
     .eq("id", user.id)
-    .single() as { data: ProfileRow | null; error: unknown };
+    .single();
 
-  if (profile?.role !== "admin") {
+  if ((profile as any)?.role !== "admin") {
     return { ok: false, error: "Solo los administradores pueden modificar dispositivos" };
   }
 

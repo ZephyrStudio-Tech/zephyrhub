@@ -15,29 +15,22 @@ export async function generateAgreement(
 
   const { user, role, supabaseAdmin } = auth;
 
-  type ClientRow = {
-    id: string;
-    company_name: string | null;
-    service_type: string | null;
-    consultant_id: string | null;
-  };
-
   const supabase = await createClient();
   const { data: client, error: clientErr } = await supabase
     .from("clients")
     .select("id, company_name, service_type, consultant_id")
     .eq("id", clientId)
-    .single() as { data: ClientRow | null; error: unknown };
+    .single();
 
   if (clientErr || !client)
     return { ok: false, error: "Cliente no encontrado" };
 
-  if (role === "consultor" && client.consultant_id !== user.id) {
+  if (role === "consultor" && (client as any).consultant_id !== user.id) {
     return { ok: false, error: "Sin permiso" };
   }
 
-  const companyName = (client.company_name as string) || "Cliente";
-  const serviceType = (client.service_type as ServiceType) ?? "web";
+  const companyName = ((client as any).company_name as string) || "Cliente";
+  const serviceType = ((client as any).service_type as ServiceType) ?? "web";
   const date = new Date().toLocaleDateString("es");
 
   let buffer: Buffer;
