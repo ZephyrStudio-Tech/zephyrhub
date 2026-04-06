@@ -65,9 +65,9 @@ export type Database = {
         Update: { id?: string; client_id?: string; actor_id?: string; type?: string; metadata?: Json | null; created_at?: string | null; };
       };
       payments: {
-        Row: { id: string; client_id: string; contract_type: string; phase: string; expected_amount: number; received_amount: number | null; received_at: string | null; agent_commission: number | null; notes: string | null; created_at: string | null; updated_at: string | null; };
-        Insert: { id?: string; client_id: string; contract_type: string; phase: string; expected_amount: number; received_amount?: number | null; received_at?: string | null; agent_commission?: number | null; notes?: string | null; created_at?: string | null; updated_at?: string | null; };
-        Update: { id?: string; client_id?: string; contract_type?: string; phase?: string; expected_amount?: number; received_amount?: number | null; received_at?: string | null; agent_commission?: number | null; notes?: string | null; created_at?: string | null; updated_at?: string | null; };
+        Row: { id: string; client_id: string; contract_type: "web" | "ecommerce"; phase: "fase_i" | "fase_ii"; expected_amount: number; received_amount: number | null; received_at: string | null; agent_commission: number | null; notes: string | null; created_at: string | null; updated_at: string | null; };
+        Insert: { id?: string; client_id: string; contract_type: "web" | "ecommerce"; phase: "fase_i" | "fase_ii"; expected_amount: number; received_amount?: number | null; received_at?: string | null; agent_commission?: number | null; notes?: string | null; created_at?: string | null; updated_at?: string | null; };
+        Update: { id?: string; client_id?: string; contract_type?: "web" | "ecommerce"; phase?: "fase_i" | "fase_ii"; expected_amount?: number; received_amount?: number | null; received_at?: string | null; agent_commission?: number | null; notes?: string | null; created_at?: string | null; updated_at?: string | null; };
       };
       profiles: {
         Row: { id: string; role: string; full_name: string | null; email: string | null; created_at: string | null; updated_at: string | null; };

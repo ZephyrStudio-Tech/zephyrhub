@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { updateInternalUserRole } from "@/app/actions/client-actions";
+import { updateInternalUserRole } from "@/app/actions/user-actions";
 import {
   Users,
   UserPlus,
