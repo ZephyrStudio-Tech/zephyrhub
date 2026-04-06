@@ -287,6 +287,12 @@ export async function moveToConsultoria(
     return { ok: false, error: insertClientErr.message };
   }
 
+  // Marcar lead como completado para que desaparezca de preconsultoría
+  await supabaseAdmin
+    .from("triage_leads")
+    .update({ status: "completed" })
+    .eq("id", leadId);
+
   // Obtener el id del cliente recién creado
   const { data: newClient } = await supabaseAdmin
     .from("clients")
