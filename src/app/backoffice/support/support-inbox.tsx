@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Search, Filter, MoreVertical } from "lucide-react";
 import { deleteTicket } from "@/app/actions/help-center";
@@ -78,7 +79,7 @@ export function SupportInbox({ tickets: initialTickets }: { tickets: Ticket[] })
     const res = await deleteTicket(id);
     if (!res.ok) {
       setTickets(originalTickets);
-      alert(res.error);
+      toast.error(res.error);
     } else {
       router.refresh();
     }

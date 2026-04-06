@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { createTutorial, updateTutorial, deleteTutorial } from "@/app/actions/help-center";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -120,7 +121,7 @@ export function AcademyCMS({ tutorials: initialTutorials }: { tutorials: Tutoria
       router.refresh();
       // En un entorno ideal aquí haríamos fetch de nuevo o actualizaríamos localmente
     } else {
-      alert(res.error);
+      toast.error(res.error);
     }
   }
 
@@ -134,7 +135,7 @@ export function AcademyCMS({ tutorials: initialTutorials }: { tutorials: Tutoria
     const res = await deleteTutorial(id);
     if (!res.ok) {
       setTutorials(original);
-      alert(res.error);
+      toast.error(res.error);
     } else {
       router.refresh();
     }
@@ -375,7 +376,7 @@ export function AcademyCMS({ tutorials: initialTutorials }: { tutorials: Tutoria
                         const ext = file.name.split(".").pop() || "jpg";
                         const path = `covers/${Date.now()}.${ext}`;
                         const { error: upErr } = await supabase.storage.from("academy").upload(path, file);
-                        if (upErr) { alert(upErr.message); setUploadingCover(false); return; }
+                        if (upErr) { toast.error(upErr.message); setUploadingCover(false); return; }
                         const { data } = supabase.storage.from("academy").getPublicUrl(path);
                         setForm((f) => ({ ...f, cover_image: data.publicUrl }));
                         setUploadingCover(false);

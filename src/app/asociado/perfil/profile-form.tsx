@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { updateAssociateProfile } from "@/app/actions/referral-actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,9 +26,9 @@ export function ProfileForm({ associate }: { associate: any }) {
 
     if (res.ok) {
       router.refresh();
-      alert("Perfil actualizado correctamente");
+      toast.success("Perfil actualizado correctamente");
     } else {
-      alert(res.error);
+      toast.error(res.error);
     }
   }
 

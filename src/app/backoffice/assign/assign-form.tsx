@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { assignConsultant } from "@/app/actions/client-actions";
 import { Button } from "@/components/ui/button";
 
@@ -36,7 +37,7 @@ export function AssignConsultantForm({
     if (res.ok) {
       router.refresh();
     } else {
-      alert(res.error);
+      toast.error(res.error);
     }
   }
 

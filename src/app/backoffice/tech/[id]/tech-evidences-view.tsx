@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,7 +42,7 @@ export function TechEvidencesView({
       .upload(path, file, { upsert: false });
 
     if (error) {
-      alert(error.message);
+      toast.error(error.message);
       setUploading(null);
       return;
     }
@@ -79,9 +80,9 @@ export function TechEvidencesView({
       });
       const data = await res.json();
       if (data.zip_url) window.open(data.zip_url, "_blank");
-      else alert(data.message || "Función desplegada. Implementar ZIP completo en Edge Function.");
+      else toast.error(data.message || "Función desplegada. Implementar ZIP completo en Edge Function.");
     } catch (e) {
-      alert(String(e));
+      toast.error(String(e));
     }
     setPackaging(false);
   }

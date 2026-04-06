@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { updateInternalUserRole } from "@/app/actions/client-actions";
 import {
   Users,
@@ -43,7 +44,7 @@ export function UsersManagementView({
 
   const handleRoleChange = async (userId: string, newRole: string) => {
     const res = await updateInternalUserRole(userId, newRole);
-    if (!res.ok) alert(res.error);
+    if (!res.ok) toast.error(res.error);
     else router.refresh();
   };
 
