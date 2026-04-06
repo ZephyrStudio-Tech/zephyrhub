@@ -29,7 +29,8 @@ export function NewInternalUserModal() {
     const formData = new FormData(e.currentTarget);
     const data = Object.fromEntries(formData.entries());
 
-    const res = await createInternalUser(data);
+    // Le añadimos "as any" para que TypeScript no se queje del tipo de los campos del formulario
+    const res = await createInternalUser(data as any);
     setLoading(false);
     if (res.ok) {
       toastSuccess("Usuario creado correctamente");
@@ -55,7 +56,7 @@ export function NewInternalUserModal() {
           <CardTitle className="text-xl flex items-center gap-2">
             <ShieldCheck className="w-5 h-5 text-brand-600" /> Nuevo miembro del equipo
           </CardTitle>
-          <button onClick={() => setIsOpen(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+          <button type="button" onClick={() => setIsOpen(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
             <X className="w-5 h-5" />
           </button>
         </CardHeader>
