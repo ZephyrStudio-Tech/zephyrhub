@@ -84,11 +84,6 @@ export type Database = {
         Insert: { id?: string; client_id?: string | null; user_id?: string | null; category: string; message?: string | null; created_at?: string | null; status?: string | null; admin_reply?: string | null; updated_at?: string | null; };
         Update: { id?: string; client_id?: string | null; user_id?: string | null; category?: string; message?: string | null; created_at?: string | null; status?: string | null; admin_reply?: string | null; updated_at?: string | null; };
       };
-      tech_evidences: {
-        Row: { id: string; client_id: string; checklist_key: string; storage_path: string; uploaded_by: string; uploaded_at: string | null; created_at: string | null; };
-        Insert: { id?: string; client_id: string; checklist_key: string; storage_path: string; uploaded_by: string; uploaded_at?: string | null; created_at?: string | null; };
-        Update: { id?: string; client_id?: string; checklist_key?: string; storage_path?: string; uploaded_by?: string; uploaded_at?: string | null; created_at?: string | null; };
-      };
       ticket_messages: {
         Row: { id: string; ticket_id: string | null; sender_id: string | null; sender_role: string; message: string; attachment_url: string | null; created_at: string | null; };
         Insert: { id?: string; ticket_id?: string | null; sender_id?: string | null; sender_role: string; message: string; attachment_url?: string | null; created_at?: string | null; };

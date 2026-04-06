@@ -7,6 +7,7 @@ import {
   getClientDetail,
   updateClientContactInfo,
   toggleHasDevice,
+  assignConsultant,
 } from "@/app/actions/client-actions";
 import { updateContractState } from "@/app/actions/contract-actions";
 import { updateDeviceOrderStatus, updateDeviceOrderTracking } from "@/app/actions/device-order-actions";
@@ -45,6 +46,7 @@ import {
   Users
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import { PIPELINE_STATE_LABELS, PRECONSULTORIA_STATE_LABELS } from "@/lib/state-machine/constants";
 import { toastError, toastSuccess } from "@/lib/toast";
 
@@ -62,6 +64,9 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
   const [isPending, startTransition] = useTransition();
   const [saving, setSaving] = useState(false);
   const [leadInteractions, setLeadInteractions] = useState<any[]>([]);
+  const [consultants, setConsultants] = useState<{id: string, full_name: string | null, email: string | null}[]>([]);
+  const [selectedConsultantId, setSelectedConsultantId] = useState<string | null>(null);
+  const [assigningConsultant, setAssigningConsultant] = useState(false);
 
   const [editForm, setEditForm] = useState({
     full_name: "",
@@ -117,6 +122,7 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
         cif: d.cif || "",
         notes: d.service_description || ""
       });
+      setSelectedConsultantId(d.consultant_id || null);
     } else if (mode === 'lead' && leadData) {
       setEditForm({
         full_name: leadData.full_name || "",
@@ -128,6 +134,20 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
       fetchLeadInteractions();
     }
   }, [clientData, leadData, mode, fetchLeadInteractions]);
+
+  // Load consultants when mode is 'client'
+  useEffect(() => {
+    if (mode === 'client') {
+      const supabase = createClient();
+      supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .eq("role", "consultor")
+        .then(({ data }) => {
+          setConsultants(data || []);
+        });
+    }
+  }, [mode]);
 
   const refreshData = useCallback(async () => {
     if (mode === 'client') {
@@ -309,7 +329,44 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
                     value={editForm.notes}
                     onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))}
                   />
-                  <div className="flex justify-end">
+                </div>
+
+                {mode === 'client' && (
+                  <div className="space-y-2 pt-4 border-t border-slate-50">
+                    <Label className="text-[10px] uppercase text-slate-400 font-bold">Consultor asignado</Label>
+                    <select
+                      value={selectedConsultantId || "none"}
+                      onChange={async (e) => {
+                        const value = e.target.value;
+                        setAssigningConsultant(true);
+                        const res = await assignConsultant(
+                          client.id,
+                          value === "none" ? null : value
+                        );
+                        setAssigningConsultant(false);
+                        
+                        if (res.ok) {
+                          toast.success("Consultor asignado");
+                          setSelectedConsultantId(value === "none" ? null : value);
+                          await refreshData();
+                        } else {
+                          toast.error(res.error || "Error al asignar consultor");
+                        }
+                      }}
+                      disabled={assigningConsultant}
+                      className="w-full rounded-xl border border-slate-100 bg-slate-50/50 px-3 h-9 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <option value="none">Sin asignar</option>
+                      {consultants.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.full_name} ({c.email})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                  <div className="flex justify-end pt-4">
                     <Button
                       size="sm"
                       className="rounded-xl h-9 font-bold px-6"
@@ -320,7 +377,6 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
                       Guardar cambios
                     </Button>
                   </div>
-                </div>
               </CardContent>
             </Card>
 
