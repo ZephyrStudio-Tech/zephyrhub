@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -348,9 +349,7 @@ export function BackofficeTicketView({
                       setMessages((prev) => prev.filter((m) => m.id !== tempId));
                       const message = res.error ?? "No se pudo enviar el mensaje.";
                       setError(message);
-                      if (typeof window !== "undefined") {
-                        window.alert(message);
-                      }
+                      toast.error(message);
                     }
                   });
                 }}

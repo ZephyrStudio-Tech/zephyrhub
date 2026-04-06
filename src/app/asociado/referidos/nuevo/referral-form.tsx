@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { createReferral } from "@/app/actions/referral-actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -37,7 +38,7 @@ export function NewReferralForm() {
     if (res.ok) {
       router.push("/asociado/referidos");
     } else {
-      alert(res.error);
+      toast.error(res.error);
     }
   }
 

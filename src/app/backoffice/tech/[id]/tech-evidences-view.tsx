@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,7 +29,6 @@ export function TechEvidencesView({
 }) {
   const router = useRouter();
   const [uploading, setUploading] = useState<string | null>(null);
-  const [packaging, setPackaging] = useState(false);
   const supabase = createClient();
 
   async function handleUpload(checklistKey: string, file: File) {
@@ -41,7 +41,7 @@ export function TechEvidencesView({
       .upload(path, file, { upsert: false });
 
     if (error) {
-      alert(error.message);
+      toast.error(error.message);
       setUploading(null);
       return;
     }
@@ -61,29 +61,6 @@ export function TechEvidencesView({
 
     setUploading(null);
     router.refresh();
-  }
-
-  async function handlePackage() {
-    setPackaging(true);
-    const { data: { session } } = await supabase.auth.getSession();
-    const token = session?.access_token;
-    const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/package-evidencias`;
-    try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ client_id: clientId }),
-      });
-      const data = await res.json();
-      if (data.zip_url) window.open(data.zip_url, "_blank");
-      else alert(data.message || "Función desplegada. Implementar ZIP completo en Edge Function.");
-    } catch (e) {
-      alert(String(e));
-    }
-    setPackaging(false);
   }
 
   const evidenceByKey = new Map(evidences.map((e) => [e.checklist_key, e]));
@@ -128,13 +105,6 @@ export function TechEvidencesView({
               </div>
             );
           })}
-          <Button
-            className="mt-4"
-            onClick={handlePackage}
-            disabled={packaging}
-          >
-            {packaging ? "Empaquetando…" : "Empaquetar evidencias (ZIP)"}
-          </Button>
         </CardContent>
       </Card>
     </div>

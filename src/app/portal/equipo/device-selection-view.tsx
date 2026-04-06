@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   selectDevice,
   confirmOrder,
@@ -77,7 +78,7 @@ export function DeviceSelectionView({
       if (res.ok) {
         setViewingDevice(null);
         router.refresh();
-      } else alert(res.error);
+      } else toast.error(res.error);
     });
   }
 
@@ -89,7 +90,7 @@ export function DeviceSelectionView({
     startTransition(async () => {
       const res = await confirmOrder(order.id, data);
       if (res.ok) router.refresh();
-      else alert(res.error);
+      else toast.error(res.error);
     });
   }
 
@@ -97,7 +98,7 @@ export function DeviceSelectionView({
     startTransition(async () => {
       const res = await resetDeviceSelection(order.id);
       if (res.ok) router.refresh();
-      else alert(res.error);
+      else toast.error(res.error);
     });
   }
 

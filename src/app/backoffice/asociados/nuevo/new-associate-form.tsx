@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { createAssociateAction } from "@/app/actions/referral-actions";
 import { generateStaffPassword } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,7 +33,7 @@ export function NewAssociateForm() {
     if (res.ok) {
       router.push("/backoffice/asociados");
     } else {
-      alert(res.error);
+      toast.error(res.error);
     }
   }
 

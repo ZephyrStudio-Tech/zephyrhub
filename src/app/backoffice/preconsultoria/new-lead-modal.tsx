@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { createTriageLead } from "@/app/actions/triage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,7 +27,7 @@ export function NewLeadModal() {
       setIsOpen(false);
       router.refresh();
     } else {
-      alert(res.error);
+      toast.error(res.error);
     }
   }
 
