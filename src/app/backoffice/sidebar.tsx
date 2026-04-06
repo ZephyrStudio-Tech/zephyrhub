@@ -17,7 +17,6 @@ const NAV = {
     { href: "/backoffice/consultoria", label: "Consultoría" },
     { href: "/backoffice/support", label: "Soporte" },
     { href: "/backoffice/academy", label: "Academia" },
-    { href: "/backoffice/tech", label: "Evidencias" },
     { href: "/backoffice/devices", label: "Catálogo" },
     { href: "/backoffice/logs", label: "Logs" },
     { href: "/backoffice/assign", label: "Asignar consultores" },
@@ -35,7 +34,6 @@ const NAV = {
     { href: "/backoffice/preconsultoria", label: "Preconsultoría" },
     { href: "/backoffice/consultoria", label: "Consultoría" },
     { href: "/backoffice/support", label: "Soporte" },
-    { href: "/backoffice/tech", label: "Evidencias" },
   ],
 } as const;
 
