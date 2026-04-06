@@ -5,6 +5,8 @@ import { requireServerAuth } from "@/lib/auth";
 import { createUserWithProfile } from "@/lib/create-user";
 import { revalidatePath } from "next/cache";
 
+import { createClient } from "@/lib/supabase/server";
+
 const PRECONSULTORIA_STATES = [
   "nuevo_lead",
   "no_contesta",
@@ -243,7 +245,7 @@ export async function moveToConsultoria(
   } else {
     // User doesn't exist - create new one
     password = generatePassword();
-    
+
     const userResult = await createUserWithProfile(supabaseAdmin, {
       email: lead.email,
       password,

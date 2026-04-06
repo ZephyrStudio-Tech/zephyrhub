@@ -86,8 +86,8 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
     staleTime: 30000,
   });
 
-  // Combine data from query or leadData
-  const data = mode === 'client' ? clientData : { client: leadData };
+  // Combine data from query or leadData (Añadido el : any para solucionar el tipado estricto)
+  const data: any = mode === 'client' ? clientData : { client: leadData };
   const loading = mode === 'client' && clientLoading;
 
   const fetchLeadInteractions = useCallback(async () => {
@@ -166,7 +166,7 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
         service_description: editForm.notes
       });
     } else {
-       res = { ok: true };
+      res = { ok: true };
     }
 
     if (res && res.ok) {
@@ -231,7 +231,7 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
                     ? await updateTriageLeadState(client.id, toState)
                     : await transitionClientState(client.id, toState);
                   if (res && res.ok) {
-                      refreshData();
+                    refreshData();
                   }
                 }}
               >
@@ -328,98 +328,98 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
               <>
                 {/* Documentation Section */}
                 <Card className="border-slate-100 shadow-sm overflow-hidden">
-                   <CardHeader className="bg-slate-50/50 border-b border-slate-100 py-4 flex flex-row items-center justify-between">
-                      <CardTitle className="text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                        <FileText className="w-4 h-4" /> Vault (documentación)
-                      </CardTitle>
-                      <span className="text-[10px] font-bold bg-brand-100 text-brand-700 px-2 py-0.5 rounded-full uppercase">{client.service_type}</span>
-                   </CardHeader>
-                   <CardContent className="p-0">
-                      <div className="divide-y divide-slate-50">
-                        {data.slots?.map((slot: any) => {
-                          const doc = data.documents?.find((d: any) => d.slot_type === slot.key);
-                          return (
-                            <div key={slot.key} className="p-4 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
-                               <div>
-                                  <p className="text-sm font-bold text-slate-700">{slot.label}</p>
-                                  <p className="text-[10px] text-slate-400">{doc ? `v${doc.version} · Subido el ${new Date(doc.uploaded_at).toLocaleDateString()}` : "Sin subir"}</p>
-                               </div>
-                               <div className="flex items-center gap-2">
-                                  {doc ? (
-                                    <span className={cn(
-                                      "text-[10px] font-bold px-2 py-1 rounded-lg uppercase border",
-                                      doc.status === 'approved' ? "bg-emerald-50 text-emerald-700 border-emerald-100" :
-                                      doc.status === 'rejected' ? "bg-red-50 text-red-700 border-red-100" : "bg-amber-50 text-amber-700 border-amber-100"
-                                    )}>
-                                      {doc.status}
-                                    </span>
-                                  ) : (
-                                    <span className="text-[10px] font-bold text-slate-300 uppercase">Pendiente</span>
-                                  )}
-                                  <ChevronRight className="w-4 h-4 text-slate-300" />
-                               </div>
+                  <CardHeader className="bg-slate-50/50 border-b border-slate-100 py-4 flex flex-row items-center justify-between">
+                    <CardTitle className="text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                      <FileText className="w-4 h-4" /> Vault (documentación)
+                    </CardTitle>
+                    <span className="text-[10px] font-bold bg-brand-100 text-brand-700 px-2 py-0.5 rounded-full uppercase">{client.service_type}</span>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="divide-y divide-slate-50">
+                      {data.slots?.map((slot: any) => {
+                        const doc = data.documents?.find((d: any) => d.slot_type === slot.key);
+                        return (
+                          <div key={slot.key} className="p-4 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
+                            <div>
+                              <p className="text-sm font-bold text-slate-700">{slot.label}</p>
+                              <p className="text-[10px] text-slate-400">{doc ? `v${doc.version} · Subido el ${new Date(doc.uploaded_at).toLocaleDateString()}` : "Sin subir"}</p>
                             </div>
-                          );
-                        })}
-                      </div>
-                   </CardContent>
+                            <div className="flex items-center gap-2">
+                              {doc ? (
+                                <span className={cn(
+                                  "text-[10px] font-bold px-2 py-1 rounded-lg uppercase border",
+                                  doc.status === 'approved' ? "bg-emerald-50 text-emerald-700 border-emerald-100" :
+                                    doc.status === 'rejected' ? "bg-red-50 text-red-700 border-red-100" : "bg-amber-50 text-amber-700 border-amber-100"
+                                )}>
+                                  {doc.status}
+                                </span>
+                              ) : (
+                                <span className="text-[10px] font-bold text-slate-300 uppercase">Pendiente</span>
+                              )}
+                              <ChevronRight className="w-4 h-4 text-slate-300" />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
                 </Card>
 
                 {/* Contracts Section */}
                 <Card className="border-slate-100 shadow-sm overflow-hidden">
-                   <CardHeader className="bg-slate-50/50 border-b border-slate-100 py-4">
-                      <CardTitle className="text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                        <FileText className="w-4 h-4" /> Contratos Red.es
-                      </CardTitle>
-                   </CardHeader>
-                   <CardContent className="p-4">
-                      <div className="grid gap-3">
-                        {data.contracts?.map((c: any) => (
-                          <div key={c.id} className="flex items-center justify-between p-3 rounded-2xl bg-white border border-slate-100 shadow-sm">
-                            <span className="text-xs font-bold text-slate-700 uppercase">Contrato {c.type}</span>
-                            <span className="text-xs bg-brand-50 text-brand-700 px-3 py-1 rounded-full font-bold">{c.current_state}</span>
-                          </div>
-                        ))}
-                      </div>
-                   </CardContent>
+                  <CardHeader className="bg-slate-50/50 border-b border-slate-100 py-4">
+                    <CardTitle className="text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                      <FileText className="w-4 h-4" /> Contratos Red.es
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4">
+                    <div className="grid gap-3">
+                      {data.contracts?.map((c: any) => (
+                        <div key={c.id} className="flex items-center justify-between p-3 rounded-2xl bg-white border border-slate-100 shadow-sm">
+                          <span className="text-xs font-bold text-slate-700 uppercase">Contrato {c.type}</span>
+                          <span className="text-xs bg-brand-50 text-brand-700 px-3 py-1 rounded-full font-bold">{c.current_state}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
                 </Card>
 
                 {/* Payments Section */}
                 <Card className="border-slate-100 shadow-sm overflow-hidden">
-                   <CardHeader className="bg-slate-50/50 border-b border-slate-100 py-4">
-                      <CardTitle className="text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                        <CreditCard className="w-4 h-4" /> Pagos
-                      </CardTitle>
-                   </CardHeader>
-                   <CardContent className="p-4">
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-xs">
-                          <thead>
-                             <tr className="text-slate-400 border-b border-slate-50">
-                               <th className="text-left font-bold py-2">CONCEPTO</th>
-                               <th className="text-right font-bold py-2">IMPORTE</th>
-                               <th className="text-center font-bold py-2">ESTADO</th>
-                             </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-50">
-                             {data.payments?.map((p: any) => (
-                               <tr key={p.id}>
-                                 <td className="py-3 font-medium text-slate-600">{p.contract_type} - {p.phase}</td>
-                                 <td className="py-3 text-right font-bold text-slate-900">€{p.expected_amount}</td>
-                                 <td className="py-3 text-center">
-                                    <span className={cn(
-                                      "px-2 py-0.5 rounded-full font-bold",
-                                      p.received_amount ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"
-                                    )}>
-                                      {p.received_amount ? "Pagado" : "Pendiente"}
-                                    </span>
-                                 </td>
-                               </tr>
-                             ))}
-                          </tbody>
-                        </table>
-                      </div>
-                   </CardContent>
+                  <CardHeader className="bg-slate-50/50 border-b border-slate-100 py-4">
+                    <CardTitle className="text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                      <CreditCard className="w-4 h-4" /> Pagos
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="text-slate-400 border-b border-slate-50">
+                            <th className="text-left font-bold py-2">CONCEPTO</th>
+                            <th className="text-right font-bold py-2">IMPORTE</th>
+                            <th className="text-center font-bold py-2">ESTADO</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                          {data.payments?.map((p: any) => (
+                            <tr key={p.id}>
+                              <td className="py-3 font-medium text-slate-600">{p.contract_type} - {p.phase}</td>
+                              <td className="py-3 text-right font-bold text-slate-900">€{p.expected_amount}</td>
+                              <td className="py-3 text-center">
+                                <span className={cn(
+                                  "px-2 py-0.5 rounded-full font-bold",
+                                  p.received_amount ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"
+                                )}>
+                                  {p.received_amount ? "Pagado" : "Pendiente"}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
                 </Card>
               </>
             )}
@@ -434,11 +434,11 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
                 <CardContent className="p-6">
                   {data?.deviceOrders?.[0] ? (
                     <div className="flex items-center justify-between">
-                       <div className="space-y-1">
-                          <p className="text-sm font-bold text-slate-800">{data.deviceOrders[0].status}</p>
-                          <p className="text-xs text-slate-500">Tracking: {data.deviceOrders[0].tracking_number || "Pendiente"}</p>
-                       </div>
-                       <Button size="sm" variant="outline" className="rounded-xl">Gestionar pedido</Button>
+                      <div className="space-y-1">
+                        <p className="text-sm font-bold text-slate-800">{data.deviceOrders[0].status}</p>
+                        <p className="text-xs text-slate-500">Tracking: {data.deviceOrders[0].tracking_number || "Pendiente"}</p>
+                      </div>
+                      <Button size="sm" variant="outline" className="rounded-xl">Gestionar pedido</Button>
                     </div>
                   ) : (
                     <p className="text-sm text-slate-500 italic">No se ha generado pedido aún.</p>
@@ -524,23 +524,23 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
 
           {/* Footer Form */}
           <footer className="p-6 bg-slate-50 border-t border-slate-100">
-             <div className="space-y-3">
-                <textarea
-                  className="w-full rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all shadow-sm"
-                  placeholder="Añadir nota interna..."
-                  rows={3}
-                  value={note}
-                  onChange={e => setNote(e.target.value)}
-                />
-                <Button
-                  className="w-full rounded-xl h-11 font-bold shadow-lg shadow-brand-100"
-                  disabled={!note.trim() || sendingNote}
-                  onClick={handleAddNote}
-                >
-                  {sendingNote ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
-                  Añadir nota
-                </Button>
-             </div>
+            <div className="space-y-3">
+              <textarea
+                className="w-full rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all shadow-sm"
+                placeholder="Añadir nota interna..."
+                rows={3}
+                value={note}
+                onChange={e => setNote(e.target.value)}
+              />
+              <Button
+                className="w-full rounded-xl h-11 font-bold shadow-lg shadow-brand-100"
+                disabled={!note.trim() || sendingNote}
+                onClick={handleAddNote}
+              >
+                {sendingNote ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
+                Añadir nota
+              </Button>
+            </div>
           </footer>
         </div>
       </div>
