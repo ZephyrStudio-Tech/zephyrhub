@@ -7,9 +7,6 @@ export type Json =
   | Json[];
 
 export type Database = {
-  __InternalSupabase: {
-    PostgrestVersion: "12";
-  };
   public: {
     Tables: {
       academy_content: {
@@ -105,7 +102,7 @@ export type Database = {
       triage_leads: {
         Row: { id: string; created_at: string | null; entity_type: string; company_size: string; full_name: string; phone: string; email: string; province: string; company_name: string | null; nif: string | null; service_requested: string; hardware_pref: string | null; web_state: string | null; rgpd_accepted: boolean; status: string; complemento: string | null; sla_type: string | null; sla_canal: string | null; kit_digital_prev: string | null; current_state: string | null; notes: string | null; last_interaction_at: string | null; call_missed_count: number | null; };
         Insert: { id?: string; created_at?: string | null; entity_type: string; company_size: string; full_name: string; phone: string; email: string; province: string; company_name?: string | null; nif?: string | null; service_requested: string; hardware_pref?: string | null; web_state?: string | null; rgpd_accepted?: boolean; status?: string; complemento?: string | null; sla_type?: string | null; sla_canal?: string | null; kit_digital_prev?: string | null; current_state?: string | null; notes?: string | null; last_interaction_at?: string | null; call_missed_count?: number | null; };
-        Update: { id?: string; created_at?: string | null; entity_type?: string; company_size?: string; full_name?: string; phone?: string; email?: string; province?: string; company_name?: string | null; nif?: string | null; service_requested?: string; hardware_pref?: string | null; web_state?: string | null; rgpd_accepted?: boolean; status?: string; complemento?: string | null; sla_type?: string | null; sla_canal?: string | null; kit_digital_prev?: string | null; current_state?: string | null; notes?: string | null; last_interaction_at?: string | null; call_missed_count?: number | null; };
+        Update: { id?: string; created_at?: string | null; entity_type?: string; company_size?: string; full_name?: string; phone?: string; email?: string; province?: string; company_name?: string | null; nif?: string | null; service_requested: string; hardware_pref?: string | null; web_state?: string | null; rgpd_accepted?: boolean; status?: string; complemento?: string | null; sla_type?: string | null; sla_canal?: string | null; kit_digital_prev?: string | null; current_state?: string | null; notes?: string | null; last_interaction_at?: string | null; call_missed_count?: number | null; };
       };
     };
     Views: { [_ in never]: never };

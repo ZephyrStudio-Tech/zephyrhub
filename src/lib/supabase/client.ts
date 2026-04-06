@@ -1,16 +1,35 @@
-"use client";
-
-import { createBrowserClient } from "@supabase/ssr";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 import type { Database } from "@/types/supabase";
 
-export function createClient() {
-  return createBrowserClient<Database>(
+/** Cliente con Service Role Key: salta RLS. Usar solo en servidor para mutaciones tras validar rol en código. */
+export function createAdminClient() {
+  return createSupabaseClient<Database, "public">(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
+
+export async function createClient() {
+  const cookieStore = await cookies();
+
+  return createServerClient<Database, "public">(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      realtime: {
-        params: {
-          eventsPerSecond: 10,
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            );
+          } catch {
+            // Ignore in Server Components (e.g. during RSC render)
+          }
         },
       },
     }
