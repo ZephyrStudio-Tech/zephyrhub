@@ -5,46 +5,63 @@
 @layer base {
   :root {
     /* Background & Foreground */
-    --background: 249 250 251; /* gray-50 */
-    --foreground: 17 24 39; /* gray-900 */
-    
+    --background: 249 250 251;
+    /* gray-50 */
+    --foreground: 17 24 39;
+    /* gray-900 */
+
     /* Card backgrounds */
     --card: 255 255 255;
     --card-foreground: 17 24 39;
-    
+
     /* Muted backgrounds */
-    --muted: 243 244 246; /* gray-100 */
-    --muted-foreground: 107 114 128; /* gray-500 */
-    
+    --muted: 243 244 246;
+    /* gray-100 */
+    --muted-foreground: 107 114 128;
+    /* gray-500 */
+
     /* Brand/Primary */
-    --primary: 70 95 255; /* brand-500 */
+    --primary: 70 95 255;
+    /* brand-500 */
     --primary-foreground: 255 255 255;
-    
+
     /* Accent */
-    --accent: 236 243 255; /* brand-50 */
-    --accent-foreground: 38 45 137; /* brand-900 */
-    
+    --accent: 236 243 255;
+    /* brand-50 */
+    --accent-foreground: 38 45 137;
+    /* brand-900 */
+
     /* Borders */
-    --border: 229 231 235; /* gray-200 */
+    --border: 229 231 235;
+    /* gray-200 */
     --input: 229 231 235;
     --ring: 70 95 255;
-    
+
     /* Border radius */
     --radius: 0.75rem;
   }
 
   .dark {
-    --background: 12 17 29; /* gray-950 */
-    --foreground: 249 250 251; /* gray-50 */
-    --card: 29 41 57; /* gray-800 */
+    --background: 12 17 29;
+    /* gray-950 */
+    --foreground: 249 250 251;
+    /* gray-50 */
+    --card: 29 41 57;
+    /* gray-800 */
     --card-foreground: 249 250 251;
-    --muted: 52 64 84; /* gray-700 */
-    --muted-foreground: 156 163 175; /* gray-400 */
-    --primary: 117 146 255; /* brand-400 */
+    --muted: 52 64 84;
+    /* gray-700 */
+    --muted-foreground: 156 163 175;
+    /* gray-400 */
+    --primary: 117 146 255;
+    /* brand-400 */
     --primary-foreground: 255 255 255;
-    --accent: 22 25 80; /* brand-950 */
-    --accent-foreground: 221 233 255; /* brand-100 */
-    --border: 52 64 84; /* gray-700 */
+    --accent: 22 25 80;
+    /* brand-950 */
+    --accent-foreground: 221 233 255;
+    /* brand-100 */
+    --border: 52 64 84;
+    /* gray-700 */
     --input: 52 64 84;
     --ring: 117 146 255;
   }
@@ -83,6 +100,7 @@
 }
 
 @layer components {
+
   /* Consistent card styling */
   .card-base {
     @apply rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800 shadow-sm;
@@ -101,5 +119,316 @@
   /* Responsive padding */
   .page-padding {
     @apply px-4 sm:px-6 lg:px-8;
+  }
+}
+
+
+/* ========================================================
+   ESTILOS ESPECÍFICOS DEL LOGIN (MINIMALISTA TECH)
+   ======================================================== */
+
+.login-wrapper {
+  background-color: var(--bg-dark, #0c111d);
+  color: #f9fafb;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  font-family: var(--font-sans);
+}
+
+.dot-pattern {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-size: 24px 24px;
+  opacity: 0.5;
+  z-index: 0;
+}
+
+.ambient-glow {
+  position: absolute;
+  width: 60vw;
+  height: 60vw;
+  background: radial-gradient(circle, rgba(70, 95, 255, 0.08) 0%, transparent 50%);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 0;
+  animation: breathe 8s ease-in-out infinite alternate;
+}
+
+.login-screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: scale(1.02);
+}
+
+.login-screen.active {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: scale(1);
+}
+
+.logo-mark {
+  height: 56px;
+  margin-bottom: 24px;
+  opacity: 0.9;
+}
+
+.intro-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 12px;
+  color: #fff;
+}
+
+.intro-desc {
+  font-size: 1rem;
+  color: #667085;
+  font-weight: 400;
+  max-width: 400px;
+  line-height: 1.5;
+  margin: 0 auto 40px auto;
+  text-align: center;
+}
+
+.btn-clean {
+  background: transparent;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 14px 36px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  border-radius: 100px;
+  cursor: pointer;
+  transition: all 0.4s ease;
+  backdrop-filter: blur(10px);
+}
+
+.btn-clean:hover {
+  background: #fff;
+  color: #0c111d;
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.glass-card {
+  width: 100%;
+  max-width: 380px;
+  background: rgba(17, 24, 39, 0.4);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 20px;
+  padding: 40px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+}
+
+.login-header {
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.login-header h2 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.input-wrapper {
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.input-wrapper label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #667085;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.input-wrapper input {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-size: 14px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  outline: none;
+  transition: all 0.3s;
+}
+
+.input-wrapper input:focus {
+  border-color: #465fff;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.btn-auth {
+  width: 100%;
+  background: #465fff;
+  color: #fff;
+  border: none;
+  padding: 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: all 0.3s;
+}
+
+.btn-auth:hover {
+  background: #7592ff;
+}
+
+/* HUD / Loading */
+.loader-layout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 40px;
+}
+
+.minimal-rings {
+  position: relative;
+  width: 120px;
+  height: 120px;
+}
+
+.ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px solid transparent;
+}
+
+.ring-outer {
+  border-top-color: rgba(255, 255, 255, 0.2);
+  border-bottom-color: rgba(255, 255, 255, 0.2);
+  animation: spin 4s linear infinite;
+}
+
+.ring-inner {
+  inset: 15px;
+  border-left-color: #465fff;
+  border-right-color: #465fff;
+  animation: spinReverse 3s ease-in-out infinite;
+}
+
+.ring-core {
+  inset: 30px;
+  border: 1px dashed rgba(255, 255, 255, 0.4);
+  animation: spin 8s linear infinite;
+}
+
+.status-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #fff;
+}
+
+.clean-terminal {
+  width: 400px;
+  height: 100px;
+  font-family: monospace;
+  font-size: 12px;
+  color: #667085;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  overflow: hidden;
+  text-align: left;
+}
+
+.log-line {
+  margin-bottom: 6px;
+  opacity: 0;
+  animation: fadeIn 0.3s forwards;
+}
+
+.log-success {
+  color: #f9fafb;
+  font-weight: bold;
+}
+
+.log-highlight {
+  color: #7592ff;
+}
+
+/* Flash Final Transición */
+#flashbang {
+  position: fixed;
+  inset: 0;
+  background: #0c111d;
+  z-index: 999;
+  opacity: 0;
+  pointer-events: none;
+}
+
+#flashbang.explode {
+  animation: fadeToDark 1.2s forwards;
+}
+
+@keyframes breathe {
+  100% {
+    transform: translate(-50%, -50%) scale(1.1);
+    opacity: 0.6;
+  }
+}
+
+@keyframes spin {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes spinReverse {
+  100% {
+    transform: rotate(-360deg);
+  }
+}
+
+@keyframes fadeIn {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeToDark {
+  0% {
+    opacity: 0;
+  }
+
+  30% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 1;
   }
 }
