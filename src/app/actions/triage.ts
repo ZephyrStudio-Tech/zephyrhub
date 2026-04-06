@@ -296,41 +296,20 @@ export async function moveToConsultoria(
 
   if (newClient) {
     // Crear los dos contratos estándar
-    const { data: contracts } = await supabaseAdmin
+    await supabaseAdmin
       .from("contracts")
       .insert([
         { client_id: newClient.id, type: "web", current_state: "pendiente" },
         { client_id: newClient.id, type: "ecommerce", current_state: "pendiente" },
-      ])
-      .select("id, type");
+      ]);
 
-    // Crear los pagos por fases para cada contrato
-    if (contracts) {
-      const webContract = contracts.find(c => c.type === "web");
-      const ecomContract = contracts.find(c => c.type === "ecommerce");
-
-      const payments = [];
-
-      if (webContract) {
-        payments.push(
-          { client_id: newClient.id, contract_id: webContract.id, contract_type: "web", phase: "anticipo", expected_amount: 600 },
-          { client_id: newClient.id, contract_id: webContract.id, contract_type: "web", phase: "intermedio", expected_amount: 700 },
-          { client_id: newClient.id, contract_id: webContract.id, contract_type: "web", phase: "final", expected_amount: 700 },
-        );
-      }
-
-      if (ecomContract) {
-        payments.push(
-          { client_id: newClient.id, contract_id: ecomContract.id, contract_type: "ecommerce", phase: "anticipo", expected_amount: 300 },
-          { client_id: newClient.id, contract_id: ecomContract.id, contract_type: "ecommerce", phase: "intermedio", expected_amount: 350 },
-          { client_id: newClient.id, contract_id: ecomContract.id, contract_type: "ecommerce", phase: "final", expected_amount: 350 },
-        );
-      }
-
-      if (payments.length > 0) {
-        await supabaseAdmin.from("payments").insert(payments);
-      }
-    }
+    // Crear los pagos por fases (fase_i y fase_ii para cada tipo de contrato)
+    await supabaseAdmin.from("payments").insert([
+      { client_id: newClient.id, contract_type: "web", phase: "fase_i", expected_amount: 1100 },
+      { client_id: newClient.id, contract_type: "web", phase: "fase_ii", expected_amount: 600 },
+      { client_id: newClient.id, contract_type: "ecommerce", phase: "fase_i", expected_amount: 700 },
+      { client_id: newClient.id, contract_type: "ecommerce", phase: "fase_ii", expected_amount: 300 },
+    ]);
   }
 
   // Enviar Email de Bienvenida con Resend (solo si se creo nuevo usuario con password)
