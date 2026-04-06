@@ -13,7 +13,7 @@ export default async function ConsultoriaPage() {
 
   let query = supabase
     .from("clients")
-    .select("id, company_name, cif, current_state, service_type, consultant_id, created_at, pending_docs")
+    .select("id, company_name, cif, full_name, email, phone, current_state, service_type, consultant_id, created_at, pending_docs")
     .order("created_at", { ascending: false });
 
   if (role === "consultor") {
@@ -26,10 +26,10 @@ export default async function ConsultoriaPage() {
   // Bulk fetch last interactions to avoid N+1 queries
   const { data: allInteractions } = clientIds.length > 0
     ? await supabaseAdmin
-        .from("interactions")
-        .select("client_id, created_at")
-        .in("client_id", clientIds)
-        .order("created_at", { ascending: false })
+      .from("interactions")
+      .select("client_id, created_at")
+      .in("client_id", clientIds)
+      .order("created_at", { ascending: false })
     : { data: [] };
 
   // Map interactions to clients efficiently
