@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { createInternalUser } from "@/app/actions/client-actions";
+import { createInternalUser } from "@/app/actions/user-actions";
 import { generateStaffPassword } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
