@@ -175,10 +175,38 @@ function getStateLabel(stateId: string): string {
   return found?.label ?? stateId;
 }
 
-function ContractProgress({ contract }: { contract: Contract }) {
-  const macro = getMacroPhase(contract.current_state as PipelineState);
+const POST_DEV_STATES = [
+  "empezar_desarrollo",
+  "presentar_justificacion_fase_i",
+  "firma_justificacion",
+  "subsanacion_fase_i",
+  "resolucion_red_es",
+  "pago_i_fase",
+  "ano_mantenimiento",
+  "justificacion_ii_fase",
+  "firma_justificacion_ii",
+  "subsanacion_fase_ii",
+  "resolucion_ii_red_es",
+  "ganada",
+  "perdida",
+];
+
+function ContractProgress({
+  contract,
+  label,
+  stateOverride,
+  unified,
+}: {
+  contract: Contract;
+  label: string;
+  stateOverride?: string;
+  unified?: boolean;
+}) {
+  const stateToShow = stateOverride ?? contract.current_state;
+  const macro = getMacroPhase(stateToShow as PipelineState);
   const currentIndex = MACRO_PHASES.findIndex((p) => p.key === macro);
   const Icon = contract.type === "web" ? Layout : ShoppingCart;
+  const stateInfo = STATE_EXPLANATIONS[stateToShow];
 
   return (
     <div className="space-y-4 p-4 rounded-xl border border-slate-100 bg-slate-50/50">
@@ -187,14 +215,22 @@ function ContractProgress({ contract }: { contract: Contract }) {
           <div className="p-2 rounded-lg bg-white shadow-sm border border-slate-100">
             <Icon className="w-5 h-5 text-brand-600" />
           </div>
-          <span className="font-semibold text-slate-800">
-            {contract.type === "web" ? "Sitio Web y Presencia" : "Comercio Electrónico"}
-          </span>
+          <span className="font-semibold text-slate-800">{label}</span>
         </div>
-        <span className="text-xs font-medium bg-brand-100 text-brand-700 px-2 py-1 rounded-full border border-brand-200">
-          {getStateLabel(contract.current_state)}
-        </span>
+        {unified ? (
+          <span className="text-xs font-medium bg-slate-100 text-slate-600 px-2 py-1 rounded-full border border-slate-200">
+            En tramitación conjunta
+          </span>
+        ) : (
+          <span className="text-xs font-medium bg-brand-100 text-brand-700 px-2 py-1 rounded-full border border-brand-200">
+            {getStateLabel(contract.current_state)}
+          </span>
+        )}
       </div>
+
+      {unified && stateInfo && (
+        <p className="text-sm text-slate-600">{stateInfo.description}</p>
+      )}
 
       <div className="flex items-center gap-1">
         {MACRO_PHASES.map((phase, i) => {
@@ -387,13 +423,40 @@ export function PortalDashboard({
       )}
 
       {/* Contracts Parallel Processes */}
-      {contracts.length > 0 && (
-        <div className="grid gap-4 md:grid-cols-2">
-          {contracts.map(c => (
-            <ContractProgress key={c.id} contract={c} />
-          ))}
-        </div>
-      )}
+      {contracts.length > 0 && (() => {
+        const isPostDev = POST_DEV_STATES.includes(client.current_state);
+
+        if (!isPostDev) {
+          // Fase pre-desarrollo: contratos unificados
+          return (
+            <div className="grid gap-4 md:grid-cols-2">
+              {contracts.map(c => (
+                <ContractProgress
+                  key={c.id}
+                  contract={c}
+                  label={c.type === "web" ? "Sitio Web" : "Bono Adicional"}
+                  stateOverride={client.current_state}
+                  unified={true}
+                />
+              ))}
+            </div>
+          );
+        } else {
+          // Fase post-desarrollo: contratos independientes
+          return (
+            <div className="grid gap-4 md:grid-cols-2">
+              {contracts.map(c => (
+                <ContractProgress
+                  key={c.id}
+                  contract={c}
+                  label={c.type === "web" ? "Tu Sitio Web" : "Tu Equipamiento Digital"}
+                  unified={false}
+                />
+              ))}
+            </div>
+          );
+        }
+      })()}
 
       <div className="grid gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-8">
