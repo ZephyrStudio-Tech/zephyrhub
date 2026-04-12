@@ -4,6 +4,23 @@ import { redirect } from "next/navigation";
 import { PipelineView } from "../pipeline-view";
 import { CONSULTORIA_STATE_LABELS } from "@/lib/state-machine/constants";
 
+type KanbanItem = {
+  id: string;
+  company_name: string | null;
+  cif: string | null;
+  email?: string | null;
+  phone?: string | null;
+  current_state: string;
+  service_type: string;
+  consultant_id: string | null;
+  created_at: string;
+  last_interaction_at: string | null;
+  pending_docs: boolean | null;
+  contractType?: string;
+  type?: "client" | "contract";
+  clientId?: string;
+};
+
 const POST_DEV_STATES = [
   "empezar_desarrollo",
   "presentar_justificacion_fase_i",
@@ -50,7 +67,7 @@ export default async function ConsultoriaPage() {
     : { data: [] };
 
   // Transform clients and contracts into a hybrid KanbanItem array
-  const kanbanItems = [];
+  const kanbanItems: KanbanItem[] = [];
 
   (rawClients ?? []).forEach((client) => {
     const latestInteraction = (allInteractions ?? []).find(i => i.client_id === client.id);
