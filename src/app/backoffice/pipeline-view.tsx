@@ -15,6 +15,7 @@ import {
 } from "@dnd-kit/core";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { transitionClientState } from "@/app/actions/transition-state";
+import { updateContractState } from "@/app/actions/contract-actions";
 import { canTransition } from "@/lib/state-machine/machine";
 import { PIPELINE_STATE_LABELS } from "@/lib/state-machine/constants";
 import type { PipelineState } from "@/lib/state-machine/constants";
@@ -23,18 +24,21 @@ import { Mail, Phone, MoreHorizontal } from "lucide-react";
 import { ClientLeadModal } from "./components/client-lead-modal";
 import { toastError } from "@/lib/toast";
 
-type Client = {
+type KanbanItem = {
   id: string;
+  type: "client" | "contract";
+  current_state: string;
   company_name: string | null;
   cif: string | null;
   email?: string | null;
   phone?: string | null;
-  current_state: string;
   service_type: string;
   consultant_id: string | null;
   created_at: string;
   last_interaction_at: string | null;
   pending_docs: boolean | null;
+  contractType?: "web" | "ecommerce";
+  clientId?: string;
 };
 
 function getServiceColor(service: string | null): string {
@@ -67,16 +71,18 @@ function getDaysSinceLastInteraction(
   }
 }
 
-function ClientCard({
-  client,
+function KanbanCard({
+  item,
   onClick
 }: {
-  client: Client;
+  item: KanbanItem;
   onClick: () => void;
 }) {
-  const title = client.company_name || client.cif || client.id.slice(0, 8);
-  const daysSince = getDaysSinceLastInteraction(client.last_interaction_at, client.created_at);
+  const title = item.company_name || item.cif || item.id.slice(0, 8);
+  const daysSince = getDaysSinceLastInteraction(item.last_interaction_at, item.created_at);
   const isInactive = daysSince.days > 3;
+  const isContract = item.type === "contract";
+  const contractLabel = isContract && item.contractType === "web" ? "CONTRATO WEB" : isContract ? "CONTRATO HARDWARE" : "";
 
   return (
     <div
@@ -87,22 +93,29 @@ function ClientCard({
       )}
     >
       <div className="flex items-start justify-between gap-3 mb-3">
-        <h4 className="font-bold text-slate-900 text-sm leading-tight flex-1 line-clamp-2">
-          {title}
-        </h4>
-        <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full border shadow-sm uppercase shrink-0", getServiceColor(client.service_type))}>
-          {client.service_type?.replace(/_/g, " ")}
+        <div className="flex-1 min-w-0">
+          <h4 className="font-bold text-slate-900 text-sm leading-tight line-clamp-2">
+            {title}
+          </h4>
+          {contractLabel && (
+            <p className="text-[10px] font-bold text-brand-600 uppercase tracking-widest mt-1">
+              {contractLabel}
+            </p>
+          )}
+        </div>
+        <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full border shadow-sm uppercase shrink-0", getServiceColor(item.service_type))}>
+          {item.service_type?.replace(/_/g, " ")}
         </span>
       </div>
 
       <div className="space-y-1.5 mb-4">
         <div className="flex items-center gap-2 text-slate-500">
            <Mail className="w-3 h-3" />
-           <span className="text-[11px] truncate">{client.email || "—"}</span>
+           <span className="text-[11px] truncate">{item.email || "—"}</span>
         </div>
         <div className="flex items-center gap-2 text-slate-500">
            <Phone className="w-3 h-3" />
-           <span className="text-[11px]">{client.phone || "—"}</span>
+           <span className="text-[11px]">{item.phone || "—"}</span>
         </div>
       </div>
 
@@ -114,7 +127,7 @@ function ClientCard({
           {daysSince.label === "Hoy" ? "Entró hoy" : (daysSince.days > 0 ? `Hace ${daysSince.days}d` : daysSince.label)}
         </span>
 
-        {client.pending_docs && (
+        {item.pending_docs && (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-100 text-[10px] font-bold">
             Docs Pendientes
           </span>
@@ -138,13 +151,13 @@ function ClientCard({
 function DroppableStateColumn({
   stateId,
   label,
-  clients,
-  onSelectClient,
+  items,
+  onSelectItem,
 }: {
   stateId: PipelineState;
   label: string;
-  clients: Client[];
-  onSelectClient: (id: string) => void;
+  items: KanbanItem[];
+  onSelectItem: (id: string) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id: stateId,
@@ -154,7 +167,7 @@ function DroppableStateColumn({
   const parentRef = useRef<HTMLDivElement>(null);
 
   const virtualizer = useVirtualizer({
-    count: clients.length,
+    count: items.length,
     getScrollElement: () => parentRef.current,
     estimateSize: () => 160,
     overscan: 3,
@@ -174,7 +187,7 @@ function DroppableStateColumn({
             {label}
           </h3>
           <span className="bg-white border border-slate-200 text-slate-500 text-[10px] font-bold px-2 py-0.5 rounded-full">
-            {clients.length}
+            {items.length}
           </span>
         </div>
 
@@ -190,10 +203,10 @@ function DroppableStateColumn({
             }}
           >
             {virtualizer.getVirtualItems().map((virtualRow) => {
-              const client = clients[virtualRow.index];
+              const item = items[virtualRow.index];
               return (
                 <div
-                  key={client.id}
+                  key={item.id}
                   style={{
                     position: "absolute",
                     top: 0,
@@ -203,9 +216,9 @@ function DroppableStateColumn({
                     transform: `translateY(${virtualRow.start}px)`,
                   }}
                 >
-                  <DraggableClientCard
-                    client={client}
-                    onSelect={() => onSelectClient(client.id)}
+                  <DraggableKanbanCard
+                    item={item}
+                    onSelect={() => onSelectItem(item.id)}
                   />
                 </div>
               );
@@ -233,10 +246,10 @@ function DroppableStateColumn({
   );
 }
 
-function DraggableClientCard({ client, onSelect }: { client: Client, onSelect: () => void }) {
+function DraggableKanbanCard({ item, onSelect }: { item: KanbanItem, onSelect: () => void }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: client.id,
-    data: { clientId: client.id, currentState: client.current_state },
+    id: item.id,
+    data: { itemId: item.id, itemType: item.type, currentState: item.current_state },
   });
 
   const dragStartPos = useRef<{ x: number, y: number } | null>(null);
@@ -266,7 +279,7 @@ function DraggableClientCard({ client, onSelect }: { client: Client, onSelect: (
       onPointerUp={handlePointerUp}
       className={cn("cursor-grab active:cursor-grabbing", isDragging && "opacity-0")}
     >
-      <ClientCard client={client} onClick={() => {}} />
+      <KanbanCard item={item} onClick={() => {}} />
     </div>
   );
 }
@@ -274,16 +287,16 @@ function DraggableClientCard({ client, onSelect }: { client: Client, onSelect: (
 type StateLabel = { id: PipelineState; label: string };
 
 export function PipelineView({
-  clients,
+  kanbanItems,
   stateLabels = PIPELINE_STATE_LABELS,
 }: {
-  clients: Client[];
+  kanbanItems: KanbanItem[];
   stateLabels?: readonly StateLabel[];
 }) {
   const router = useRouter();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [changing, setChanging] = useState(false);
-  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
@@ -302,17 +315,28 @@ export function PipelineView({
       const toState = String(over.id) as PipelineState;
       if (!stateLabels.some((s) => s.id === toState)) return;
 
-      const client = clients.find((c) => c.id === active.id);
-      if (!client) return;
+      const item = kanbanItems.find((i) => i.id === active.id);
+      if (!item) return;
 
-      const fromState = client.current_state as PipelineState;
+      const fromState = item.current_state as PipelineState;
       if (!canTransition(fromState, toState)) {
         toastError("Transición no permitida desde el estado actual");
         return;
       }
 
       setChanging(true);
-      const res = await transitionClientState(client.id, toState);
+
+      let res: { ok: boolean; error?: string };
+      if (item.type === "client") {
+        // Item is a client
+        const clientId = item.id.replace("client-", "");
+        res = await transitionClientState(clientId, toState);
+      } else {
+        // Item is a contract
+        const contractId = item.id.replace("contract-", "");
+        res = await updateContractState(contractId, toState);
+      }
+
       setChanging(false);
       if (res.ok) {
         router.refresh();
@@ -320,10 +344,10 @@ export function PipelineView({
         toastError(res.error || "Error al cambiar estado");
       }
     },
-    [clients, stateLabels, changing, router]
+    [kanbanItems, stateLabels, changing, router]
   );
 
-  const activeClient = activeId ? clients.find((c) => c.id === activeId) : null;
+  const activeItem = activeId ? kanbanItems.find((i) => i.id === activeId) : null;
 
   return (
     <>
@@ -338,35 +362,41 @@ export function PipelineView({
               key={id}
               stateId={id}
               label={label}
-              clients={clients.filter((c) => c.current_state === id)}
-              onSelectClient={setSelectedClientId}
+              items={kanbanItems.filter((i) => i.current_state === id)}
+              onSelectItem={setSelectedItemId}
             />
           ))}
         </div>
 
         <DragOverlay dropAnimation={null}>
-          {activeClient ? (
+          {activeItem ? (
             <div className="w-[310px] rounded-xl border-2 border-brand-500 bg-white p-4 shadow-2xl cursor-grabbing scale-105 rotate-1">
               <p className="font-bold text-slate-900 text-sm truncate">
-                {activeClient.company_name ||
-                  activeClient.cif ||
-                  activeClient.id.slice(0, 8)}
+                {activeItem.company_name ||
+                  activeItem.cif ||
+                  activeItem.id.slice(0, 8)}
               </p>
               <p className="text-xs text-slate-500 mt-1 capitalize">
-                {activeClient.service_type?.replace("_", " ")}
+                {activeItem.contractType && `Contrato ${activeItem.contractType} · `}
+                {activeItem.service_type?.replace("_", " ")}
               </p>
             </div>
           ) : null}
         </DragOverlay>
       </DndContext>
 
-      {selectedClientId && (
-        <ClientLeadModal
-          mode="client"
-          clientId={selectedClientId}
-          onClose={() => setSelectedClientId(null)}
-        />
-      )}
+      {selectedItemId && (() => {
+        const item = kanbanItems.find(i => i.id === selectedItemId);
+        if (!item || item.type !== "client") return null;
+        const clientId = item.id.replace("client-", "");
+        return (
+          <ClientLeadModal
+            mode="client"
+            clientId={clientId}
+            onClose={() => setSelectedItemId(null)}
+          />
+        );
+      })()}
     </>
   );
 }
