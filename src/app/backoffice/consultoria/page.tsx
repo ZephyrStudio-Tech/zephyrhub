@@ -14,7 +14,8 @@ export default async function ConsultoriaPage() {
   let query = supabase
     .from("clients")
     .select("id, company_name, cif, full_name, email, phone, current_state, service_type, consultant_id, created_at, pending_docs")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(100);
 
   if (role === "consultor") {
     query = query.eq("consultant_id", user.id);

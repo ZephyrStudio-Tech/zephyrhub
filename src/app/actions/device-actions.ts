@@ -72,7 +72,25 @@ export async function selectDevice(deviceOrderId: string, deviceId: string) {
   const auth = await requireServerAuth(["beneficiario"]);
   if (auth.error) return { ok: false, error: auth.error };
 
-  const { supabaseAdmin } = auth;
+  const { user, supabaseAdmin } = auth;
+
+  // Validar que el pedido pertenece al usuario actual
+  const { data: deviceOrder } = await (supabaseAdmin.from("device_orders") as any)
+    .select("client_id")
+    .eq("id", deviceOrderId)
+    .single();
+
+  if (!deviceOrder) return { ok: false, error: "Pedido no encontrado" };
+
+  const { data: client } = await (supabaseAdmin.from("clients") as any)
+    .select("user_id")
+    .eq("id", deviceOrder.client_id)
+    .single();
+
+  if (!client || client.user_id !== user.id) {
+    return { ok: false, error: "No tienes permiso para modificar este pedido" };
+  }
+
   const { data: device } = await (supabaseAdmin.from("devices") as any)
     .select("sale_price, cost_price, bono_coverage")
     .eq("id", deviceId)
@@ -105,7 +123,25 @@ export async function confirmOrder(deviceOrderId: string, shippingData: any) {
   const auth = await requireServerAuth(["beneficiario"]);
   if (auth.error) return { ok: false, error: auth.error };
 
-  const { supabaseAdmin } = auth;
+  const { user, supabaseAdmin } = auth;
+
+  // Validar que el pedido pertenece al usuario actual
+  const { data: deviceOrder } = await (supabaseAdmin.from("device_orders") as any)
+    .select("client_id")
+    .eq("id", deviceOrderId)
+    .single();
+
+  if (!deviceOrder) return { ok: false, error: "Pedido no encontrado" };
+
+  const { data: client } = await (supabaseAdmin.from("clients") as any)
+    .select("user_id")
+    .eq("id", deviceOrder.client_id)
+    .single();
+
+  if (!client || client.user_id !== user.id) {
+    return { ok: false, error: "No tienes permiso para modificar este pedido" };
+  }
+
   const { error } = await (supabaseAdmin.from("device_orders") as any)
     .update({
       shipping_name: shippingData.name,
