@@ -50,6 +50,40 @@ import { toast } from "sonner";
 import { PIPELINE_STATE_LABELS, PRECONSULTORIA_STATE_LABELS } from "@/lib/state-machine/constants";
 import { toastError, toastSuccess } from "@/lib/toast";
 
+const POST_DEV_STATES = [
+  "empezar_desarrollo",
+  "presentar_justificacion_fase_i",
+  "firma_justificacion",
+  "subsanacion_fase_i",
+  "resolucion_red_es",
+  "pago_i_fase",
+  "ano_mantenimiento",
+  "justificacion_ii_fase",
+  "firma_justificacion_ii",
+  "subsanacion_fase_ii",
+  "resolucion_ii_red_es",
+  "ganada",
+  "perdida",
+] as const;
+
+const POST_DEV_STATE_LABELS: { id: string; label: string }[] = [
+  { id: "empezar_desarrollo", label: "Empezar desarrollo" },
+  { id: "presentar_justificacion_fase_i", label: "Presentar justificación (Fase I)" },
+  { id: "firma_justificacion", label: "Firma justificación" },
+  { id: "subsanacion_fase_i", label: "Subsanación (Fase I)" },
+  { id: "resolucion_red_es", label: "Resolución Red.es" },
+  { id: "pago_i_fase", label: "Pago I Fase" },
+  { id: "ano_mantenimiento", label: "Año mantenimiento" },
+  { id: "justificacion_ii_fase", label: "Justificación II Fase" },
+  { id: "firma_justificacion_ii", label: "Firma justificación II" },
+  { id: "subsanacion_fase_ii", label: "Subsanación (Fase II)" },
+  { id: "resolucion_ii_red_es", label: "Resolución II Red.es" },
+  { id: "ganada", label: "Ganada ✓" },
+  { id: "perdida", label: "Perdida ✗" },
+];
+
+const isPostDev = (state: string) => POST_DEV_STATES.includes(state as any);
+
 type Props = {
   mode: 'lead' | 'client';
   leadData?: any;
@@ -243,7 +277,7 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
 
             <div className="flex items-center gap-3">
               <select
-                className="bg-brand-50 text-brand-700 text-xs font-bold px-4 py-2 rounded-xl border border-brand-100 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                className="bg-brand-50 text-brand-700 text-xs font-bold px-4 py-2 rounded-xl border border-brand-100 focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 value={client?.current_state || ""}
                 onChange={async (e) => {
                   const toState = e.target.value;
@@ -254,11 +288,17 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
                     refreshData();
                   }
                 }}
+                disabled={mode === 'client' && isPostDev(client?.current_state)}
               >
                 {(mode === 'lead' ? PRECONSULTORIA_STATE_LABELS : PIPELINE_STATE_LABELS).map(s => (
                   <option key={s.id} value={s.id}>{s.label}</option>
                 ))}
               </select>
+              {mode === 'client' && isPostDev(client?.current_state) && (
+                <div className="text-[10px] text-slate-400 font-bold absolute top-full mt-1 left-4">
+                  Estado gestionado por contratos
+                </div>
+              )}
               <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400 hover:text-slate-600">
                 <X className="w-5 h-5" />
               </button>
@@ -422,61 +462,106 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
                 </Card>
 
                 {/* Contracts Section */}
-                <Card className="border-slate-100 shadow-sm overflow-hidden">
-                  <CardHeader className="bg-slate-50/50 border-b border-slate-100 py-4">
-                    <CardTitle className="text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                      <FileText className="w-4 h-4" /> Contratos Red.es
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-4">
-                    <div className="grid gap-3">
-                      {data.contracts?.map((c: any) => (
-                        <div key={c.id} className="flex items-center justify-between p-3 rounded-2xl bg-white border border-slate-100 shadow-sm">
-                          <span className="text-xs font-bold text-slate-700 uppercase">Contrato {c.type}</span>
-                          <span className="text-xs bg-brand-50 text-brand-700 px-3 py-1 rounded-full font-bold">{c.current_state}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
+                {mode === 'client' && data?.contracts && (
+                  <Card className="border-slate-100 shadow-sm overflow-hidden">
+                    <CardHeader className="bg-slate-50/50 border-b border-slate-100 py-4">
+                      <CardTitle className="text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                        <FileText className="w-4 h-4" /> Contratos Red.es
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0 divide-y divide-slate-50">
+                      {[
+                        { type: "web", label: "Sitio Web", total: "2.000€" },
+                        { type: "ecommerce", label: "Bono Adicional", total: "1.000€" },
+                      ].map(({ type, label, total }) => {
+                        const contract = data.contracts?.find((c: any) => c.type === type);
+                        const contractPayments = data.payments?.filter((p: any) => p.contract_type === type) ?? [];
+                        const isInPostDev = contract && isPostDev(contract.current_state);
 
-                {/* Payments Section */}
-                <Card className="border-slate-100 shadow-sm overflow-hidden">
-                  <CardHeader className="bg-slate-50/50 border-b border-slate-100 py-4">
-                    <CardTitle className="text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                      <CreditCard className="w-4 h-4" /> Pagos
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-4">
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-xs">
-                        <thead>
-                          <tr className="text-slate-400 border-b border-slate-50">
-                            <th className="text-left font-bold py-2">CONCEPTO</th>
-                            <th className="text-right font-bold py-2">IMPORTE</th>
-                            <th className="text-center font-bold py-2">ESTADO</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-50">
-                          {data.payments?.map((p: any) => (
-                            <tr key={p.id}>
-                              <td className="py-3 font-medium text-slate-600">{p.contract_type} - {p.phase}</td>
-                              <td className="py-3 text-right font-bold text-slate-900">€{p.expected_amount}</td>
-                              <td className="py-3 text-center">
-                                <span className={cn(
-                                  "px-2 py-0.5 rounded-full font-bold",
-                                  p.received_amount ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"
-                                )}>
-                                  {p.received_amount ? "Pagado" : "Pendiente"}
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </CardContent>
-                </Card>
+                        return (
+                          <div key={type} className="p-4 space-y-3">
+                            {/* Header del contrato */}
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-sm font-bold text-slate-800">{label}</p>
+                                <p className="text-[10px] text-slate-400 uppercase font-bold">{total} · Red.es</p>
+                              </div>
+                              {contract ? (
+                                isInPostDev ? (
+                                  /* Selector independiente en fase post-desarrollo */
+                                  <select
+                                    className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                                    value={contract.current_state}
+                                    onChange={async (e) => {
+                                      const res = await updateContractState(contract.id, e.target.value);
+                                      if (res.ok) {
+                                        toastSuccess(`${label} actualizado`);
+                                        refreshData();
+                                      } else {
+                                        toastError(res.error ?? "Error");
+                                      }
+                                    }}
+                                  >
+                                    {POST_DEV_STATE_LABELS.map(s => (
+                                      <option key={s.id} value={s.id}>{s.label}</option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  /* Antes de post-desarrollo: solo badge informativo */
+                                  <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-3 py-1 rounded-full uppercase">
+                                    {contract.current_state.replace(/_/g, " ")}
+                                  </span>
+                                )
+                              ) : (
+                                <span className="text-[10px] text-slate-300 font-bold uppercase">Sin contrato</span>
+                              )}
+                            </div>
+
+                            {/* Pagos del contrato */}
+                            {contractPayments.length > 0 && (
+                              <div className="rounded-xl border border-slate-50 overflow-hidden">
+                                {contractPayments.map((p: any) => (
+                                  <div key={p.id} className="flex items-center justify-between px-4 py-2.5 border-b border-slate-50 last:border-0 hover:bg-slate-50/50">
+                                    <div>
+                                      <p className="text-xs font-bold text-slate-700 capitalize">
+                                        {p.phase === "fase_i" ? "Fase I" : "Fase II"}
+                                      </p>
+                                      <p className="text-[10px] text-slate-400">€{p.expected_amount}</p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      {p.received_amount ? (
+                                        <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-1 rounded-lg">
+                                          Cobrado €{p.received_amount}
+                                        </span>
+                                      ) : (
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="h-7 px-3 text-[10px] font-bold rounded-lg border-emerald-100 text-emerald-700 hover:bg-emerald-50"
+                                          onClick={async () => {
+                                            const res = await markPaymentReceived(p.id, p.expected_amount);
+                                            if (res.ok) {
+                                              toastSuccess("Pago registrado");
+                                              refreshData();
+                                            } else {
+                                              toastError(res.error ?? "Error");
+                                            }
+                                          }}
+                                        >
+                                          Marcar cobrado
+                                        </Button>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </CardContent>
+                  </Card>
+                )}
               </>
             )}
 
