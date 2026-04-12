@@ -539,7 +539,7 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
                                           variant="outline"
                                           className="h-7 px-3 text-[10px] font-bold rounded-lg border-emerald-100 text-emerald-700 hover:bg-emerald-50"
                                           onClick={async () => {
-                                            const res = await markPaymentReceived(p.id, p.expected_amount);
+                                            const res = await markPaymentReceived(p.id, p.expected_amount, new Date().toISOString());
                                             if (res.ok) {
                                               toastSuccess("Pago registrado");
                                               refreshData();
