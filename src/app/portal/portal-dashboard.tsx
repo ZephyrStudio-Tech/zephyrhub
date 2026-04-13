@@ -206,50 +206,74 @@ function ContractProgress({
   const macro = getMacroPhase(stateToShow as PipelineState);
   const currentIndex = MACRO_PHASES.findIndex((p) => p.key === macro);
   const Icon = contract.type === "web" ? Layout : ShoppingCart;
-  const stateInfo = STATE_EXPLANATIONS[stateToShow];
+  const contractInfo = CONTRACT_STATE_INFO[contract.current_state];
+  const generalInfo = STATE_EXPLANATIONS[stateToShow];
 
   return (
-    <div className="space-y-4 p-4 rounded-xl border border-slate-100 bg-slate-50/50">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="p-2 rounded-lg bg-white shadow-sm border border-slate-100">
+    <div className="rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden">
+      {/* Header */}
+      <div className="p-4 border-b border-slate-50 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-brand-50 border border-brand-100">
             <Icon className="w-5 h-5 text-brand-600" />
           </div>
-          <span className="font-semibold text-slate-800">{label}</span>
+          <p className="font-bold text-slate-900 text-sm">{label}</p>
         </div>
         {unified ? (
-          <span className="text-xs font-medium bg-slate-100 text-slate-600 px-2 py-1 rounded-full border border-slate-200">
-            En tramitación conjunta
+          <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-3 py-1 rounded-full uppercase tracking-wide">
+            Tramitación conjunta
           </span>
         ) : (
-          <span className="text-xs font-medium bg-brand-100 text-brand-700 px-2 py-1 rounded-full border border-brand-200">
+          <span className="text-[10px] font-bold bg-brand-50 text-brand-700 px-3 py-1 rounded-full border border-brand-100 uppercase tracking-wide">
             {getStateLabel(contract.current_state)}
           </span>
         )}
       </div>
 
-      {unified && stateInfo && (
-        <p className="text-sm text-slate-600">{stateInfo.description}</p>
-      )}
-
-      <div className="flex items-center gap-1">
-        {MACRO_PHASES.map((phase, i) => {
-          const isActive = i <= currentIndex;
-          return (
+      {/* Progress bar */}
+      <div className="px-4 pt-3">
+        <div className="flex items-center gap-1 mb-1">
+          {MACRO_PHASES.map((phase, i) => (
             <div
               key={phase.key}
-              className={cn(
-                "h-1.5 flex-1 rounded-full transition-all",
-                isActive ? "bg-brand-500" : "bg-slate-200"
-              )}
+              className={cn("h-1.5 flex-1 rounded-full transition-all", i <= currentIndex ? "bg-brand-500" : "bg-slate-100")}
               title={phase.label}
             />
-          );
-        })}
+          ))}
+        </div>
+        <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold text-right mb-3">
+          {MACRO_PHASES[currentIndex]?.label || "Tramitación"}
+        </p>
       </div>
-      <p className="text-[10px] text-slate-500 text-center uppercase tracking-wider font-semibold">
-        Fase actual: {MACRO_PHASES[currentIndex]?.label || "Tramitación"}
-      </p>
+
+      {/* Info */}
+      <div className="px-4 pb-4 space-y-2">
+        {unified ? (
+          <>
+            {generalInfo && (
+              <p className="text-sm text-slate-600 leading-relaxed">{generalInfo.description}</p>
+            )}
+            <div className="flex items-start gap-2 text-[11px] text-slate-500 bg-slate-50 rounded-xl px-3 py-2 border border-slate-100">
+              <span>🕐</span>
+              <span>Ambos contratos avanzan conjuntamente hasta que se inicie el desarrollo.</span>
+            </div>
+          </>
+        ) : contractInfo ? (
+          <>
+            <p className="text-sm text-slate-600 leading-relaxed">{contractInfo.description}</p>
+            <div className="flex items-start gap-2 text-[11px] text-slate-500 bg-slate-50 rounded-xl px-3 py-2 border border-slate-100">
+              <span>🕐</span>
+              <span>{contractInfo.orientation}</span>
+            </div>
+            {contractInfo.actor === "cliente" && contractInfo.clientAction && (
+              <div className="flex items-start gap-2 text-[11px] text-amber-700 bg-amber-50 rounded-xl px-3 py-2 border border-amber-100">
+                <span>⚠️</span>
+                <span className="font-medium">{contractInfo.clientAction}</span>
+              </div>
+            )}
+          </>
+        ) : null}
+      </div>
     </div>
   );
 }
