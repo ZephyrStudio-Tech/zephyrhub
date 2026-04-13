@@ -40,10 +40,10 @@ export default async function BackofficeTicketPage({
   const supabase = createAdminClient();
 
   // Execute both queries in parallel
-  const [{ data: ticket }, { data: messages }] = await Promise.all([
+  const [{ data: ticket, error: ticketError }, { data: messages }] = await Promise.all([
     supabase
       .from("support_requests")
-      .select("id, user_id, client_id, category, message, status, created_at, updated_at, profiles(full_name, email)")
+      .select("id, user_id, client_id, category, message, status, created_at, updated_at")
       .eq("id", id)
       .single(),
     supabase
@@ -53,7 +53,17 @@ export default async function BackofficeTicketPage({
       .order("created_at", { ascending: true }),
   ]);
 
-  if (!ticket) redirect("/backoffice/support");
+  if (ticketError || !ticket) {
+    console.error("[Ticket] Error:", ticketError?.message);
+    redirect("/backoffice/support");
+  }
+
+  // Fetch profile del usuario del ticket
+  const { data: profile } = ticket.user_id
+    ? await supabase.from("profiles").select("full_name, email").eq("id", ticket.user_id).single()
+    : { data: null };
+
+  const ticketWithProfile = { ...ticket, profiles: profile ? [profile] : [] };
 
   return (
     <div>
@@ -70,7 +80,7 @@ export default async function BackofficeTicketPage({
       </div>
 
       <BackofficeTicketView
-        ticket={ticket as Ticket}
+        ticket={ticketWithProfile as Ticket}
         messages={(messages ?? []) as TicketMessage[]}
       />
     </div>
