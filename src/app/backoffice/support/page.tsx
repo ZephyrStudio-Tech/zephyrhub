@@ -14,7 +14,7 @@ export default async function BackofficeSupportPage() {
   const supabase = createAdminClient();
   let query = supabase
     .from("support_requests")
-    .select("id, user_id, client_id, category, message, status, admin_reply, created_at, updated_at, profiles(full_name, email)")
+    .select("id, user_id, client_id, category, message, status, admin_reply, created_at, updated_at")
     .order("created_at", { ascending: false });
 
   if (role === "consultor") {
@@ -33,7 +33,23 @@ export default async function BackofficeSupportPage() {
     }
   }
 
-  const { data: tickets } = await query;
+  const { data: tickets, error: ticketsError } = await query;
+
+  if (ticketsError) {
+    console.error("[Support] Error fetching tickets:", ticketsError.message);
+  }
+
+  // Fetch profiles separately para los user_ids únicos
+  const userIds = [...new Set((tickets || []).map(t => t.user_id).filter(Boolean))];
+  const { data: profiles } = userIds.length > 0
+    ? await supabase.from("profiles").select("id, full_name, email").in("id", userIds)
+    : { data: [] };
+
+  // Merge tickets con sus profiles
+  const ticketsWithProfiles = (tickets || []).map(t => ({
+    ...t,
+    profiles: profiles?.find(p => p.id === t.user_id) ?? null
+  }));
 
   // Calculate statistics
   const totalTickets = tickets?.length ?? 0;
@@ -93,7 +109,7 @@ export default async function BackofficeSupportPage() {
       </div>
 
       {/* Support Inbox */}
-      <SupportInbox tickets={tickets ?? []} />
+      <SupportInbox tickets={ticketsWithProfiles ?? []} />
     </div>
   );
 }
