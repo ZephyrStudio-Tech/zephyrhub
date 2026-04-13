@@ -18,7 +18,8 @@ export default async function PreconsultoriaPage() {
       "id, full_name, company_name, email, phone, current_state, service_requested, created_at"
     )
     .in("status", ["pending", "in_progress"])
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(100);
 
   const leadIds = (rawLeads ?? []).map(l => l.id);
 

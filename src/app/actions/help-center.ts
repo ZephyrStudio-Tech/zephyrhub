@@ -120,6 +120,21 @@ export async function addTicketMessage(data: { ticketId: string; message: string
   if (!user) return { ok: false, error: "No autenticado" };
 
   const supabaseAdmin = createAdminClient();
+
+  // Si es un cliente, validar que el ticket le pertenece
+  if (data.isClient) {
+    const { data: ticketData } = await supabaseAdmin
+      .from("support_requests")
+      .select("user_id")
+      .eq("id", data.ticketId)
+      .single() as any;
+
+    if (!ticketData) return { ok: false, error: "Ticket no encontrado" };
+    if (ticketData.user_id !== user.id) {
+      return { ok: false, error: "No autorizado para este ticket" };
+    }
+  }
+
   const { error } = await supabaseAdmin.from("ticket_messages").insert({
     ticket_id: data.ticketId,
     message: data.message,
