@@ -24,7 +24,6 @@ export default async function ConsultoriaPage() {
   const { user, role } = await getSession();
   if (!user) redirect("/login");
 
-  // === FIX CRÍTICO: Usamos supabaseAdmin para garantizar la carga de datos sin bloqueos RLS ===
   const supabaseAdmin = await import("@/lib/supabase/server").then(m => m.createAdminClient());
 
   let query = supabaseAdmin
@@ -37,8 +36,8 @@ export default async function ConsultoriaPage() {
     query = query.eq("consultant_id", user.id);
   }
 
+  // === DIAGNÓSTICO ===
   const { data: rawClients, error } = await query;
-  if (error) console.error("[Consultoria] Error fetching clients:", error);
 
   const clientIds = (rawClients ?? []).map(c => c.id);
 
@@ -82,7 +81,6 @@ export default async function ConsultoriaPage() {
           });
         });
       } else {
-        // Fallback blindado
         kanbanItems.push({
           ...clientWithInteraction,
           clientId: client.id,
@@ -92,7 +90,6 @@ export default async function ConsultoriaPage() {
         });
       }
     } else {
-      // Fase Pre-desarrollo
       kanbanItems.push({
         ...clientWithInteraction,
         clientId: client.id,
@@ -121,6 +118,28 @@ export default async function ConsultoriaPage() {
           </div>
         </div>
       </div>
+
+      {/* CHIVATO DE DIAGNÓSTICO: Solo aparece si hay 0 tarjetas */}
+      {kanbanItems.length === 0 && (
+        <div className="mx-1 bg-red-50 border border-red-200 p-6 rounded-xl text-red-900">
+          <h3 className="font-black text-lg mb-4">⚠️ MODO DIAGNÓSTICO (0 Resultados)</h3>
+          <ul className="space-y-2 font-mono text-sm bg-white p-4 rounded-lg border border-red-100">
+            <li><strong className="text-slate-900">Rol actual:</strong> {role}</li>
+            <li><strong className="text-slate-900">Tu ID de Usuario:</strong> {user.id}</li>
+            <li><strong className="text-slate-900">¿Hubo error SQL?:</strong> {error ? error.message : "No (Supabase devolvió array vacío)"}</li>
+            <li><strong className="text-slate-900">Clientes descargados crudos:</strong> {rawClients?.length || 0}</li>
+          </ul>
+
+          <div className="mt-4 text-sm text-red-800">
+            {role === "consultor" && (
+              <p>📌 <b>Estás logueado como Consultor.</b> Tu ID ({user.id}) tiene que coincidir exactamente con el campo <code className="bg-white px-1">consultant_id</code> de los clientes en Supabase. Si no coinciden, verás 0 tarjetas.</p>
+            )}
+            {role === "admin" && !error && (
+              <p>📌 <b>Estás logueado como Admin pero recibes 0 datos.</b> Esto significa que la variable <code className="bg-white px-1">SUPABASE_SERVICE_ROLE_KEY</code> en Vercel está mal puesta (probablemente pusiste la anon_key). Cámbiala en Vercel y haz Redeploy.</p>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="flex-1 min-h-0">
         <PipelineView
