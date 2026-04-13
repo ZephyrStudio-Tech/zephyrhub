@@ -1,5 +1,4 @@
 import { getSession } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { PipelineView } from "../pipeline-view";
 import type { KanbanItem } from "../pipeline-view";
@@ -25,23 +24,24 @@ export default async function ConsultoriaPage() {
   const { user, role } = await getSession();
   if (!user) redirect("/login");
 
-  const supabase = await createClient();
+  // === FIX CRÍTICO: Usamos supabaseAdmin para garantizar la carga de datos sin bloqueos RLS ===
   const supabaseAdmin = await import("@/lib/supabase/server").then(m => m.createAdminClient());
 
-  let query = supabase
+  let query = supabaseAdmin
     .from("clients")
     .select("id, company_name, cif, full_name, email, phone, current_state, service_type, consultant_id, created_at, pending_docs, contracts(id, type, current_state)")
     .order("created_at", { ascending: false })
-    .limit(100);
+    .limit(150);
 
   if (role === "consultor") {
     query = query.eq("consultant_id", user.id);
   }
 
-  const { data: rawClients } = await query;
+  const { data: rawClients, error } = await query;
+  if (error) console.error("[Consultoria] Error fetching clients:", error);
+
   const clientIds = (rawClients ?? []).map(c => c.id);
 
-  // Bulk fetch last interactions to avoid N+1 queries
   const { data: allInteractions } = clientIds.length > 0
     ? await supabaseAdmin
       .from("interactions")
@@ -50,7 +50,6 @@ export default async function ConsultoriaPage() {
       .order("created_at", { ascending: false })
     : { data: [] };
 
-  // Transform clients and contracts into a hybrid KanbanItem array
   const kanbanItems: KanbanItem[] = [];
 
   (rawClients ?? []).forEach((client) => {
@@ -61,9 +60,8 @@ export default async function ConsultoriaPage() {
     };
 
     if (POST_DEV_STATES.includes(client.current_state)) {
-      // Post-dev phase: create separate items for each contract
       const contracts = client.contracts ?? [];
-      
+
       if (contracts.length > 0) {
         contracts.forEach((contract: any) => {
           kanbanItems.push({
@@ -84,18 +82,20 @@ export default async function ConsultoriaPage() {
           });
         });
       } else {
-        // Fallback: client in post-dev but no contracts - show as client card
+        // Fallback blindado
         kanbanItems.push({
           ...clientWithInteraction,
+          clientId: client.id,
           id: `client-limbo-${client.id}`,
           type: "client",
           current_state: client.current_state,
         });
       }
     } else {
-      // Pre-dev phase: create single client item
+      // Fase Pre-desarrollo
       kanbanItems.push({
         ...clientWithInteraction,
+        clientId: client.id,
         id: `client-${client.id}`,
         type: "client",
         current_state: client.current_state,
@@ -116,8 +116,8 @@ export default async function ConsultoriaPage() {
         </div>
         <div className="flex items-center gap-4">
           <div className="hidden md:flex items-center gap-2 bg-white border border-slate-200 px-4 py-2 rounded-2xl shadow-sm">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Total Expedientes</span>
-            <span className="text-lg font-black text-brand-600">{(rawClients ?? []).length}</span>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Tarjetas Activas</span>
+            <span className="text-lg font-black text-brand-600">{kanbanItems.length}</span>
           </div>
         </div>
       </div>

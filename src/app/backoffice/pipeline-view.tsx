@@ -62,22 +62,12 @@ function getDaysSinceLastInteraction(
   const diffMs = now.getTime() - lastDate.getTime();
   const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-  if (days === 0) {
-    return { days, color: "text-emerald-600", label: "Hoy" };
-  } else if (days <= 3) {
-    return { days, color: "text-amber-600", label: `${days}d` };
-  } else {
-    return { days, color: "text-red-600", label: `${days}d sin actividad` };
-  }
+  if (days === 0) return { days, color: "text-emerald-600", label: "Hoy" };
+  if (days <= 3) return { days, color: "text-amber-600", label: `${days}d` };
+  return { days, color: "text-red-600", label: `${days}d sin actividad` };
 }
 
-function KanbanCard({
-  item,
-  onClick
-}: {
-  item: KanbanItem;
-  onClick: () => void;
-}) {
+function KanbanCard({ item, onClick }: { item: KanbanItem; onClick: () => void }) {
   const title = item.company_name || item.cif || item.id.slice(0, 8);
   const daysSince = getDaysSinceLastInteraction(item.last_interaction_at, item.created_at);
   const isInactive = daysSince.days > 3;
@@ -110,12 +100,12 @@ function KanbanCard({
 
       <div className="space-y-1.5 mb-4">
         <div className="flex items-center gap-2 text-slate-500">
-           <Mail className="w-3 h-3" />
-           <span className="text-[11px] truncate">{item.email || "—"}</span>
+          <Mail className="w-3 h-3" />
+          <span className="text-[11px] truncate">{item.email || "—"}</span>
         </div>
         <div className="flex items-center gap-2 text-slate-500">
-           <Phone className="w-3 h-3" />
-           <span className="text-[11px]">{item.phone || "—"}</span>
+          <Phone className="w-3 h-3" />
+          <span className="text-[11px]">{item.phone || "—"}</span>
         </div>
       </div>
 
@@ -136,10 +126,7 @@ function KanbanCard({
 
       <div className="absolute inset-x-0 -bottom-3 flex justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 translate-y-1 group-hover:translate-y-0 z-10 pointer-events-none">
         <div className="bg-white border border-slate-200 shadow-xl rounded-full p-1.5 flex items-center pointer-events-auto">
-          <button
-            className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:text-brand-600 hover:bg-brand-50 transition-colors"
-            title="Ver ficha"
-          >
+          <button className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:text-brand-600 hover:bg-brand-50 transition-colors" title="Ver ficha">
             <MoreHorizontal className="w-4 h-4" />
           </button>
         </div>
@@ -176,50 +163,21 @@ function DroppableStateColumn({
 
   return (
     <div ref={setNodeRef} className="flex-shrink-0 w-[310px] h-full pb-6">
-      <div
-        className={cn(
-          "rounded-[24px] border border-slate-200 bg-[#f9fafb] shadow-sm transition-all h-full flex flex-col overflow-hidden",
-          isOver && "ring-2 ring-brand-500/20 bg-brand-50/10"
-        )}
-      >
+      <div className={cn("rounded-[24px] border border-slate-200 bg-[#f9fafb] shadow-sm transition-all h-full flex flex-col overflow-hidden", isOver && "ring-2 ring-brand-500/20 bg-brand-50/10")}>
         <div className="p-4 flex items-center justify-between">
-          <h3 className="font-extrabold text-slate-900 text-sm uppercase tracking-tight">
-            {label}
-          </h3>
+          <h3 className="font-extrabold text-slate-900 text-sm uppercase tracking-tight">{label}</h3>
           <span className="bg-white border border-slate-200 text-slate-500 text-[10px] font-bold px-2 py-0.5 rounded-full">
             {items.length}
           </span>
         </div>
 
-        <div
-          ref={parentRef}
-          className="px-3 pb-4 flex-1 overflow-y-auto custom-scrollbar"
-        >
-          <div
-            style={{
-              height: `${virtualizer.getTotalSize()}px`,
-              width: "100%",
-              position: "relative",
-            }}
-          >
+        <div ref={parentRef} className="px-3 pb-4 flex-1 overflow-y-auto custom-scrollbar">
+          <div style={{ height: `${virtualizer.getTotalSize()}px`, width: "100%", position: "relative" }}>
             {virtualizer.getVirtualItems().map((virtualRow) => {
               const item = items[virtualRow.index];
               return (
-                <div
-                  key={item.id}
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    width: "100%",
-                    height: `${virtualRow.size}px`,
-                    transform: `translateY(${virtualRow.start}px)`,
-                  }}
-                >
-                  <DraggableKanbanCard
-                    item={item}
-                    onSelect={() => onSelectItem(item.id)}
-                  />
+                <div key={item.id} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: `${virtualRow.size}px`, transform: `translateY(${virtualRow.start}px)` }}>
+                  <DraggableKanbanCard item={item} onSelect={() => onSelectItem(item.id)} />
                 </div>
               );
             })}
@@ -228,19 +186,10 @@ function DroppableStateColumn({
       </div>
 
       <style jsx>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 8px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: transparent;
-          border-radius: 10px;
-        }
-        .custom-scrollbar:hover::-webkit-scrollbar-thumb {
-          background: #e2e8f0;
-        }
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: transparent; border-radius: 10px; }
+        .custom-scrollbar:hover::-webkit-scrollbar-thumb { background: #e2e8f0; }
       `}</style>
     </div>
   );
@@ -260,26 +209,14 @@ function DraggableKanbanCard({ item, onSelect }: { item: KanbanItem, onSelect: (
 
   const handlePointerUp = (e: React.PointerEvent) => {
     if (!dragStartPos.current) return;
-    const dist = Math.sqrt(
-      Math.pow(e.clientX - dragStartPos.current.x, 2) +
-      Math.pow(e.clientY - dragStartPos.current.y, 2)
-    );
-    if (dist < 5) {
-      onSelect();
-    }
+    const dist = Math.sqrt(Math.pow(e.clientX - dragStartPos.current.x, 2) + Math.pow(e.clientY - dragStartPos.current.y, 2));
+    if (dist < 5) onSelect();
     dragStartPos.current = null;
   };
 
   return (
-    <div
-      ref={setNodeRef}
-      {...listeners}
-      {...attributes}
-      onPointerDown={handlePointerDown}
-      onPointerUp={handlePointerUp}
-      className={cn("cursor-grab active:cursor-grabbing", isDragging && "opacity-0")}
-    >
-      <KanbanCard item={item} onClick={() => {}} />
+    <div ref={setNodeRef} {...listeners} {...attributes} onPointerDown={handlePointerDown} onPointerUp={handlePointerUp} className={cn("cursor-grab active:cursor-grabbing", isDragging && "opacity-0")}>
+      <KanbanCard item={item} onClick={() => { }} />
     </div>
   );
 }
@@ -298,9 +235,7 @@ export function PipelineView({
   const [changing, setChanging] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
-  );
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     setActiveId(String(event.active.id));
@@ -328,21 +263,17 @@ export function PipelineView({
 
       let res: { ok: boolean; error?: string };
       if (item.type === "client") {
-        // Item is a client
-        const clientId = item.id.replace("client-", "");
+        // Obtenemos el clientId real de forma segura
+        const clientId = item.clientId || item.id.replace("client-", "").replace("limbo-", "");
         res = await transitionClientState(clientId, toState);
       } else {
-        // Item is a contract
         const contractId = item.id.replace("contract-", "");
         res = await updateContractState(contractId, toState);
       }
 
       setChanging(false);
-      if (res.ok) {
-        router.refresh();
-      } else {
-        toastError(res.error || "Error al cambiar estado");
-      }
+      if (res.ok) router.refresh();
+      else toastError(res.error || "Error al cambiar estado");
     },
     [kanbanItems, stateLabels, changing, router]
   );
@@ -351,11 +282,7 @@ export function PipelineView({
 
   return (
     <>
-      <DndContext
-        sensors={sensors}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-      >
+      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div className="flex gap-4 overflow-x-auto h-[calc(100vh-220px)] pb-4 custom-scrollbar">
           {stateLabels.map(({ id, label }) => (
             <DroppableStateColumn
@@ -372,9 +299,7 @@ export function PipelineView({
           {activeItem ? (
             <div className="w-[310px] rounded-xl border-2 border-brand-500 bg-white p-4 shadow-2xl cursor-grabbing scale-105 rotate-1">
               <p className="font-bold text-slate-900 text-sm truncate">
-                {activeItem.company_name ||
-                  activeItem.cif ||
-                  activeItem.id.slice(0, 8)}
+                {activeItem.company_name || activeItem.cif || activeItem.id.slice(0, 8)}
               </p>
               <p className="text-xs text-slate-500 mt-1 capitalize">
                 {activeItem.contractType && `Contrato ${activeItem.contractType} · `}
@@ -387,8 +312,11 @@ export function PipelineView({
 
       {selectedItemId && (() => {
         const item = kanbanItems.find(i => i.id === selectedItemId);
-        if (!item || item.type !== "client") return null;
-        const clientId = item.id.replace("client-", "");
+        if (!item) return null;
+
+        // Extraemos el clientId de forma segura
+        const clientId = item.clientId || item.id.replace("client-", "").replace("limbo-", "");
+
         return (
           <ClientLeadModal
             mode="client"
