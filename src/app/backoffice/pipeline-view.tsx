@@ -24,7 +24,7 @@ import { Mail, Phone, MoreHorizontal } from "lucide-react";
 import { ClientLeadModal } from "./components/client-lead-modal";
 import { toastError } from "@/lib/toast";
 
-type KanbanItem = {
+export type KanbanItem = {
   id: string;
   type: "client" | "contract";
   current_state: string;
