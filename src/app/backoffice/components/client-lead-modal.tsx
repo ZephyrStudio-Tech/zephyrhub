@@ -11,7 +11,6 @@ import {
 } from "@/app/actions/client-actions";
 import { updateContractState } from "@/app/actions/contract-actions";
 import { updateDeviceOrderStatus, updateDeviceOrderTracking } from "@/app/actions/device-order-actions";
-import { markPaymentReceived } from "@/app/actions/payment-actions";
 import { addClientNote } from "@/app/actions/note-actions";
 import {
   addTriageNote,
@@ -288,17 +287,12 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
                     refreshData();
                   }
                 }}
-                disabled={mode === 'client' && isPostDev(client?.current_state)}
+                disabled={false}
               >
                 {(mode === 'lead' ? PRECONSULTORIA_STATE_LABELS : PIPELINE_STATE_LABELS).map(s => (
                   <option key={s.id} value={s.id}>{s.label}</option>
                 ))}
               </select>
-              {mode === 'client' && isPostDev(client?.current_state) && (
-                <div className="text-[10px] text-slate-400 font-bold absolute top-full mt-1 left-4">
-                  Estado gestionado por contratos
-                </div>
-              )}
               <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400 hover:text-slate-600">
                 <X className="w-5 h-5" />
               </button>
@@ -534,22 +528,9 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
                                           Cobrado €{p.received_amount}
                                         </span>
                                       ) : (
-                                        <Button
-                                          size="sm"
-                                          variant="outline"
-                                          className="h-7 px-3 text-[10px] font-bold rounded-lg border-emerald-100 text-emerald-700 hover:bg-emerald-50"
-                                          onClick={async () => {
-                                            const res = await markPaymentReceived(p.id, p.expected_amount, new Date().toISOString());
-                                            if (res.ok) {
-                                              toastSuccess("Pago registrado");
-                                              refreshData();
-                                            } else {
-                                              toastError(res.error ?? "Error");
-                                            }
-                                          }}
-                                        >
-                                          Marcar cobrado
-                                        </Button>
+                                        <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-1 rounded-lg">
+                                          Pendiente
+                                        </span>
                                       )}
                                     </div>
                                   </div>
