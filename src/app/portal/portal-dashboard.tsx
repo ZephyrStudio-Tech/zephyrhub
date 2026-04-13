@@ -191,6 +191,82 @@ const POST_DEV_STATES = [
   "perdida",
 ];
 
+const CONTRACT_STATE_INFO: Record<string, {
+  description: string;
+  actor: "zephyr" | "redes" | "cliente";
+  orientation: string;
+  clientAction?: string;
+}> = {
+  empezar_desarrollo: {
+    description: "Nuestro equipo técnico ha comenzado a trabajar en tu solución. Este proceso puede durar varias semanas dependiendo de la complejidad del proyecto.",
+    actor: "zephyr",
+    orientation: "Plazo orientativo: 4-8 semanas desde el inicio.",
+  },
+  presentar_justificacion_fase_i: {
+    description: "El trabajo realizado está siendo documentado y preparado para su presentación ante Red.es como justificación de la Fase I.",
+    actor: "zephyr",
+    orientation: "Estamos recopilando evidencias y completando la documentación requerida.",
+  },
+  firma_justificacion: {
+    description: "Los documentos de justificación están listos. Necesitamos tu firma para poder presentarlos ante Red.es.",
+    actor: "cliente",
+    orientation: "Cuanto antes firmes, antes podremos avanzar.",
+    clientAction: "Revisa tu email o contacta con tu consultor para firmar los documentos pendientes.",
+  },
+  subsanacion_fase_i: {
+    description: "Red.es ha solicitado aclaraciones o documentación adicional sobre la justificación presentada. Estamos preparando la respuesta.",
+    actor: "zephyr",
+    orientation: "Los plazos de subsanación son marcados por la administración.",
+  },
+  resolucion_red_es: {
+    description: "La justificación ha sido presentada y Red.es está evaluándola. Este trámite es gestionado íntegramente por la administración.",
+    actor: "redes",
+    orientation: "Los plazos de resolución dependen de Red.es y pueden extenderse varios meses.",
+  },
+  pago_i_fase: {
+    description: "Red.es ha resuelto favorablemente la Fase I. El pago correspondiente está siendo tramitado por la administración.",
+    actor: "redes",
+    orientation: "Los pagos de la administración pueden tardar semanas en hacerse efectivos.",
+  },
+  ano_mantenimiento: {
+    description: "Tu solución está en el período de mantenimiento obligatorio de 12 meses. Seguimos dándote soporte durante este tiempo.",
+    actor: "zephyr",
+    orientation: "Durante este año debes mantener activa la solución para poder justificar la Fase II.",
+  },
+  justificacion_ii_fase: {
+    description: "Estamos preparando la documentación de la segunda y última fase de justificación ante Red.es.",
+    actor: "zephyr",
+    orientation: "Esta es la fase final del proceso de justificación.",
+  },
+  firma_justificacion_ii: {
+    description: "Los documentos de la Fase II están listos para tu firma.",
+    actor: "cliente",
+    orientation: "Tu firma es necesaria para completar el proceso.",
+    clientAction: "Contacta con tu consultor para firmar los documentos de la Fase II.",
+  },
+  subsanacion_fase_ii: {
+    description: "Red.es ha solicitado correcciones sobre la justificación de la Fase II. Estamos resolviéndolo.",
+    actor: "zephyr",
+    orientation: "Los plazos de subsanación son fijados por la administración.",
+  },
+  resolucion_ii_red_es: {
+    description: "Red.es está evaluando la justificación final de tu proyecto. Esta es la última resolución del proceso.",
+    actor: "redes",
+    orientation: "Una vez resuelta favorablemente, el proceso habrá concluido.",
+  },
+  ganada: {
+    description: "¡Tu proyecto Kit Digital ha sido completado con éxito! Todos los trámites han finalizado correctamente.",
+    actor: "zephyr",
+    orientation: "El proceso ha concluido. Gracias por confiar en ZephyrStudio.",
+  },
+  perdida: {
+    description: "Este expediente ha sido cerrado. Si tienes dudas sobre el motivo, contacta con tu consultor.",
+    actor: "cliente",
+    orientation: "Contacta con nosotros si necesitas más información.",
+    clientAction: "Abre un ticket de soporte para hablar con tu consultor.",
+  },
+};
+
 function ContractProgress({
   contract,
   label,
