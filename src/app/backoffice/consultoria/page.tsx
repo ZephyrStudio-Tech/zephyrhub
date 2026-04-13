@@ -80,11 +80,11 @@ export default async function ConsultoriaPage() {
       // Post-dev phase: create separate items for each contract
       (client.contracts ?? []).forEach((contract: any) => {
         kanbanItems.push({
-          id: `contract-${contract.id}`,
           type: "contract",
           contractType: contract.type,
-          current_state: contract.current_state,
           clientId: client.id,
+          id: `contract-${contract.id}`,
+          current_state: contract.current_state,
           company_name: client.company_name,
           cif: client.cif,
           email: client.email,
