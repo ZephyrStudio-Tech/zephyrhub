@@ -460,91 +460,95 @@ export function PortalDashboard({
 
       <div className="grid gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-8">
-          {/* Progress Stepper */}
-          <Card className="border-slate-200 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg">Progreso General</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between gap-2 overflow-x-auto pb-2">
-                {MACRO_PHASES.map((phase, i) => {
-                  const isActive = i <= currentIndex;
-                  const isCurrent = phase.key === currentMacro;
-                  return (
-                    <div key={phase.key} className="flex flex-col items-center gap-2 min-w-[80px]">
-                      <div
-                        className={cn(
-                          "flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-all",
-                          isActive
-                            ? "bg-brand-500 text-white"
-                            : "bg-slate-100 text-slate-400 border border-slate-200",
-                          isCurrent && "ring-4 ring-brand-100"
-                        )}
-                      >
-                        {i + 1}
+          {/* Progress Stepper - only show in pre-dev phase */}
+          {!POST_DEV_STATES.includes(client.current_state) && (
+            <Card className="border-slate-200 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg">Progreso General</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between gap-2 overflow-x-auto pb-2">
+                  {MACRO_PHASES.map((phase, i) => {
+                    const isActive = i <= currentIndex;
+                    const isCurrent = phase.key === currentMacro;
+                    return (
+                      <div key={phase.key} className="flex flex-col items-center gap-2 min-w-[80px]">
+                        <div
+                          className={cn(
+                            "flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-all",
+                            isActive
+                              ? "bg-brand-500 text-white"
+                              : "bg-slate-100 text-slate-400 border border-slate-200",
+                            isCurrent && "ring-4 ring-brand-100"
+                          )}
+                        >
+                          {i + 1}
+                        </div>
+                        <span
+                          className={cn(
+                            "text-[10px] font-bold uppercase tracking-wider text-center",
+                            isActive ? "text-slate-900" : "text-slate-400"
+                          )}
+                        >
+                          {phase.label}
+                        </span>
                       </div>
-                      <span
-                        className={cn(
-                          "text-[10px] font-bold uppercase tracking-wider text-center",
-                          isActive ? "text-slate-900" : "text-slate-400"
-                        )}
-                      >
-                        {phase.label}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
-          {/* State Explanation Card */}
-          <Card className="border-slate-200 shadow-sm overflow-hidden">
-            <div className={cn("h-1.5 w-full", actorInfo.color.replace("text", "bg"))} />
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Clock className="w-5 h-5 text-slate-400" />
-                ¿En qué punto estamos?
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div>
-                <h3 className="text-xl font-bold text-slate-900">{stateInfo.title}</h3>
-                <p className="text-slate-600 mt-2 leading-relaxed">{stateInfo.description}</p>
-              </div>
+          {/* State Explanation Card - only show in pre-dev phase */}
+          {!POST_DEV_STATES.includes(client.current_state) && (
+            <Card className="border-slate-200 shadow-sm overflow-hidden">
+              <div className={cn("h-1.5 w-full", actorInfo.color.replace("text", "bg"))} />
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Clock className="w-5 h-5 text-slate-400" />
+                  ¿En qué punto estamos?
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900">{stateInfo.title}</h3>
+                  <p className="text-slate-600 mt-2 leading-relaxed">{stateInfo.description}</p>
+                </div>
 
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 border border-slate-100 w-fit">
-                <actorInfo.icon className={cn("w-5 h-5", actorInfo.color)} />
-                <span className="text-sm font-medium text-slate-700">
-                  Responsable actual: <span className={cn("font-bold", actorInfo.color)}>{actorInfo.label}</span>
-                </span>
-              </div>
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 border border-slate-100 w-fit">
+                  <actorInfo.icon className={cn("w-5 h-5", actorInfo.color)} />
+                  <span className="text-sm font-medium text-slate-700">
+                    Responsable actual: <span className={cn("font-bold", actorInfo.color)}>{actorInfo.label}</span>
+                  </span>
+                </div>
 
-              {/* Client Action Banner */}
-              {stateInfo.actor === "cliente" && stateInfo.clientAction && (
-                <div className="rounded-xl border border-amber-200 bg-amber-50 p-5">
-                  <div className="flex items-start gap-4">
-                    <div className="p-2 rounded-full bg-amber-100">
-                      <AlertTriangle className="w-5 h-5 text-amber-600" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-bold text-amber-900">
-                        Acción requerida por tu parte
-                      </p>
-                      <p className="text-sm text-amber-800 mt-1">{stateInfo.clientAction}</p>
-                      <div className="flex gap-2 mt-4">
-                        <Link href="/portal/soporte/tickets/nuevo">
-                          <Button size="sm" className="bg-amber-600 hover:bg-amber-700 text-white border-none">
-                            Resolver ahora
-                          </Button>
-                        </Link>
+                {/* Client Action Banner */}
+                {stateInfo.actor === "cliente" && stateInfo.clientAction && (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-5">
+                    <div className="flex items-start gap-4">
+                      <div className="p-2 rounded-full bg-amber-100">
+                        <AlertTriangle className="w-5 h-5 text-amber-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-bold text-amber-900">
+                          Acción requerida por tu parte
+                        </p>
+                        <p className="text-sm text-amber-800 mt-1">{stateInfo.clientAction}</p>
+                        <div className="flex gap-2 mt-4">
+                          <Link href="/portal/soporte/tickets/nuevo">
+                            <Button size="sm" className="bg-amber-600 hover:bg-amber-700 text-white border-none">
+                              Resolver ahora
+                            </Button>
+                          </Link>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         <div className="space-y-8">

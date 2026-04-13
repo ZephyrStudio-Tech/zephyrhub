@@ -62,24 +62,36 @@ export default async function ConsultoriaPage() {
 
     if (POST_DEV_STATES.includes(client.current_state)) {
       // Post-dev phase: create separate items for each contract
-      (client.contracts ?? []).forEach((contract: any) => {
-        kanbanItems.push({
-          type: "contract",
-          contractType: contract.type,
-          clientId: client.id,
-          id: `contract-${contract.id}`,
-          current_state: contract.current_state,
-          company_name: client.company_name,
-          cif: client.cif,
-          email: client.email,
-          phone: client.phone,
-          service_type: client.service_type,
-          consultant_id: client.consultant_id,
-          created_at: client.created_at,
-          last_interaction_at: clientWithInteraction.last_interaction_at,
-          pending_docs: client.pending_docs,
+      const contracts = client.contracts ?? [];
+      
+      if (contracts.length > 0) {
+        contracts.forEach((contract: any) => {
+          kanbanItems.push({
+            type: "contract",
+            contractType: contract.type,
+            clientId: client.id,
+            id: `contract-${contract.id}`,
+            current_state: contract.current_state,
+            company_name: client.company_name,
+            cif: client.cif,
+            email: client.email,
+            phone: client.phone,
+            service_type: client.service_type,
+            consultant_id: client.consultant_id,
+            created_at: client.created_at,
+            last_interaction_at: clientWithInteraction.last_interaction_at,
+            pending_docs: client.pending_docs,
+          });
         });
-      });
+      } else {
+        // Fallback: client in post-dev but no contracts - show as client card
+        kanbanItems.push({
+          ...clientWithInteraction,
+          id: `client-limbo-${client.id}`,
+          type: "client",
+          current_state: client.current_state,
+        });
+      }
     } else {
       // Pre-dev phase: create single client item
       kanbanItems.push({
