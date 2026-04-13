@@ -36,7 +36,7 @@ export default async function PortalTicketsPage() {
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Mis tickets de soporte</h1>
           <p className="text-gray-500">Gestiona tus solicitudes de soporte y consulta el estado</p>
         </div>
-        <Link href="/portal/soporte/tickets/new">
+        <Link href="/portal/soporte/tickets/nuevo">
           <Button className="gap-2">
             <Plus className="w-4 h-4" />
             Nuevo ticket
