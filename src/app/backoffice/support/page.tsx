@@ -18,7 +18,7 @@ export default async function BackofficeSupportPage() {
     .order("created_at", { ascending: false });
 
   if (role === "consultor") {
-    // Subquery-like behavior: consultant sees their own user tickets OR tickets for clients they manage
+    // Consultant sees their own user tickets OR tickets for clients they manage OR tickets with no client_id
     const { data: managedClients } = await supabase
       .from("clients")
       .select("id")
@@ -27,9 +27,9 @@ export default async function BackofficeSupportPage() {
     const clientIds = (managedClients || []).map(c => c.id);
 
     if (clientIds.length > 0) {
-      query = query.or(`user_id.eq.${user.id},client_id.in.(${clientIds.join(",")})`);
+      query = query.or(`user_id.eq.${user.id},client_id.in.(${clientIds.join(",")}),client_id.is.null`);
     } else {
-      query = query.eq("user_id", user.id);
+      query = query.or(`user_id.eq.${user.id},client_id.is.null`);
     }
   }
 
