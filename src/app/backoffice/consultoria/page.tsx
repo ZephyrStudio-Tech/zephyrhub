@@ -99,10 +99,10 @@ export default async function ConsultoriaPage() {
     } else {
       // Pre-dev phase: create single client item
       kanbanItems.push({
+        ...clientWithInteraction,
         id: `client-${client.id}`,
         type: "client",
         current_state: client.current_state,
-        ...clientWithInteraction,
       });
     }
   });
