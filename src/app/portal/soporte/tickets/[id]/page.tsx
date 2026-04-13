@@ -12,7 +12,7 @@ type Ticket = {
   status: string;
   created_at: string;
   updated_at: string | null;
-  profiles?: { full_name?: string; email?: string } | any;
+  profiles?: { full_name?: string; email?: string } | null;
 };
 
 type TicketMessage = {
@@ -35,22 +35,41 @@ export default async function PortalTicketPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  // Execute both queries in parallel
-  const [{ data: ticket }, { data: messages }] = await Promise.all([
-    supabase
-      .from("support_requests")
-      .select("id, user_id, client_id, category, message, status, created_at, updated_at, profiles(full_name, email)")
-      .eq("id", id)
-      .eq("user_id", user.id)
-      .single(),
-    supabase
-      .from("ticket_messages")
-      .select("id, ticket_id, message, attachment_url, sender_role, created_at")
-      .eq("ticket_id", id)
-      .order("created_at", { ascending: true }),
-  ]);
+  // Queries en paralelo — sin join a profiles (FK apunta a auth.users, no a profiles)
+  const [{ data: ticket, error: ticketError }, { data: messages }] =
+    await Promise.all([
+      supabase
+        .from("support_requests")
+        .select(
+          "id, user_id, client_id, category, message, status, created_at, updated_at"
+        )
+        .eq("id", id)
+        .eq("user_id", user.id)
+        .single(),
+      supabase
+        .from("ticket_messages")
+        .select(
+          "id, ticket_id, message, attachment_url, sender_role, created_at"
+        )
+        .eq("ticket_id", id)
+        .order("created_at", { ascending: true }),
+    ]);
 
-  if (!ticket) redirect("/portal/soporte/tickets");
+  if (ticketError || !ticket) {
+    redirect("/portal/soporte/tickets");
+  }
+
+  // Fetch profile del usuario por separado
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name, email")
+    .eq("id", user.id)
+    .single();
+
+  const ticketWithProfile: Ticket = {
+    ...ticket,
+    profiles: profile ?? null,
+  };
 
   return (
     <div>
@@ -59,16 +78,19 @@ export default async function PortalTicketPage({
         <div className="flex items-center gap-1 text-sm text-gray-500 mb-2">
           <span>Home</span>
           <span>/</span>
-          <span>Ticket Reply</span>
+          <span>Mis tickets</span>
+          <span>/</span>
+          <span>#{id.slice(0, 8)}</span>
         </div>
-        <h1 className="text-3xl font-bold text-gray-900">Ticket Reply</h1>
+        <h1 className="text-3xl font-bold text-gray-900">
+          {ticket.category}
+        </h1>
       </div>
 
       <TicketChatView
-        ticket={ticket as Ticket}
+        ticket={ticketWithProfile}
         messages={(messages ?? []) as TicketMessage[]}
       />
     </div>
   );
 }
-
