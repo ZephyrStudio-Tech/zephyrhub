@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { createDevice, updateDevice, toggleDeviceAvailability } from "@/app/actions/device-actions";
+import { createDevice, updateDevice, toggleDeviceAvailability, bulkCreateDevices } from "@/app/actions/device-actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Pencil, Trash2, Check, X } from "lucide-react";
+import { Plus, Pencil, Trash2, Upload, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { toastError, toastSuccess } from "@/lib/toast";
@@ -52,9 +52,6 @@ type DeviceFormData = {
   specs: { ram?: string; storage?: string; screen?: string; processor?: string };
   cost_price: number;
   sale_price: number;
-  bono_coverage: number;
-  stock: number;
-  is_available: boolean;
   images: string[];
 };
 
@@ -79,9 +76,6 @@ function DeviceForm({
       specs: device.specs || {},
       cost_price: device.cost_price,
       sale_price: device.sale_price,
-      bono_coverage: device.bono_coverage,
-      stock: device.stock || 0,
-      is_available: device.is_available,
       images: device.images,
     } : {
       name: "",
@@ -92,9 +86,6 @@ function DeviceForm({
       specs: {},
       cost_price: 0,
       sale_price: 0,
-      bono_coverage: 1000,
-      stock: 0,
-      is_available: true,
       images: [],
     }
   );
@@ -290,45 +281,6 @@ function DeviceForm({
             disabled={isPending}
           />
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Cobertura del bono (€)
-          </label>
-          <input
-            type="number"
-            step="0.01"
-            required
-            value={formData.bono_coverage}
-            onChange={(e) => handleChange("bono_coverage", parseFloat(e.target.value))}
-            className="w-full rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-brand-500"
-            disabled={isPending}
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Stock
-          </label>
-          <input
-            type="number"
-            value={formData.stock || 0}
-            onChange={(e) => handleChange("stock", parseInt(e.target.value))}
-            className="w-full rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-brand-500"
-            disabled={isPending}
-          />
-        </div>
-      </div>
-
-      <div className="flex items-center gap-3">
-        <input
-          type="checkbox"
-          checked={formData.is_available}
-          onChange={(e) => handleChange("is_available", e.target.checked)}
-          className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
-          disabled={isPending}
-        />
-        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-          Disponible
-        </label>
       </div>
 
       <div>
@@ -362,12 +314,87 @@ function DeviceForm({
   );
 }
 
+function parseCSV(csv: string): Array<{
+  name: string;
+  brand: string | null;
+  model: string | null;
+  category: string;
+  description: string | null;
+  specs: { ram?: string; storage?: string; screen?: string; processor?: string } | null;
+  cost_price: number;
+  sale_price: number;
+  images: string[];
+}> {
+  const lines = csv.trim().split("\n");
+  const devices = [];
+
+  // Skip header (first line)
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line.trim()) continue;
+
+    // Parse CSV with support for quoted fields containing commas
+    const fields: string[] = [];
+    let current = "";
+    let inQuotes = false;
+
+    for (let j = 0; j < line.length; j++) {
+      const char = line[j];
+      const nextChar = line[j + 1];
+
+      if (char === '"') {
+        inQuotes = !inQuotes;
+      } else if (char === "," && !inQuotes) {
+        fields.push(current.trim());
+        current = "";
+      } else {
+        current += char;
+      }
+    }
+    fields.push(current.trim());
+
+    if (fields.length < 12) continue;
+
+    // Remove quotes from fields
+    const cleanFields = fields.map(f => f.replace(/^"|"$/g, ""));
+
+    // Parse prices: replace comma with dot for European format
+    const cost_price = parseFloat(cleanFields[9].replace(",", "."));
+    const sale_price = parseFloat(cleanFields[10].replace(",", "."));
+
+    if (isNaN(cost_price) || isNaN(sale_price)) continue;
+
+    devices.push({
+      name: cleanFields[0] || "",
+      brand: cleanFields[1] || null,
+      model: cleanFields[2] || null,
+      category: cleanFields[3] || "Otro",
+      description: cleanFields[4] || null,
+      specs: {
+        ram: cleanFields[5] || undefined,
+        storage: cleanFields[6] || undefined,
+        screen: cleanFields[7] || undefined,
+        processor: cleanFields[8] || undefined,
+      },
+      cost_price,
+      sale_price,
+      images: cleanFields[11] ? [cleanFields[11]] : [],
+    });
+  }
+
+  return devices;
+}
+
 export function DevicesCatalog({ devices: initialDevices }: { devices: Device[] }) {
   const router = useRouter();
-  const [devices, setDevices] = useState(initialDevices);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Filter to only show available devices in main catalog
+  const [devices, setDevices] = useState(initialDevices.filter(d => d.is_available));
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [isImporting, setIsImporting] = useState(false);
 
   const handleCreate = (data: DeviceFormData) => {
     startTransition(async () => {
@@ -396,31 +423,90 @@ export function DevicesCatalog({ devices: initialDevices }: { devices: Device[] 
     });
   };
 
-  const handleToggleAvailability = (deviceId: string, currentStatus: boolean) => {
+  const handleDelete = (deviceId: string) => {
     startTransition(async () => {
-      const res = await toggleDeviceAvailability(deviceId, !currentStatus);
+      const res = await toggleDeviceAvailability(deviceId, false);
       if (res.ok) {
+        toastSuccess("Dispositivo eliminado");
         router.refresh();
       } else {
-        toastError(res.error || "Error al cambiar disponibilidad");
+        toastError(res.error || "Error al eliminar dispositivo");
       }
     });
   };
 
-  const editingDevice = editingId ? devices.find((d) => d.id === editingId) : null;
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    const text = await file.text();
+    const parsed = parseCSV(text);
+
+    if (parsed.length === 0) {
+      toastError("No se encontraron dispositivos válidos en el CSV");
+      setIsImporting(false);
+      return;
+    }
+
+    startTransition(async () => {
+      const res = await bulkCreateDevices(parsed);
+      setIsImporting(false);
+      if (res.ok) {
+        toastSuccess(`${res.created} dispositivos importados`);
+        router.refresh();
+      } else {
+        toastError(res.error || "Error al importar dispositivos");
+      }
+    });
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const editingDevice = editingId ? initialDevices.find((d) => d.id === editingId) : null;
 
   return (
     <div className="space-y-6">
-      {/* New Device Button */}
+      {/* Buttons */}
       {!showForm && !editingId && (
-        <Button
-          onClick={() => setShowForm(true)}
-          className="gap-2"
-          size="lg"
-        >
-          <Plus className="w-4 h-4" />
-          Nuevo dispositivo
-        </Button>
+        <div className="flex gap-3">
+          <Button
+            onClick={() => setShowForm(true)}
+            className="gap-2"
+            size="lg"
+          >
+            <Plus className="w-4 h-4" />
+            Nuevo dispositivo
+          </Button>
+          <Button
+            onClick={() => fileInputRef.current?.click()}
+            variant="outline"
+            className="gap-2"
+            size="lg"
+            disabled={isImporting}
+          >
+            {isImporting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Importando...
+              </>
+            ) : (
+              <>
+                <Upload className="w-4 h-4" />
+                Importar CSV
+              </>
+            )}
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+        </div>
       )}
 
       {/* Form */}
@@ -464,17 +550,6 @@ export function DevicesCatalog({ devices: initialDevices }: { devices: Device[] 
                       Sin imagen
                     </div>
                   )}
-                  <div className="absolute top-2 right-2 flex gap-2">
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        device.is_available
-                          ? "bg-green-100 text-green-700"
-                          : "bg-red-100 text-red-700"
-                      }`}
-                    >
-                      {device.is_available ? "Disponible" : "No disponible"}
-                    </span>
-                  </div>
                 </div>
 
                 <CardHeader>
@@ -538,12 +613,6 @@ export function DevicesCatalog({ devices: initialDevices }: { devices: Device[] 
                     </div>
                   </div>
 
-                  {device.stock !== null && (
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      <span className="font-medium">Stock:</span> {device.stock} unidades
-                    </p>
-                  )}
-
                   <div className="flex gap-2 pt-3">
                     <Button
                       size="sm"
@@ -557,22 +626,13 @@ export function DevicesCatalog({ devices: initialDevices }: { devices: Device[] 
                     </Button>
                     <Button
                       size="sm"
-                      variant={device.is_available ? "outline" : "default"}
+                      variant="destructive"
                       className="flex-1 gap-2"
-                      onClick={() => handleToggleAvailability(device.id, device.is_available)}
+                      onClick={() => handleDelete(device.id)}
                       disabled={isPending}
                     >
-                      {device.is_available ? (
-                        <>
-                          <X className="w-4 h-4" />
-                          Desactivar
-                        </>
-                      ) : (
-                        <>
-                          <Check className="w-4 h-4" />
-                          Activar
-                        </>
-                      )}
+                      <Trash2 className="w-4 h-4" />
+                      Eliminar
                     </Button>
                   </div>
                 </CardContent>
