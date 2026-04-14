@@ -17,9 +17,6 @@ type DeviceInput = {
   specs: Json | null;
   cost_price: number;
   sale_price: number;
-  bono_coverage: number;
-  stock: number | null;
-  is_available: boolean;
   images: string[];
 };
 
@@ -53,9 +50,9 @@ export async function createDevice(
     specs: data.specs,
     cost_price: data.cost_price,
     sale_price: data.sale_price,
-    bono_coverage: data.bono_coverage,
-    stock: data.stock,
-    is_available: data.is_available,
+    bono_coverage: 1000,
+    stock: null,
+    is_available: true,
     images: data.images,
   };
 
@@ -214,9 +211,6 @@ export async function updateDevice(
     specs: data.specs,
     cost_price: data.cost_price,
     sale_price: data.sale_price,
-    bono_coverage: data.bono_coverage,
-    stock: data.stock,
-    is_available: data.is_available,
     images: data.images,
   };
 
@@ -235,6 +229,64 @@ export async function updateDevice(
 
   revalidatePath("/backoffice/devices");
   return { ok: true };
+}
+
+export async function bulkCreateDevices(
+  devices: Array<{
+    name: string;
+    brand: string | null;
+    model: string | null;
+    category: string;
+    description: string | null;
+    specs: Json | null;
+    cost_price: number;
+    sale_price: number;
+    images: string[];
+  }>
+): Promise<{ ok: boolean; error?: string; created?: number }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "No autenticado" };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if ((profile as any)?.role !== "admin") {
+    return { ok: false, error: "Solo los administradores pueden importar dispositivos" };
+  }
+
+  const supabaseAdmin = createAdminClient();
+
+  // Ensure all devices have the fixed values
+  const insertData: DeviceInsert[] = devices.map((d) => ({
+    name: d.name,
+    brand: d.brand,
+    model: d.model,
+    category: d.category,
+    description: d.description,
+    specs: d.specs,
+    cost_price: d.cost_price,
+    sale_price: d.sale_price,
+    bono_coverage: 1000,
+    stock: null,
+    is_available: true,
+    images: d.images,
+  }));
+
+  const { data: inserted, error } = await (supabaseAdmin.from("devices") as any).insert(
+    insertData
+  );
+
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/backoffice/devices");
+  revalidatePath("/backoffice/devices/archived");
+  return { ok: true, created: insertData.length };
 }
 
 export async function toggleDeviceAvailability(
