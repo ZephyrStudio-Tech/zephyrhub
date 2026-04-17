@@ -10,7 +10,6 @@ import {
   deleteClientRecord
 } from "@/app/actions/client-actions";
 import { updateContractState } from "@/app/actions/contract-actions";
-import { markPaymentReceived } from "@/app/actions/payment-actions";
 import { addClientNote } from "@/app/actions/note-actions";
 import {
   addTriageNote,
@@ -33,7 +32,6 @@ import {
 import { cn } from "@/lib/utils";
 import { PIPELINE_STATE_LABELS, PRECONSULTORIA_STATE_LABELS } from "@/lib/state-machine/constants";
 import { toastError, toastSuccess } from "@/lib/toast";
-import { toast } from "sonner";
 
 const POST_DEV_STATES = [
   "empezar_desarrollo", "presentar_justificacion_fase_i", "firma_justificacion", 
@@ -74,7 +72,7 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
   const [isPending, startTransition] = useTransition();
   const [saving, setSaving] = useState(false);
   
-  // NUEVO: Estado para el modal de confirmación de borrado
+  // Modal de confirmación de borrado
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const [leadInteractions, setLeadInteractions] = useState<any[]>([]);
@@ -170,7 +168,7 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
     } else {
       res = await updateTriageLead(client.id, {
         full_name: editForm.full_name, email: editForm.email,
-        phone: editForm.phone, nif: editForm.cif, // <--- CORREGIDO (nif)
+        phone: editForm.phone, nif: editForm.cif, // FIX NIF APLICADO AQUÍ
         notes: editForm.notes, associate_id: editForm.associate_id || null
       });
     }
@@ -180,14 +178,13 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
     setSaving(false);
   }
 
-  // NUEVO: Función de borrado definitivo que es llamada desde el modal rojo
-  const executeDelete = async () => {
+  const handleDeleteRecord = async () => {
     startTransition(async () => {
       const res = mode === 'lead' ? await deleteTriageLead(client.id) : await deleteClientRecord(client.id);
       if (res.ok) {
         toastSuccess("Ficha eliminada correctamente");
         onClose();
-        window.location.reload(); // Recarga para actualizar Kanban
+        window.location.reload(); 
       } else {
         toastError(res.error || "Error al eliminar");
         setShowDeleteConfirm(false);
@@ -218,7 +215,6 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 md:p-6" onClick={onClose}>
       
-      {/* Contenedor de la ficha */}
       <div className="bg-slate-50 w-full max-w-6xl max-h-[90vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row relative" onClick={e => e.stopPropagation()}>
         {/* COLUMNA IZQUIERDA */}
         <div className="flex-1 overflow-y-auto custom-scrollbar">
@@ -234,7 +230,6 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
             </div>
 
             <div className="flex items-center gap-3">
-              {/* Botón que abre nuestro Modal Seguro */}
               <Button variant="ghost" className="text-red-600 hover:text-red-700 hover:bg-red-50 gap-2" onClick={() => setShowDeleteConfirm(true)} disabled={isPending}>
                 <Trash2 className="w-4 h-4" /> <span className="hidden sm:inline">Eliminar</span>
               </Button>
@@ -402,6 +397,7 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
                               ) : (<span className="text-[10px] text-slate-300 font-bold uppercase">Sin contrato</span>)}
                             </div>
 
+                            {/* ELIMINADO BOTÓN MANUAL DE COBRAR */}
                             {contractPayments.length > 0 && (
                               <div className="rounded-xl border border-slate-50 overflow-hidden">
                                 {contractPayments.map((p: any) => (
@@ -418,17 +414,9 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
                                           Cobrado €{p.received_amount}
                                         </span>
                                       ) : (
-                                        <Button
-                                          size="sm"
-                                          variant="outline"
-                                          className="h-7 px-3 text-[10px] font-bold rounded-lg border-emerald-100 text-emerald-700 hover:bg-emerald-50"
-                                          onClick={async () => {
-                                            const res = await markPaymentReceived(p.id, p.expected_amount, new Date().toISOString());
-                                            if (res.ok) { toastSuccess("Pago registrado"); refreshData(); }
-                                          }}
-                                        >
-                                          Marcar cobrado
-                                        </Button>
+                                        <span className="text-[10px] font-bold bg-amber-50 text-amber-700 px-2 py-1 rounded-lg">
+                                          Pendiente
+                                        </span>
                                       )}
                                     </div>
                                   </div>
@@ -442,6 +430,29 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
                   </Card>
                 )}
               </>
+            )}
+
+            {client.has_device && (
+              <Card className="border-slate-100 shadow-sm overflow-hidden mb-6">
+                <CardHeader className="bg-slate-50/50 border-b border-slate-100 py-4">
+                  <CardTitle className="text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                    <Package className="w-4 h-4" /> Dispositivo
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6">
+                  {data?.deviceOrders?.[0] ? (
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <p className="text-sm font-bold text-slate-800">{data.deviceOrders[0].status}</p>
+                        <p className="text-xs text-slate-500">Tracking: {data.deviceOrders[0].tracking_number || "Pendiente"}</p>
+                      </div>
+                      <Button size="sm" variant="outline" className="rounded-xl">Gestionar pedido</Button>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-slate-500 italic">No se ha generado pedido aún.</p>
+                  )}
+                </CardContent>
+              </Card>
             )}
           </div>
         </div>
@@ -509,7 +520,7 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
         </div>
       </div>
 
-      {/* MODAL DE CONFIRMACIÓN DE BORRADO (Custom y Seguro) */}
+      {/* MODAL DE CONFIRMACIÓN DE BORRADO */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4" onClick={() => setShowDeleteConfirm(false)}>
           <div className="bg-white w-full max-w-md rounded-3xl shadow-xl p-8 relative border border-red-100" onClick={e => e.stopPropagation()}>
