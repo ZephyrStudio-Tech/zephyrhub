@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -8,6 +9,7 @@ import {
   updateClientContactInfo,
   toggleHasDevice,
   assignConsultant,
+  deleteClientRecord,
 } from "@/app/actions/client-actions";
 import { updateContractState } from "@/app/actions/contract-actions";
 import { updateDeviceOrderStatus, updateDeviceOrderTracking } from "@/app/actions/device-order-actions";
@@ -17,7 +19,9 @@ import {
   registerTriageCallMissed,
   registerTriageCallSuccess,
   updateTriageLeadState,
-  moveToConsultoria
+  moveToConsultoria,
+  updateTriageLead,
+  deleteTriageLead,
 } from "@/app/actions/triage";
 import { registerCallMissed, registerCallSuccess } from "@/app/actions/interactions";
 import { transitionClientState } from "@/app/actions/transition-state";
@@ -42,7 +46,8 @@ import {
   Loader2,
   ExternalLink,
   ChevronRight,
-  Users
+  Users,
+  Trash2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -91,13 +96,16 @@ type Props = {
 };
 
 export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [note, setNote] = useState("");
   const [sendingNote, setSendingNote] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [leadInteractions, setLeadInteractions] = useState<any[]>([]);
   const [consultants, setConsultants] = useState<{id: string, full_name: string | null, email: string | null}[]>([]);
+  const [associates, setAssociates] = useState<{id: string, full_name: string | null}[]>([]);
   const [selectedConsultantId, setSelectedConsultantId] = useState<string | null>(null);
   const [assigningConsultant, setAssigningConsultant] = useState(false);
 
@@ -106,7 +114,8 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
     email: "",
     phone: "",
     cif: "",
-    notes: ""
+    notes: "",
+    associate_id: "" as string | null
   });
 
   // Use TanStack Query for client detail with 30s stale time
@@ -153,7 +162,8 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
         email: d.email || "",
         phone: d.phone || "",
         cif: d.cif || "",
-        notes: d.service_description || ""
+        notes: d.service_description || "",
+        associate_id: d.associate_id || null
       });
       setSelectedConsultantId(d.consultant_id || null);
     } else if (mode === 'lead' && leadData) {
@@ -162,16 +172,19 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
         email: leadData.email || "",
         phone: leadData.phone || "",
         cif: leadData.nif || leadData.cif || "",
-        notes: leadData.notes || leadData.service_description || ""
+        notes: leadData.notes || leadData.service_description || "",
+        associate_id: leadData.associate_id || null
       });
       fetchLeadInteractions();
     }
   }, [clientData, leadData, mode, fetchLeadInteractions]);
 
-  // Load consultants when mode is 'client'
+  // Load consultants and associates
   useEffect(() => {
+    const supabase = createClient();
+    
+    // Load consultants (for clients)
     if (mode === 'client') {
-      const supabase = createClient();
       supabase
         .from("profiles")
         .select("id, full_name, email")
@@ -180,6 +193,15 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
           setConsultants(data || []);
         });
     }
+    
+    // Load associates (for both modes)
+    supabase
+      .from("associates")
+      .select("id, full_name")
+      .order("full_name", { ascending: true })
+      .then(({ data }) => {
+        setAssociates(data || []);
+      });
   }, [mode]);
 
   const refreshData = useCallback(async () => {
