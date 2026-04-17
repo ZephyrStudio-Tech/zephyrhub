@@ -170,7 +170,7 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
     } else {
       res = await updateTriageLead(client.id, {
         full_name: editForm.full_name, email: editForm.email,
-        phone: editForm.phone, cif: editForm.cif,
+        phone: editForm.phone, nif: editForm.cif, // <--- CORREGIDO (nif)
         notes: editForm.notes, associate_id: editForm.associate_id || null
       });
     }
