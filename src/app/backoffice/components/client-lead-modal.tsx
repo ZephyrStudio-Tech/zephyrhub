@@ -1,76 +1,48 @@
 "use client";
 
 import { useEffect, useState, useTransition, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import {
   getClientDetail,
   updateClientContactInfo,
-  toggleHasDevice,
   assignConsultant,
-  deleteClientRecord,
+  deleteClientRecord
 } from "@/app/actions/client-actions";
 import { updateContractState } from "@/app/actions/contract-actions";
-import { updateDeviceOrderStatus, updateDeviceOrderTracking } from "@/app/actions/device-order-actions";
+import { markPaymentReceived } from "@/app/actions/payment-actions";
 import { addClientNote } from "@/app/actions/note-actions";
 import {
   addTriageNote,
   registerTriageCallMissed,
   registerTriageCallSuccess,
   updateTriageLeadState,
-  moveToConsultoria,
   updateTriageLead,
-  deleteTriageLead,
+  deleteTriageLead
 } from "@/app/actions/triage";
 import { registerCallMissed, registerCallSuccess } from "@/app/actions/interactions";
 import { transitionClientState } from "@/app/actions/transition-state";
-import { approveDocument, rejectDocument } from "@/app/actions/documents";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  X,
-  Phone,
-  Mail,
-  Building,
-  MapPin,
-  FileText,
-  CreditCard,
-  Package,
-  History,
-  PhoneMissed,
-  CheckCircle2,
-  Send,
-  Loader2,
-  ExternalLink,
-  ChevronRight,
-  Users,
-  Trash2
+  X, Phone, Mail, FileText, Package, History, PhoneMissed,
+  CheckCircle2, Send, Loader2, ExternalLink, ChevronRight, Users, Trash2, AlertTriangle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 import { PIPELINE_STATE_LABELS, PRECONSULTORIA_STATE_LABELS } from "@/lib/state-machine/constants";
 import { toastError, toastSuccess } from "@/lib/toast";
+import { toast } from "sonner";
 
 const POST_DEV_STATES = [
-  "empezar_desarrollo",
-  "presentar_justificacion_fase_i",
-  "firma_justificacion",
-  "subsanacion_fase_i",
-  "resolucion_red_es",
-  "pago_i_fase",
-  "ano_mantenimiento",
-  "justificacion_ii_fase",
-  "firma_justificacion_ii",
-  "subsanacion_fase_ii",
-  "resolucion_ii_red_es",
-  "ganada",
-  "perdida",
+  "empezar_desarrollo", "presentar_justificacion_fase_i", "firma_justificacion", 
+  "subsanacion_fase_i", "resolucion_red_es", "pago_i_fase", "ano_mantenimiento", 
+  "justificacion_ii_fase", "firma_justificacion_ii", "subsanacion_fase_ii", 
+  "resolucion_ii_red_es", "ganada", "perdida"
 ] as const;
 
-const POST_DEV_STATE_LABELS: { id: string; label: string }[] = [
+const POST_DEV_STATE_LABELS = [
   { id: "empezar_desarrollo", label: "Empezar desarrollo" },
   { id: "presentar_justificacion_fase_i", label: "Presentar justificación (Fase I)" },
   { id: "firma_justificacion", label: "Firma justificación" },
@@ -96,18 +68,19 @@ type Props = {
 };
 
 export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
-  const router = useRouter();
   const queryClient = useQueryClient();
   const [note, setNote] = useState("");
   const [sendingNote, setSendingNote] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  
+  // NUEVO: Estado para el modal de confirmación de borrado
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
   const [leadInteractions, setLeadInteractions] = useState<any[]>([]);
-  const [consultants, setConsultants] = useState<{id: string, full_name: string | null, email: string | null}[]>([]);
+  const [consultants, setConsultants] = useState<{id: string, full_name: string | null}[]>([]);
   const [associates, setAssociates] = useState<{id: string, full_name: string | null}[]>([]);
   const [selectedConsultantId, setSelectedConsultantId] = useState<string | null>(null);
-  const [assigningConsultant, setAssigningConsultant] = useState(false);
 
   const [editForm, setEditForm] = useState({
     full_name: "",
@@ -115,101 +88,63 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
     phone: "",
     cif: "",
     notes: "",
-    associate_id: "" as string | null
+    associate_id: ""
   });
 
-  // Use TanStack Query for client detail with 30s stale time
   const { data: clientData, isLoading: clientLoading, refetch: refetchClient } = useQuery({
     queryKey: ['client-detail', clientId],
     queryFn: async () => {
       if (!clientId) return null;
       const res = await getClientDetail(clientId);
-      if (res && res.ok && res.data) {
-        return res.data;
-      }
+      if (res && res.ok && res.data) return res.data;
       return null;
     },
     enabled: mode === 'client' && !!clientId,
     staleTime: 30000,
   });
 
-  // Combine data from query or leadData (Añadido el : any para solucionar el tipado estricto)
   const data: any = mode === 'client' ? clientData : { client: leadData };
   const loading = mode === 'client' && clientLoading;
 
   const fetchLeadInteractions = useCallback(async () => {
     if (!leadData?.id) return;
-    try {
-      const supabase = createClient();
-      const { data: interactions } = await supabase
-        .from("triage_interactions")
-        .select("*")
-        .eq("lead_id", leadData.id)
-        .order("created_at", { ascending: false });
-
-      setLeadInteractions(interactions || []);
-    } catch (error) {
-      console.error("Error fetching lead interactions:", error);
-    }
+    const supabase = createClient();
+    const { data: interactions } = await supabase
+      .from("triage_interactions")
+      .select("*")
+      .eq("lead_id", leadData.id)
+      .order("created_at", { ascending: false });
+    setLeadInteractions(interactions || []);
   }, [leadData?.id]);
 
-  // Set edit form when client data loads from query
   useEffect(() => {
     if (mode === 'client' && clientData?.client) {
       const d = clientData.client;
       setEditForm({
-        full_name: d.full_name || "",
-        email: d.email || "",
-        phone: d.phone || "",
-        cif: d.cif || "",
-        notes: d.service_description || "",
-        associate_id: d.associate_id || null
+        full_name: d.full_name || "", email: d.email || "",
+        phone: d.phone || "", cif: d.cif || "",
+        notes: d.service_description || "", associate_id: d.associate_id || ""
       });
       setSelectedConsultantId(d.consultant_id || null);
     } else if (mode === 'lead' && leadData) {
       setEditForm({
-        full_name: leadData.full_name || "",
-        email: leadData.email || "",
-        phone: leadData.phone || "",
-        cif: leadData.nif || leadData.cif || "",
-        notes: leadData.notes || leadData.service_description || "",
-        associate_id: leadData.associate_id || null
+        full_name: leadData.full_name || "", email: leadData.email || "",
+        phone: leadData.phone || "", cif: leadData.nif || leadData.cif || "",
+        notes: leadData.notes || leadData.service_description || "", associate_id: leadData.associate_id || ""
       });
       fetchLeadInteractions();
     }
   }, [clientData, leadData, mode, fetchLeadInteractions]);
 
-  // Load consultants and associates
   useEffect(() => {
     const supabase = createClient();
-    
-    // Load consultants (for clients)
-    if (mode === 'client') {
-      supabase
-        .from("profiles")
-        .select("id, full_name, email")
-        .eq("role", "consultor")
-        .then(({ data }) => {
-          setConsultants(data || []);
-        });
-    }
-    
-    // Load associates (for both modes)
-    supabase
-      .from("associates")
-      .select("id, full_name")
-      .order("full_name", { ascending: true })
-      .then(({ data }) => {
-        setAssociates(data || []);
-      });
-  }, [mode]);
+    supabase.from("profiles").select("id, full_name").eq("role", "consultor").then(({ data }) => setConsultants(data || []));
+    supabase.from("associates").select("id, full_name").then(({ data }) => setAssociates(data || []));
+  }, []);
 
   const refreshData = useCallback(async () => {
-    if (mode === 'client') {
-      await refetchClient();
-    } else {
-      await fetchLeadInteractions();
-    }
+    if (mode === 'client') await refetchClient();
+    else await fetchLeadInteractions();
   }, [mode, refetchClient, fetchLeadInteractions]);
 
   const client = data?.client || leadData;
@@ -218,14 +153,8 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
   async function handleAddNote() {
     if (!note.trim()) return;
     setSendingNote(true);
-    const res = mode === 'lead'
-      ? await addTriageNote(client.id, note)
-      : await addClientNote(client.id, note);
-
-    if (res && res.ok) {
-      setNote("");
-      refreshData();
-    }
+    const res = mode === 'lead' ? await addTriageNote(client.id, note) : await addClientNote(client.id, note);
+    if (res && res.ok) { setNote(""); refreshData(); }
     setSendingNote(false);
   }
 
@@ -234,64 +163,44 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
     let res;
     if (mode === 'client') {
       res = await updateClientContactInfo(client.id, {
-        full_name: editForm.full_name,
-        email: editForm.email,
-        phone: editForm.phone,
-        cif: editForm.cif,
-        service_description: editForm.notes,
-        associate_id: editForm.associate_id || null
+        full_name: editForm.full_name, email: editForm.email,
+        phone: editForm.phone, cif: editForm.cif,
+        service_description: editForm.notes, associate_id: editForm.associate_id || null
       });
     } else {
       res = await updateTriageLead(client.id, {
-        full_name: editForm.full_name,
-        email: editForm.email,
-        phone: editForm.phone,
-        nif: editForm.cif,
-        notes: editForm.notes,
-        associate_id: editForm.associate_id || null
+        full_name: editForm.full_name, email: editForm.email,
+        phone: editForm.phone, cif: editForm.cif,
+        notes: editForm.notes, associate_id: editForm.associate_id || null
       });
     }
 
-    if (res && res.ok) {
-      toastSuccess("Cambios guardados");
-      refreshData();
-    } else if (res && res.error) {
-      toastError(res.error);
-    }
+    if (res && res.ok) { toastSuccess("Cambios guardados"); refreshData(); } 
+    else if (res && res.error) { toastError(res.error); }
     setSaving(false);
   }
 
-  async function handleDeleteRecord() {
-    const message = mode === 'lead'
-      ? "PELIGRO: Esta accion es irreparable y eliminara toda la informacion, interacciones y documentacion de este lead. Estas absolutamente seguro?"
-      : "PELIGRO: Esta accion es irreparable y eliminara toda la informacion, interacciones, contratos y documentacion de este cliente. Estas absolutamente seguro?";
-    
-    if (!window.confirm(message)) return;
-    
-    setDeleting(true);
-    const res = mode === 'lead'
-      ? await deleteTriageLead(client.id)
-      : await deleteClientRecord(client.id);
-    
-    if (res && res.ok) {
-      toastSuccess("Registro eliminado correctamente");
-      onClose();
-      router.refresh();
-    } else if (res && 'error' in res) {
-      toastError(res.error || "Error al eliminar");
-    }
-    setDeleting(false);
-  }
+  // NUEVO: Función de borrado definitivo que es llamada desde el modal rojo
+  const executeDelete = async () => {
+    startTransition(async () => {
+      const res = mode === 'lead' ? await deleteTriageLead(client.id) : await deleteClientRecord(client.id);
+      if (res.ok) {
+        toastSuccess("Ficha eliminada correctamente");
+        onClose();
+        window.location.reload(); // Recarga para actualizar Kanban
+      } else {
+        toastError(res.error || "Error al eliminar");
+        setShowDeleteConfirm(false);
+      }
+    });
+  };
 
   const handleCallAction = async (success: boolean) => {
     startTransition(async () => {
       const res = mode === 'lead'
         ? (success ? await registerTriageCallSuccess(client.id) : await registerTriageCallMissed(client.id))
         : (success ? await registerCallSuccess(client.id) : await registerCallMissed(client.id));
-
-      if (res && res.ok) {
-        refreshData();
-      }
+      if (res && res.ok) refreshData();
     });
   };
 
@@ -308,13 +217,11 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 md:p-6" onClick={onClose}>
-      <div
-        className="bg-slate-50 w-full max-w-6xl max-h-[90vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row relative"
-        onClick={e => e.stopPropagation()}
-      >
+      
+      {/* Contenedor de la ficha */}
+      <div className="bg-slate-50 w-full max-w-6xl max-h-[90vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row relative" onClick={e => e.stopPropagation()}>
         {/* COLUMNA IZQUIERDA */}
         <div className="flex-1 overflow-y-auto custom-scrollbar">
-          {/* Header Sticky */}
           <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-slate-100 p-6 flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-2xl bg-brand-600 text-white flex items-center justify-center font-bold text-xl shadow-lg shadow-brand-200">
@@ -327,19 +234,19 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
             </div>
 
             <div className="flex items-center gap-3">
+              {/* Botón que abre nuestro Modal Seguro */}
+              <Button variant="ghost" className="text-red-600 hover:text-red-700 hover:bg-red-50 gap-2" onClick={() => setShowDeleteConfirm(true)} disabled={isPending}>
+                <Trash2 className="w-4 h-4" /> <span className="hidden sm:inline">Eliminar</span>
+              </Button>
               <select
                 className="bg-brand-50 text-brand-700 text-xs font-bold px-4 py-2 rounded-xl border border-brand-100 focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 value={client?.current_state || ""}
                 onChange={async (e) => {
                   const toState = e.target.value;
-                  const res = mode === 'lead'
-                    ? await updateTriageLeadState(client.id, toState)
-                    : await transitionClientState(client.id, toState);
-                  if (res && res.ok) {
-                    refreshData();
-                  }
+                  const res = mode === 'lead' ? await updateTriageLeadState(client.id, toState) : await transitionClientState(client.id, toState);
+                  if (res && res.ok) refreshData();
                 }}
-                disabled={false}
+                disabled={mode === 'client' && isPostDev(client?.current_state)}
               >
                 {(mode === 'lead' ? PRECONSULTORIA_STATE_LABELS : PIPELINE_STATE_LABELS).map(s => (
                   <option key={s.id} value={s.id}>{s.label}</option>
@@ -352,7 +259,6 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
           </header>
 
           <div className="p-6 space-y-6">
-            {/* Info Card */}
             <Card className="border-slate-100 shadow-sm overflow-hidden">
               <CardHeader className="bg-slate-50/50 border-b border-slate-100 py-4">
                 <CardTitle className="text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
@@ -363,147 +269,73 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label className="text-[10px] uppercase text-slate-400 font-bold">Nombre Completo</Label>
-                    <Input
-                      className="bg-slate-50/50 border-slate-100 text-sm h-9 rounded-xl"
-                      value={editForm.full_name}
-                      onChange={e => setEditForm(f => ({ ...f, full_name: e.target.value }))}
-                    />
+                    <Input className="bg-slate-50/50 border-slate-100 text-sm h-9 rounded-xl" value={editForm.full_name} onChange={e => setEditForm(f => ({ ...f, full_name: e.target.value }))} />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-[10px] uppercase text-slate-400 font-bold">Email</Label>
-                    <div className="relative">
-                      <Input
-                        className="bg-slate-50/50 border-slate-100 text-sm h-9 rounded-xl pr-8"
-                        value={editForm.email}
-                        onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))}
-                      />
-                      {editForm.email && <a href={`mailto:${editForm.email}`} className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-600"><ExternalLink className="w-3 h-3" /></a>}
-                    </div>
+                    <Input className="bg-slate-50/50 border-slate-100 text-sm h-9 rounded-xl" value={editForm.email} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-[10px] uppercase text-slate-400 font-bold">Teléfono</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        className="bg-slate-50/50 border-slate-100 text-sm h-9 rounded-xl flex-1"
-                        value={editForm.phone}
-                        onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))}
-                      />
-                      {editForm.phone && (
-                        <a href={`tel:${editForm.phone}`}>
-                          <Button size="sm" variant="outline" className="h-9 px-3 rounded-xl bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100">
-                            <Phone className="w-3 h-3" />
-                          </Button>
-                        </a>
-                      )}
-                    </div>
+                    <Input className="bg-slate-50/50 border-slate-100 text-sm h-9 rounded-xl" value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-[10px] uppercase text-slate-400 font-bold">CIF / NIF</Label>
-                    <Input
-                      className="bg-slate-50/50 border-slate-100 text-sm h-9 rounded-xl uppercase"
-                      value={editForm.cif}
-                      onChange={e => setEditForm(f => ({ ...f, cif: e.target.value }))}
-                    />
+                    <Input className="bg-slate-50/50 border-slate-100 text-sm h-9 rounded-xl uppercase" value={editForm.cif} onChange={e => setEditForm(f => ({ ...f, cif: e.target.value }))} />
                   </div>
                 </div>
 
                 <div className="space-y-2 pt-4 border-t border-slate-50">
                   <Label className="text-[10px] uppercase text-slate-400 font-bold">Descripción del servicio / Notas</Label>
-                  <textarea
-                    className="w-full rounded-2xl border border-slate-100 bg-slate-50/50 p-4 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all"
-                    rows={4}
-                    value={editForm.notes}
-                    onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))}
-                  />
+                  <textarea className="w-full rounded-2xl border border-slate-100 bg-slate-50/50 p-4 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all" rows={3} value={editForm.notes} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))} />
                 </div>
 
-                {mode === 'client' && (
-                  <div className="space-y-2 pt-4 border-t border-slate-50">
-                    <Label className="text-[10px] uppercase text-slate-400 font-bold">Consultor asignado</Label>
+                <div className="grid md:grid-cols-2 gap-6 pt-4 border-t border-slate-50">
+                  {mode === 'client' && (
+                    <div className="space-y-2">
+                      <Label className="text-[10px] uppercase text-slate-400 font-bold">Consultor asignado</Label>
+                      <select
+                        value={selectedConsultantId || "none"}
+                        onChange={async (e) => {
+                          const value = e.target.value;
+                          const res = await assignConsultant(client.id, value === "none" ? null : value);
+                          if (res.ok) { toastSuccess("Consultor asignado"); setSelectedConsultantId(value === "none" ? null : value); refreshData(); }
+                        }}
+                        className="w-full rounded-xl border border-slate-100 bg-slate-50/50 px-3 h-9 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                      >
+                        <option value="none">Sin asignar</option>
+                        {consultants.map((c) => <option key={c.id} value={c.id}>{c.full_name}</option>)}
+                      </select>
+                    </div>
+                  )}
+                  <div className="space-y-2">
+                    <Label className="text-[10px] uppercase text-slate-400 font-bold text-brand-600">Asociado (Referidor)</Label>
                     <select
-                      value={selectedConsultantId || "none"}
-                      onChange={async (e) => {
-                        const value = e.target.value;
-                        setAssigningConsultant(true);
-                        const res = await assignConsultant(
-                          client.id,
-                          value === "none" ? null : value
-                        );
-                        setAssigningConsultant(false);
-                        
-                        if (res.ok) {
-                          toast.success("Consultor asignado");
-                          setSelectedConsultantId(value === "none" ? null : value);
-                          await refreshData();
-                        } else {
-                          toast.error(res.error || "Error al asignar consultor");
-                        }
-                      }}
-                      disabled={assigningConsultant}
-                      className="w-full rounded-xl border border-slate-100 bg-slate-50/50 px-3 h-9 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      value={editForm.associate_id || "none"}
+                      onChange={(e) => setEditForm(f => ({ ...f, associate_id: e.target.value === "none" ? "" : e.target.value }))}
+                      className="w-full rounded-xl border border-brand-100 bg-brand-50/30 px-3 h-9 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
                     >
-                      <option value="none">Sin asignar</option>
-                      {consultants.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.full_name} ({c.email})
-                        </option>
-                      ))}
+                      <option value="none">Sin referidor asociado</option>
+                      {associates.map((a) => <option key={a.id} value={a.id}>{a.full_name}</option>)}
                     </select>
                   </div>
-                )}
-
-                <div className="space-y-2 pt-4 border-t border-slate-50">
-                  <Label className="text-[10px] uppercase text-slate-400 font-bold">Asociado (Referidor)</Label>
-                  <select
-                    value={editForm.associate_id || "none"}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setEditForm(f => ({ ...f, associate_id: value === "none" ? null : value }));
-                    }}
-                    className="w-full rounded-xl border border-slate-100 bg-slate-50/50 px-3 h-9 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-                  >
-                    <option value="none">Sin asociado</option>
-                    {associates.map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.full_name || "Sin nombre"}
-                      </option>
-                    ))}
-                  </select>
                 </div>
 
-                  <div className="flex justify-between items-center pt-4">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="rounded-xl h-9 font-bold px-4 text-red-600 hover:text-red-700 hover:bg-red-50"
-                      onClick={handleDeleteRecord}
-                      disabled={deleting}
-                    >
-                      {deleting ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : <Trash2 className="w-3 h-3 mr-2" />}
-                      Eliminar Ficha
-                    </Button>
-                    <Button
-                      size="sm"
-                      className="rounded-xl h-9 font-bold px-6"
-                      onClick={handleSaveChanges}
-                      disabled={saving}
-                    >
-                      {saving ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : null}
-                      Guardar cambios
-                    </Button>
-                  </div>
+                <div className="flex justify-end pt-4">
+                  <Button size="sm" className="rounded-xl h-9 font-bold px-6" onClick={handleSaveChanges} disabled={saving}>
+                    {saving ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : null} Guardar cambios
+                  </Button>
+                </div>
               </CardContent>
             </Card>
 
             {mode === 'client' && data && (
               <>
-                {/* Documentation Section */}
                 <Card className="border-slate-100 shadow-sm overflow-hidden">
                   <CardHeader className="bg-slate-50/50 border-b border-slate-100 py-4 flex flex-row items-center justify-between">
                     <CardTitle className="text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
                       <FileText className="w-4 h-4" /> Vault (documentación)
                     </CardTitle>
-                    <span className="text-[10px] font-bold bg-brand-100 text-brand-700 px-2 py-0.5 rounded-full uppercase">{client.service_type}</span>
                   </CardHeader>
                   <CardContent className="p-0">
                     <div className="divide-y divide-slate-50">
@@ -517,17 +349,10 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
                             </div>
                             <div className="flex items-center gap-2">
                               {doc ? (
-                                <span className={cn(
-                                  "text-[10px] font-bold px-2 py-1 rounded-lg uppercase border",
-                                  doc.status === 'approved' ? "bg-emerald-50 text-emerald-700 border-emerald-100" :
-                                    doc.status === 'rejected' ? "bg-red-50 text-red-700 border-red-100" : "bg-amber-50 text-amber-700 border-amber-100"
-                                )}>
+                                <span className={cn("text-[10px] font-bold px-2 py-1 rounded-lg uppercase border", doc.status === 'approved' ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-amber-50 text-amber-700 border-amber-100")}>
                                   {doc.status}
                                 </span>
-                              ) : (
-                                <span className="text-[10px] font-bold text-slate-300 uppercase">Pendiente</span>
-                              )}
-                              <ChevronRight className="w-4 h-4 text-slate-300" />
+                              ) : (<span className="text-[10px] font-bold text-slate-300 uppercase">Pendiente</span>)}
                             </div>
                           </div>
                         );
@@ -536,8 +361,7 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
                   </CardContent>
                 </Card>
 
-                {/* Contracts Section */}
-                {mode === 'client' && data?.contracts && (
+                {data?.contracts && (
                   <Card className="border-slate-100 shadow-sm overflow-hidden">
                     <CardHeader className="bg-slate-50/50 border-b border-slate-100 py-4">
                       <CardTitle className="text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
@@ -555,7 +379,6 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
 
                         return (
                           <div key={type} className="p-4 space-y-3">
-                            {/* Header del contrato */}
                             <div className="flex items-center justify-between">
                               <div>
                                 <p className="text-sm font-bold text-slate-800">{label}</p>
@@ -563,36 +386,22 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
                               </div>
                               {contract ? (
                                 isInPostDev ? (
-                                  /* Selector independiente en fase post-desarrollo */
                                   <select
                                     className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500"
                                     value={contract.current_state}
                                     onChange={async (e) => {
                                       const res = await updateContractState(contract.id, e.target.value);
-                                      if (res.ok) {
-                                        toastSuccess(`${label} actualizado`);
-                                        refreshData();
-                                      } else {
-                                        toastError(res.error ?? "Error");
-                                      }
+                                      if (res.ok) { toastSuccess(`${label} actualizado`); refreshData(); }
                                     }}
                                   >
-                                    {POST_DEV_STATE_LABELS.map(s => (
-                                      <option key={s.id} value={s.id}>{s.label}</option>
-                                    ))}
+                                    {POST_DEV_STATE_LABELS.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
                                   </select>
                                 ) : (
-                                  /* Antes de post-desarrollo: solo badge informativo */
-                                  <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-3 py-1 rounded-full uppercase">
-                                    {contract.current_state.replace(/_/g, " ")}
-                                  </span>
+                                  <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-3 py-1 rounded-full uppercase">{contract.current_state.replace(/_/g, " ")}</span>
                                 )
-                              ) : (
-                                <span className="text-[10px] text-slate-300 font-bold uppercase">Sin contrato</span>
-                              )}
+                              ) : (<span className="text-[10px] text-slate-300 font-bold uppercase">Sin contrato</span>)}
                             </div>
 
-                            {/* Pagos del contrato */}
                             {contractPayments.length > 0 && (
                               <div className="rounded-xl border border-slate-50 overflow-hidden">
                                 {contractPayments.map((p: any) => (
@@ -609,9 +418,17 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
                                           Cobrado €{p.received_amount}
                                         </span>
                                       ) : (
-                                        <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-1 rounded-lg">
-                                          Pendiente
-                                        </span>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="h-7 px-3 text-[10px] font-bold rounded-lg border-emerald-100 text-emerald-700 hover:bg-emerald-50"
+                                          onClick={async () => {
+                                            const res = await markPaymentReceived(p.id, p.expected_amount, new Date().toISOString());
+                                            if (res.ok) { toastSuccess("Pago registrado"); refreshData(); }
+                                          }}
+                                        >
+                                          Marcar cobrado
+                                        </Button>
                                       )}
                                     </div>
                                   </div>
@@ -626,29 +443,6 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
                 )}
               </>
             )}
-
-            {client.has_device && (
-              <Card className="border-slate-100 shadow-sm overflow-hidden mb-6">
-                <CardHeader className="bg-slate-50/50 border-b border-slate-100 py-4">
-                  <CardTitle className="text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                    <Package className="w-4 h-4" /> Dispositivo
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-6">
-                  {data?.deviceOrders?.[0] ? (
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <p className="text-sm font-bold text-slate-800">{data.deviceOrders[0].status}</p>
-                        <p className="text-xs text-slate-500">Tracking: {data.deviceOrders[0].tracking_number || "Pendiente"}</p>
-                      </div>
-                      <Button size="sm" variant="outline" className="rounded-xl">Gestionar pedido</Button>
-                    </div>
-                  ) : (
-                    <p className="text-sm text-slate-500 italic">No se ha generado pedido aún.</p>
-                  )}
-                </CardContent>
-              </Card>
-            )}
           </div>
         </div>
 
@@ -659,37 +453,22 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
               <History className="w-5 h-5 text-brand-600" /> Historial
             </h3>
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="flex-1 rounded-2xl bg-red-50 text-red-600 border-red-100 hover:bg-red-100 h-10 text-xs font-bold"
-                onClick={() => handleCallAction(false)}
-                disabled={isPending}
-              >
-                {isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <PhoneMissed className="w-4 h-4 mr-2" />}
-                Llamada Fallida
+              <Button variant="outline" className="flex-1 rounded-2xl bg-red-50 text-red-600 border-red-100 hover:bg-red-100 h-10 text-xs font-bold" onClick={() => handleCallAction(false)} disabled={isPending}>
+                {isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <PhoneMissed className="w-4 h-4 mr-2" />} Llamada Fallida
               </Button>
-              <Button
-                variant="outline"
-                className="flex-1 rounded-2xl bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100 h-10 text-xs font-bold"
-                onClick={() => handleCallAction(true)}
-                disabled={isPending}
-              >
-                {isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
-                Llamada Exitosa
+              <Button variant="outline" className="flex-1 rounded-2xl bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-100 h-10 text-xs font-bold" onClick={() => handleCallAction(true)} disabled={isPending}>
+                {isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-4 h-4 mr-2" />} Llamada Exitosa
               </Button>
             </div>
           </header>
 
-          {/* Timeline */}
           <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
             {interactions.map((i: any) => {
               const date = new Date(i.created_at);
               if (i.type === 'note') {
                 return (
                   <div key={i.id} className="flex gap-3">
-                    <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0 text-slate-500 text-xs font-bold">
-                      ?
-                    </div>
+                    <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0 text-slate-500 text-xs font-bold">?</div>
                     <div className="bg-slate-50 rounded-2xl rounded-tl-none p-4 flex-1 border border-slate-100">
                       <div className="flex justify-between items-center mb-1">
                         <span className="text-[10px] font-bold text-slate-400 uppercase">Soporte</span>
@@ -717,56 +496,48 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
                 </div>
               );
             })}
-            {interactions.length === 0 && (
-              <div className="py-12 text-center">
-                <History className="w-12 h-12 text-slate-100 mx-auto mb-3" />
-                <p className="text-sm text-slate-400 font-medium">Sin actividad reciente</p>
-              </div>
-            )}
           </div>
 
-          {/* Footer Form */}
           <footer className="p-6 bg-slate-50 border-t border-slate-100">
             <div className="space-y-3">
-              <textarea
-                className="w-full rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all shadow-sm"
-                placeholder="Añadir nota interna..."
-                rows={3}
-                value={note}
-                onChange={e => setNote(e.target.value)}
-              />
-              <Button
-                className="w-full rounded-xl h-11 font-bold shadow-lg shadow-brand-100"
-                disabled={!note.trim() || sendingNote}
-                onClick={handleAddNote}
-              >
-                {sendingNote ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
-                Añadir nota
+              <textarea className="w-full rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all shadow-sm" placeholder="Añadir nota interna..." rows={3} value={note} onChange={e => setNote(e.target.value)} />
+              <Button className="w-full rounded-xl h-11 font-bold shadow-lg shadow-brand-100" disabled={!note.trim() || sendingNote} onClick={handleAddNote}>
+                {sendingNote ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />} Añadir nota
               </Button>
             </div>
           </footer>
         </div>
       </div>
 
+      {/* MODAL DE CONFIRMACIÓN DE BORRADO (Custom y Seguro) */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4" onClick={() => setShowDeleteConfirm(false)}>
+          <div className="bg-white w-full max-w-md rounded-3xl shadow-xl p-8 relative border border-red-100" onClick={e => e.stopPropagation()}>
+             <div className="w-14 h-14 rounded-full bg-red-50 border border-red-100 flex items-center justify-center mb-5 mx-auto">
+                <AlertTriangle className="w-7 h-7 text-red-600" />
+             </div>
+             <h3 className="text-2xl font-bold text-slate-900 mb-3 text-center tracking-tight">Eliminar expediente</h3>
+             <p className="text-sm text-slate-600 mb-8 leading-relaxed text-center">
+               ¿Estás seguro? Esta acción es <b className="text-slate-900">irreversible</b> y eliminará el expediente, sus contratos, documentos e interacciones asociadas.
+             </p>
+             <div className="flex gap-3 justify-center">
+               <Button variant="outline" className="rounded-xl font-bold h-11 px-6 border-slate-200 hover:bg-slate-50" onClick={() => setShowDeleteConfirm(false)} disabled={isPending}>
+                 Cancelar
+               </Button>
+               <Button className="bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold h-11 px-6 shadow-md shadow-red-200" onClick={executeDelete} disabled={isPending}>
+                 {isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
+                 Sí, eliminar todo
+               </Button>
+             </div>
+          </div>
+        </div>
+      )}
+
       <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 8px;
-          height: 8px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #e2e8f0;
-          border-radius: 10px;
-          border: 2px solid transparent;
-          background-clip: content-box;
-        }
-        .custom-scrollbar:hover::-webkit-scrollbar-thumb {
-          background: #cbd5e1;
-          border: 2px solid transparent;
-          background-clip: content-box;
-        }
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; border: 2px solid transparent; background-clip: content-box; }
+        .custom-scrollbar:hover::-webkit-scrollbar-thumb { background: #cbd5e1; border: 2px solid transparent; background-clip: content-box; }
       `}</style>
     </div>
   );
