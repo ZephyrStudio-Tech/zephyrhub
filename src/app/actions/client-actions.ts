@@ -129,6 +129,7 @@ export async function updateClientContactInfo(
     phone?: string;
     cif?: string;
     service_description?: string;
+    associate_id?: string | null;
   }
 ): Promise<{ ok: boolean; error?: string }> {
   const auth = await requireServerAuth(["admin", "consultor", "tecnico"]);
@@ -159,6 +160,51 @@ export async function updateClientContactInfo(
   if (error) return { ok: false, error: error.message };
 
   revalidatePath("/backoffice/clients/[id]", "layout");
+  return { ok: true };
+}
+
+/**
+ * Elimina un cliente y todos sus registros relacionados (destructivo)
+ * Orden de borrado para evitar FK violations: interactions, documents, contracts, device_orders, payments, alerts, referrals, clients
+ */
+export async function deleteClientRecord(
+  clientId: string
+): Promise<{ ok: boolean; error?: string }> {
+  const auth = await requireServerAuth(["admin", "consultor"]);
+  if (auth.error) return { ok: false, error: auth.error };
+
+  const { user, role, supabaseAdmin } = auth;
+
+  // Ownership check for consultors
+  if (role === "consultor") {
+    const { data: client } = await supabaseAdmin
+      .from("clients")
+      .select("consultant_id")
+      .eq("id", clientId)
+      .single();
+    if (client?.consultant_id !== user.id) {
+      return { ok: false, error: "Sin permiso para eliminar este cliente" };
+    }
+  }
+
+  // Borrar en orden para evitar FK violations
+  await supabaseAdmin.from("interactions").delete().eq("client_id", clientId);
+  await supabaseAdmin.from("documents").delete().eq("client_id", clientId);
+  await supabaseAdmin.from("contracts").delete().eq("client_id", clientId);
+  await supabaseAdmin.from("device_orders").delete().eq("client_id", clientId);
+  await supabaseAdmin.from("payments").delete().eq("client_id", clientId);
+  await supabaseAdmin.from("alerts").delete().eq("client_id", clientId);
+  await supabaseAdmin.from("referrals").delete().eq("client_id", clientId);
+
+  const { error } = await supabaseAdmin
+    .from("clients")
+    .delete()
+    .eq("id", clientId);
+
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/backoffice/consultoria");
+  revalidatePath("/backoffice/assign");
   return { ok: true };
 }
 

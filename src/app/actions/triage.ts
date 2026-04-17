@@ -616,3 +616,71 @@ export async function rejectLead(
   revalidatePath("/backoffice/preconsultoria");
   return { ok: true };
 }
+
+/**
+ * Actualiza campos de un lead en triage_leads
+ */
+export async function updateTriageLead(
+  leadId: string,
+  data: {
+    full_name?: string;
+    email?: string;
+    phone?: string;
+    nif?: string;
+    notes?: string;
+    associate_id?: string | null;
+  }
+): Promise<{ ok: boolean; error?: string }> {
+  const auth = await requireServerAuth(["consultor", "admin"]);
+  if (auth.error) return { ok: false, error: auth.error };
+
+  const { supabaseAdmin } = auth;
+
+  const { error } = await supabaseAdmin
+    .from("triage_leads")
+    .update({
+      full_name: data.full_name,
+      email: data.email,
+      phone: data.phone,
+      nif: data.nif,
+      notes: data.notes,
+      associate_id: data.associate_id,
+    })
+    .eq("id", leadId);
+
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/backoffice/preconsultoria");
+  return { ok: true };
+}
+
+/**
+ * Elimina un lead de triage_leads y sus interacciones relacionadas
+ */
+export async function deleteTriageLead(
+  leadId: string
+): Promise<{ ok: boolean; error?: string }> {
+  const auth = await requireServerAuth(["consultor", "admin"]);
+  if (auth.error) return { ok: false, error: auth.error };
+
+  const { supabaseAdmin } = auth;
+
+  // Primero borrar las interacciones asociadas
+  const { error: interactionsErr } = await supabaseAdmin
+    .from("triage_interactions")
+    .delete()
+    .eq("lead_id", leadId);
+
+  if (interactionsErr) return { ok: false, error: interactionsErr.message };
+
+  // Luego borrar el lead
+  const { error: leadErr } = await supabaseAdmin
+    .from("triage_leads")
+    .delete()
+    .eq("id", leadId);
+
+  if (leadErr) return { ok: false, error: leadErr.message };
+
+  revalidatePath("/backoffice/preconsultoria");
+  return { ok: true };
+}
