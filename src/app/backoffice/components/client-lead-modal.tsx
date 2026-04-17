@@ -238,10 +238,18 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
         email: editForm.email,
         phone: editForm.phone,
         cif: editForm.cif,
-        service_description: editForm.notes
+        service_description: editForm.notes,
+        associate_id: editForm.associate_id || null
       });
     } else {
-      res = { ok: true };
+      res = await updateTriageLead(client.id, {
+        full_name: editForm.full_name,
+        email: editForm.email,
+        phone: editForm.phone,
+        nif: editForm.cif,
+        notes: editForm.notes,
+        associate_id: editForm.associate_id || null
+      });
     }
 
     if (res && res.ok) {
@@ -251,6 +259,28 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
       toastError(res.error);
     }
     setSaving(false);
+  }
+
+  async function handleDeleteRecord() {
+    const message = mode === 'lead'
+      ? "PELIGRO: Esta accion es irreparable y eliminara toda la informacion, interacciones y documentacion de este lead. Estas absolutamente seguro?"
+      : "PELIGRO: Esta accion es irreparable y eliminara toda la informacion, interacciones, contratos y documentacion de este cliente. Estas absolutamente seguro?";
+    
+    if (!window.confirm(message)) return;
+    
+    setDeleting(true);
+    const res = mode === 'lead'
+      ? await deleteTriageLead(client.id)
+      : await deleteClientRecord(client.id);
+    
+    if (res && res.ok) {
+      toastSuccess("Registro eliminado correctamente");
+      onClose();
+      router.refresh();
+    } else if (res && 'error' in res) {
+      toastError(res.error || "Error al eliminar");
+    }
+    setDeleting(false);
   }
 
   const handleCallAction = async (success: boolean) => {
@@ -422,7 +452,36 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
                   </div>
                 )}
 
-                  <div className="flex justify-end pt-4">
+                <div className="space-y-2 pt-4 border-t border-slate-50">
+                  <Label className="text-[10px] uppercase text-slate-400 font-bold">Asociado (Referidor)</Label>
+                  <select
+                    value={editForm.associate_id || "none"}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setEditForm(f => ({ ...f, associate_id: value === "none" ? null : value }));
+                    }}
+                    className="w-full rounded-xl border border-slate-100 bg-slate-50/50 px-3 h-9 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  >
+                    <option value="none">Sin asociado</option>
+                    {associates.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.full_name || "Sin nombre"}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                  <div className="flex justify-between items-center pt-4">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="rounded-xl h-9 font-bold px-4 text-red-600 hover:text-red-700 hover:bg-red-50"
+                      onClick={handleDeleteRecord}
+                      disabled={deleting}
+                    >
+                      {deleting ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : <Trash2 className="w-3 h-3 mr-2" />}
+                      Eliminar Ficha
+                    </Button>
                     <Button
                       size="sm"
                       className="rounded-xl h-9 font-bold px-6"
