@@ -21,20 +21,19 @@ export default async function AssociatesListPage() {
     .from("associates")
     .select(`
       *,
-      referrals(count),
-      referrals_data:referrals(commission_amount, commission_status)
+      referrals(commission_amount, commission_status)
     `)
     .order("full_name");
 
   if (error) console.error("❌ Error cargando asociados:", error);
 
   const processedAssociates = (associates || []).map(a => {
-    const refs = (a.referrals_data as any[]) || [];
+    const refs = (a.referrals as any[]) || [];
     const reclaimable = refs.filter((r: any) => r.commission_status === "reclamable").reduce((acc: number, r: any) => acc + (r.commission_amount || 0), 0);
 
     return {
       ...a,
-      referral_count: a.referrals?.[0]?.count || 0,
+      referral_count: refs.length,
       reclaimable_amount: reclaimable
     };
   });
