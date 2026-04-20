@@ -17,7 +17,7 @@ export default async function AssociatesListPage() {
     .order("full_name");
 
   // 2. Get associates (existing logic)
-  const { data: associates } = await supabase
+  const { data: associates, error } = await supabase
     .from("associates")
     .select(`
       *,
@@ -25,6 +25,8 @@ export default async function AssociatesListPage() {
       referrals_data:referrals(commission_amount, commission_status)
     `)
     .order("full_name");
+
+  if (error) console.error("❌ Error cargando asociados:", error);
 
   const processedAssociates = (associates || []).map(a => {
     const refs = (a.referrals_data as any[]) || [];

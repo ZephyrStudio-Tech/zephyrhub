@@ -20,13 +20,15 @@ export default async function ReferralsGlobalPage() {
 
   const supabase = createAdminClient();
 
-  const { data: referrals } = await supabase
+  const { data: referrals, error } = await supabase
     .from("referrals")
     .select(`
       *,
       associates(full_name)
     `)
     .order("created_at", { ascending: false });
+
+  if (error) console.error("❌ Error cargando referidos:", error);
 
   const totalReclaimable = (referrals || []).filter(r => r.commission_status === "reclamable")
     .reduce((acc, r) => acc + (r.commission_amount || 0), 0);
@@ -42,14 +44,14 @@ export default async function ReferralsGlobalPage() {
           <p className="text-slate-500 mt-1">Todos los contactos enviados por asociados.</p>
         </div>
         <div className="flex gap-4">
-           <Card className="border-none bg-brand-50 shadow-sm p-4 flex flex-col justify-center min-w-[200px]">
-             <p className="text-[10px] font-bold text-brand-500 uppercase tracking-widest">Total Reclamable</p>
-             <p className="text-2xl font-bold text-brand-700">€{totalReclaimable.toLocaleString()}</p>
-           </Card>
-           <Card className="border-none bg-amber-50 shadow-sm p-4 flex flex-col justify-center min-w-[200px]">
-             <p className="text-[10px] font-bold text-amber-500 uppercase tracking-widest">Total Confirmada</p>
-             <p className="text-2xl font-bold text-amber-700">€{totalConfirmada.toLocaleString()}</p>
-           </Card>
+          <Card className="border-none bg-brand-50 shadow-sm p-4 flex flex-col justify-center min-w-[200px]">
+            <p className="text-[10px] font-bold text-brand-500 uppercase tracking-widest">Total Reclamable</p>
+            <p className="text-2xl font-bold text-brand-700">€{totalReclaimable.toLocaleString()}</p>
+          </Card>
+          <Card className="border-none bg-amber-50 shadow-sm p-4 flex flex-col justify-center min-w-[200px]">
+            <p className="text-[10px] font-bold text-amber-500 uppercase tracking-widest">Total Confirmada</p>
+            <p className="text-2xl font-bold text-amber-700">€{totalConfirmada.toLocaleString()}</p>
+          </Card>
         </div>
       </div>
 
@@ -72,33 +74,33 @@ export default async function ReferralsGlobalPage() {
                     <td className="px-6 py-4">
                       <p className="font-bold text-slate-900">{r.contact_name}</p>
                       <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
-                         <span className="font-medium text-slate-700">{r.company_name || "Particular"}</span> ·
-                         <span>{new Date(r.created_at).toLocaleDateString()}</span>
+                        <span className="font-medium text-slate-700">{r.company_name || "Particular"}</span> ·
+                        <span>{new Date(r.created_at).toLocaleDateString()}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                       <Link href={`/backoffice/asociados/${r.associate_id}`} className="flex items-center gap-2 text-brand-600 hover:underline">
-                          <UserCircle2 className="w-4 h-4" />
-                          <span className="font-medium">{r.associates?.full_name}</span>
-                       </Link>
+                      <Link href={`/backoffice/asociados/${r.associate_id}`} className="flex items-center gap-2 text-brand-600 hover:underline">
+                        <UserCircle2 className="w-4 h-4" />
+                        <span className="font-medium">{r.associates?.full_name}</span>
+                      </Link>
                     </td>
                     <td className="px-6 py-4 text-center">
-                       <span className={cn(
-                          "inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase",
-                          r.status === "completado" ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-slate-50 text-slate-600 border-slate-100"
-                        )}>
-                          {r.status}
-                        </span>
+                      <span className={cn(
+                        "inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase",
+                        r.status === "completado" ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-slate-50 text-slate-600 border-slate-100"
+                      )}>
+                        {r.status}
+                      </span>
                     </td>
                     <td className="px-6 py-4 text-center">
-                       <span className={cn(
-                          "inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider",
-                          r.commission_status === "reclamable" ? "bg-brand-50 text-brand-700 border-brand-200 font-bold" :
+                      <span className={cn(
+                        "inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider",
+                        r.commission_status === "reclamable" ? "bg-brand-50 text-brand-700 border-brand-200 font-bold" :
                           r.commission_status === "pagada" ? "bg-emerald-800 text-white border-emerald-900" :
-                          "bg-slate-50 text-slate-500 border-slate-100"
-                        )}>
-                          {r.commission_status}
-                        </span>
+                            "bg-slate-50 text-slate-500 border-slate-100"
+                      )}>
+                        {r.commission_status}
+                      </span>
                     </td>
                     <td className="px-6 py-4 text-right font-bold text-slate-900">
                       €{r.commission_amount.toLocaleString()}

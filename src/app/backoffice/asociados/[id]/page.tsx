@@ -1,5 +1,5 @@
 import { getSession } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/server";
 import { redirect, notFound } from "next/navigation";
 import { AssociateDetailView } from "./associate-detail-view";
 
@@ -12,20 +12,23 @@ export default async function AssociateDetailPage({
   const { user, role } = await getSession();
   if (!user || (role !== "admin" && role !== "consultor")) redirect("/backoffice");
 
-  const supabase = await createClient();
-  const { data: associate } = await supabase
+  const supabase = createAdminClient();
+  const { data: associate, error: assocError } = await supabase
     .from("associates")
     .select("*")
     .eq("id", id)
     .single();
 
+  if (assocError) console.error("❌ Error cargando asociado:", assocError);
   if (!associate) notFound();
 
-  const { data: referrals } = await supabase
+  const { data: referrals, error: refError } = await supabase
     .from("referrals")
     .select("*")
     .eq("associate_id", id)
     .order("created_at", { ascending: false });
+
+  if (refError) console.error("❌ Error cargando referidos del asociado:", refError);
 
   const stats = (referrals || []).reduce((acc, r) => {
     if (r.commission_status === "pendiente") acc.pending += (r.commission_amount || 0);
