@@ -1,5 +1,5 @@
 import { getSession } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { UsersManagementView } from "./users-management-view";
 
@@ -7,7 +7,7 @@ export default async function AssociatesListPage() {
   const { user, role } = await getSession();
   if (!user || (role !== "admin" && role !== "consultor")) redirect("/backoffice");
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   // 1. Get internal users (profiles with staff roles)
   const { data: internalUsers } = await supabase
