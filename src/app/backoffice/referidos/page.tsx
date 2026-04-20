@@ -1,5 +1,5 @@
 import { getSession } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -18,7 +18,7 @@ export default async function ReferralsGlobalPage() {
   const { user, role } = await getSession();
   if (!user || (role !== "admin" && role !== "consultor")) redirect("/backoffice");
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data: referrals } = await supabase
     .from("referrals")

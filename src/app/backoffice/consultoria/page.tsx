@@ -63,12 +63,17 @@ export default async function ConsultoriaPage() {
 
       if (contracts.length > 0) {
         contracts.forEach((contract: any) => {
+          // Fallback: if contract is still "pendiente", use client's state instead
+          const effectiveState = contract.current_state === "pendiente" 
+            ? client.current_state 
+            : contract.current_state;
+          
           kanbanItems.push({
             type: "contract",
             contractType: contract.type,
             clientId: client.id,
             id: `contract-${contract.id}`,
-            current_state: contract.current_state,
+            current_state: effectiveState,
             company_name: client.company_name,
             cif: client.cif,
             email: client.email,

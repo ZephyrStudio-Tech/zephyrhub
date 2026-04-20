@@ -114,3 +114,22 @@ export async function updateInternalUserRole(userId: string, newRole: string) {
   revalidatePath("/backoffice/asociados");
   return { ok: true };
 }
+
+export async function adminResetUserPassword(
+  userId: string,
+  newPassword: string
+): Promise<{ ok: boolean; error?: string }> {
+  const auth = await requireServerAuth(["admin"]);
+  if (auth.error) return { ok: false, error: auth.error };
+
+  const { supabaseAdmin } = auth;
+
+  const { error } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+    password: newPassword,
+  });
+
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/backoffice/asociados");
+  return { ok: true };
+}
