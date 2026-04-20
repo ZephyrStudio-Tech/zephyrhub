@@ -42,6 +42,32 @@ export async function transitionClientState(
 
   if (updateError) return { ok: false, error: updateError.message };
 
+  // Sync contracts when entering POST_DEV phases
+  const POST_DEV_STATES = [
+    "empezar_desarrollo",
+    "presentar_justificacion_fase_i",
+    "firma_justificacion",
+    "subsanacion_fase_i",
+    "resolucion_red_es",
+    "pago_i_fase",
+    "ano_mantenimiento",
+    "justificacion_ii_fase",
+    "firma_justificacion_ii",
+    "subsanacion_fase_ii",
+    "resolucion_ii_red_es",
+    "ganada",
+    "perdida",
+  ];
+
+  if (POST_DEV_STATES.includes(toState)) {
+    // Update contracts that are still "pendiente" to match client state
+    await supabaseAdmin
+      .from("contracts")
+      .update({ current_state: toState })
+      .eq("client_id", clientId)
+      .eq("current_state", "pendiente");
+  }
+
   await supabaseAdmin.from("interactions").insert({
     client_id: clientId,
     actor_id: user.id,
