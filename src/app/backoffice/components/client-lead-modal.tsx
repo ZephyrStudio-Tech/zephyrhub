@@ -535,7 +535,7 @@ export function ClientLeadModal({ mode, leadData, clientId, onClose }: Props) {
                <Button variant="outline" className="rounded-xl font-bold h-11 px-6 border-slate-200 hover:bg-slate-50" onClick={() => setShowDeleteConfirm(false)} disabled={isPending}>
                  Cancelar
                </Button>
-               <Button className="bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold h-11 px-6 shadow-md shadow-red-200" onClick={executeDelete} disabled={isPending}>
+               <Button className="bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold h-11 px-6 shadow-md shadow-red-200" onClick={handleDeleteRecord} disabled={isPending}>
                  {isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
                  Sí, eliminar todo
                </Button>
