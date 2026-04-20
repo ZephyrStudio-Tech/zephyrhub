@@ -20,13 +20,15 @@ export default async function ReferralsGlobalPage() {
 
   const supabase = createAdminClient();
 
-  const { data: referrals } = await supabase
+  const { data: referrals, error } = await supabase
     .from("referrals")
     .select(`
       *,
       associates(full_name)
     `)
     .order("created_at", { ascending: false });
+
+  if (error) console.error("❌ Error cargando referidos:", error);
 
   const totalReclaimable = (referrals || []).filter(r => r.commission_status === "reclamable")
     .reduce((acc, r) => acc + (r.commission_amount || 0), 0);

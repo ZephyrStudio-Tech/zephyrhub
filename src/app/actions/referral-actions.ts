@@ -40,6 +40,24 @@ export async function createReferral(data: any) {
 
   if (insertError) return { ok: false, error: insertError.message };
 
+  // Insertar en el Kanban de Preconsultoría
+  await supabaseAdmin.from("triage_leads").insert({
+    full_name: data.contact_name,
+    email: data.contact_email,
+    phone: data.contact_phone,
+    company_name: data.company_name,
+    nif: data.dni_cif,
+    entity_type: data.entity_type || "particular",
+    company_size: "0-2",
+    province: "No especificada",
+    service_requested: "web",
+    rgpd_accepted: true,
+    current_state: "nuevo_lead",
+    status: "pending",
+    notes: data.notes,
+    associate_id: associate.id // Vinculamos al asociado
+  });
+
   revalidatePath("/asociado/referidos");
   return { ok: true };
 }
